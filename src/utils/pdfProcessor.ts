@@ -40,7 +40,7 @@ export async function renderPdfPage(
   } finally {
     // Release worker memory; previously every page render leaked the whole document.
     try {
-      await pdfDoc.destroy();
+      await loadingTask.destroy();
     } catch {
       /* ignore */
     }
@@ -179,7 +179,7 @@ export async function getPdfPageCount(fileData: ArrayBuffer): Promise<number> {
     const loadingTask = pdfjsLib.getDocument({ data: fileData });
     const pdfDoc = await loadingTask.promise;
     const n = pdfDoc.numPages;
-    await pdfDoc.destroy().catch(() => undefined);
+    await loadingTask.destroy().catch(() => undefined);
     return n;
   } catch (err) {
     console.error("Error reading PDF page count:", err);

@@ -163,3 +163,14 @@ input[type="number"] { font-variant-numeric: tabular-nums; }
 
 /* Never let one wide element push the whole page (and the fixed bottom bar) sideways */
 html, body { overflow-x: clip; max-width: 100%; }
+
+/* ---- Touch feedback & motion polish ---- */
+button:not(:disabled), [role="button"] { transition: transform 0.16s var(--qto-ease), background-color 0.2s, box-shadow 0.2s, opacity 0.2s; -webkit-tap-highlight-color: transparent; }
+button:not(:disabled):active { transform: scale(0.965); }
+@keyframes qto-fab-ring { 0% { box-shadow: 0 0 0 0 rgb(245 158 11 / 0.55); } 70% { box-shadow: 0 0 0 16px rgb(245 158 11 / 0); } 100% { box-shadow: 0 0 0 0 rgb(245 158 11 / 0); } }
+.qto-fab-attention { animation: qto-fab-ring 2.2s ease-out infinite; }
+@keyframes qto-nav-pop { 0% { transform: translateY(0) scale(1); } 40% { transform: translateY(-3px) scale(1.12); } 100% { transform: translateY(0) scale(1); } }
+.qto-nav-active svg { animation: qto-nav-pop 0.35s var(--qto-ease-spring); }
+@keyframes qto-sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.qto-sheet-up { animation: qto-sheet-up 0.32s var(--qto-ease); }
+@media (prefers-reduced-motion: reduce) { .qto-fab-attention, .qto-nav-active svg, .qto-sheet-up { animation: none !important; } button:not(:disabled):active { transform: none; } }

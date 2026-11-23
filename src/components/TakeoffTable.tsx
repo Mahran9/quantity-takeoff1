@@ -252,11 +252,11 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
             </p>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="grid grid-cols-2 sm:flex items-center gap-2 sm:flex-wrap w-full sm:w-auto">
             {onOpenExtractionModal && (
               <button
                 onClick={onOpenExtractionModal}
-                className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-sm transition-all"
+                className="hidden sm:flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-sm transition-all"
               >
                 <Layers className="w-4 h-4 text-blue-200" />
                 <span>استخراج الكميات الهندسية (CAD & Vision)</span>
@@ -274,7 +274,7 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
                 />
                 <button
                   onClick={() => excelInputRef.current?.click()}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-sm transition-all"
+                  className="flex items-center justify-center gap-1.5 px-3 py-2.5 sm:py-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-sm transition-all"
                   title="استيراد بنود من جدول Excel موجود إلى هذه اللوحة"
                 >
                   <FileUp className="w-4 h-4 text-emerald-200" />
@@ -286,15 +286,15 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
             <button
               id="btn-add-item-row"
               onClick={() => setIsAddingNew(true)}
-              className="flex items-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-sm transition-all"
+              className="flex items-center justify-center gap-1.5 px-3 py-2.5 sm:py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-sm transition-all"
             >
               <Plus className="w-4 h-4 text-amber-400" />
-              <span>إضافة بند يدوي</span>
+              <span>بند يدوي</span>
             </button>
 
             <button
               onClick={onOpenVisualSearch}
-              className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-xl text-xs font-bold shadow-sm transition-all"
+              className="col-span-2 sm:col-span-1 flex items-center justify-center gap-1.5 px-3 py-2.5 sm:py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-xl text-xs font-bold shadow-sm transition-all"
             >
               <Sparkles className="w-4 h-4 text-cyan-200" />
               <span>بحث بصري في الملف</span>
@@ -303,8 +303,8 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
         </div>
 
         {/* Metric Badges for this specific sheet */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 text-right">
-          <div className="bg-white p-2.5 rounded-xl border border-slate-200/80 shadow-2xs">
+        <div className="flex sm:grid overflow-x-auto no-scrollbar sm:overflow-visible sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 text-right -mx-1 px-1 sm:mx-0 sm:px-0 qto-stagger">
+          <div className="bg-white p-2.5 rounded-xl border border-slate-200/80 shadow-2xs shrink-0 min-w-[132px] sm:min-w-0">
             <span className="text-[11px] text-slate-500 flex items-center gap-1">
               <Box className="w-3 h-3 text-purple-600" /> الحجوم والخرسانات
             </span>
@@ -314,7 +314,7 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
             </span>
           </div>
 
-          <div className="bg-white p-2.5 rounded-xl border border-slate-200/80 shadow-2xs">
+          <div className="bg-white p-2.5 rounded-xl border border-slate-200/80 shadow-2xs shrink-0 min-w-[132px] sm:min-w-0">
             <span className="text-[11px] text-slate-500 flex items-center gap-1">
               <Square className="w-3 h-3 text-blue-600" /> المسطحات والمباني
             </span>
@@ -324,7 +324,7 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
             </span>
           </div>
 
-          <div className="bg-white p-2.5 rounded-xl border border-slate-200/80 shadow-2xs">
+          <div className="bg-white p-2.5 rounded-xl border border-slate-200/80 shadow-2xs shrink-0 min-w-[132px] sm:min-w-0">
             <span className="text-[11px] text-slate-500 flex items-center gap-1">
               <Ruler className="w-3 h-3 text-emerald-600" /> الأطوال والمسارات
             </span>
@@ -334,7 +334,7 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
             </span>
           </div>
 
-          <div className="bg-white p-2.5 rounded-xl border border-slate-200/80 shadow-2xs">
+          <div className="bg-white p-2.5 rounded-xl border border-slate-200/80 shadow-2xs shrink-0 min-w-[132px] sm:min-w-0">
             <span className="text-[11px] text-slate-500 flex items-center gap-1">
               <Hash className="w-3 h-3 text-amber-600" /> الأعداد والقطع
             </span>
@@ -344,7 +344,7 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
             </span>
           </div>
 
-          <div className="bg-white p-2.5 rounded-xl border border-slate-200/80 shadow-2xs">
+          <div className="bg-white p-2.5 rounded-xl border border-slate-200/80 shadow-2xs shrink-0 min-w-[132px] sm:min-w-0">
             <span className="text-[11px] text-slate-500 block">حديد التسليح</span>
             <span className="text-base font-bold font-mono text-slate-800">
               {weightTotal.toFixed(2)}{" "}
@@ -623,7 +623,92 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
       )}
 
       {/* Takeoff Items Table */}
-      <div className="overflow-x-auto">
+      {/* Phone: one card per item */}
+      <div className="sm:hidden divide-y divide-slate-100 qto-stagger">
+        {filteredItems.length === 0 ? (
+          <div className="py-10 px-4 text-center text-slate-400">
+            <Calculator className="w-8 h-8 mx-auto text-slate-300 mb-2" />
+            <p className="font-semibold text-slate-600 text-sm">لا توجد بنود في هذا المخطط بعد</p>
+            <p className="text-xs mt-1">اضغط «حصر الكميات من الملف» أو أضف بنداً يدوياً.</p>
+          </div>
+        ) : (
+          filteredItems.map((item, index) => {
+            const st = getEffectiveStatus(item);
+            const total = item.quantity * (item.unitPrice || 0);
+            const fld = "w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-sm font-mono text-center focus:bg-white focus:border-amber-500 focus:outline-none";
+            return (
+              <article key={item.id} className="p-3.5 space-y-2.5 qto-rise-in">
+                <div className="flex items-start gap-2">
+                  <span className="mt-0.5 shrink-0 w-6 h-6 rounded-full bg-slate-100 text-slate-500 text-[11px] font-mono flex items-center justify-center">{index + 1}</span>
+                  <div className="min-w-0 flex-1">
+                    <textarea
+                      rows={2}
+                      value={item.description}
+                      onChange={(e) => onUpdateItem({ ...item, description: e.target.value })}
+                      className="w-full resize-none bg-transparent text-sm font-semibold text-slate-900 leading-6 focus:bg-slate-50 rounded-lg px-1"
+                    />
+                    <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-500">
+                      <span className="px-1.5 py-0.5 rounded bg-slate-100">{item.category}</span>
+                      {item.location && <span className="px-1.5 py-0.5 rounded bg-slate-50 border border-slate-100">{item.location}</span>}
+                    </div>
+                  </div>
+                  <select
+                    value={st}
+                    onChange={(e) => {
+                      const nextSt = e.target.value as ReviewStatus;
+                      if (onUpdateStatus) onUpdateStatus(item, nextSt, "تغيير الحالة من الجدول");
+                      else onUpdateItem({ ...item, reviewStatus: nextSt, isVerified: nextSt === "approved" });
+                    }}
+                    className={`shrink-0 text-[11px] font-bold px-2 py-1 rounded-lg border ${STATUS_META[st].cls}`}
+                  >
+                    <option value="draft">مسودة</option>
+                    <option value="extracted">مستخرج</option>
+                    <option value="needs_review">يحتاج مراجعة</option>
+                    <option value="reviewed">تمت مراجعته</option>
+                    <option value="approved">معتمد ✓</option>
+                    <option value="rejected">مرفوض</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <label className="text-[10px] text-slate-500 space-y-1">الكمية
+                    <input type="number" step="0.01" value={item.quantity} className={`${fld} font-bold`}
+                      onChange={(e) => onUpdateItem({ ...item, quantity: Number(e.target.value), totalPrice: Number(e.target.value) * (item.unitPrice || 0) })} />
+                  </label>
+                  <label className="text-[10px] text-slate-500 space-y-1">الوحدة
+                    <select value={item.unit} className={fld} onChange={(e) => onUpdateItem({ ...item, unit: e.target.value })}>
+                      {["م³", "م²", "م.ط", "عدد", "طن", "كجم", "نقطة", "مقطوعية"].map((u) => <option key={u} value={u}>{u}</option>)}
+                    </select>
+                  </label>
+                  <label className="text-[10px] text-slate-500 space-y-1">سعر الوحدة
+                    <input type="number" value={item.unitPrice || 0} className={fld}
+                      onChange={(e) => onUpdateItem({ ...item, unitPrice: Number(e.target.value), totalPrice: item.quantity * Number(e.target.value) })} />
+                  </label>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="text-sm">
+                    <span className="text-[11px] text-slate-500">الإجمالي </span>
+                    <b className="font-mono text-amber-800">{total.toLocaleString("en-US", { maximumFractionDigits: 1 })}</b>
+                    <span className="text-[11px] text-slate-500"> {currencySymbol}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {onInspectItemOnSheet && (
+                      <button onClick={() => onInspectItemOnSheet(item)} aria-label="عرض على المخطط" className="p-2 rounded-lg text-cyan-700 bg-cyan-50"><Eye className="w-4 h-4" /></button>
+                    )}
+                    <button onClick={() => handleDuplicate(item)} aria-label="تكرار" className="p-2 rounded-lg text-slate-600 bg-slate-100"><Copy className="w-4 h-4" /></button>
+                    <button
+                      onClick={() => { if (window.confirm(`هل أنت متأكد من حذف البند "${item.description}"؟`)) onDeleteItem(item.id); }}
+                      aria-label="حذف" className="p-2 rounded-lg text-rose-600 bg-rose-50"><Trash2 className="w-4 h-4" /></button>
+                  </div>
+                </div>
+              </article>
+            );
+          })
+        )}
+      </div>
+
+      <div className="hidden sm:block overflow-x-auto">
         <table className="w-full text-right text-xs border-collapse">
           <thead>
             <tr className="bg-slate-100/90 text-slate-700 font-semibold border-b border-slate-200">

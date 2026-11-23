@@ -25,6 +25,37 @@ interface SheetProps {
   terms: string[];
 }
 
+
+/** Shrinks the A4 preview to the available width (phones) so the document stays readable and intact. */
+const PreviewScaler: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const outer = React.useRef<HTMLDivElement>(null);
+  const inner = React.useRef<HTMLDivElement>(null);
+  const [scale, setScale] = React.useState(1);
+  const [h, setH] = React.useState<number | undefined>(undefined);
+  React.useLayoutEffect(() => {
+    const measure = () => {
+      if (!outer.current || !inner.current) return;
+      const w = outer.current.clientWidth;
+      const iw = inner.current.scrollWidth || 794;
+      const sc = Math.min(1, w / iw);
+      setScale(sc);
+      setH(inner.current.offsetHeight * sc);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    if (outer.current) ro.observe(outer.current);
+    if (inner.current) ro.observe(inner.current);
+    return () => ro.disconnect();
+  }, []);
+  return (
+    <div ref={outer} className="w-full flex justify-center" style={{ height: h }}>
+      <div ref={inner} style={{ width: "fit-content", transform: `scale(${scale})`, transformOrigin: "top center" }} className="shadow-xl bg-white">
+        {children}
+      </div>
+    </div>
+  );
+};
+
 /** One A4-width document; spacer rows repeat per printed page so text never touches the letterhead. */
 const QuotationSheet: React.FC<SheetProps> = ({ data, metadata, company, meta, terms }) => {
   const L = QUOTATION_LABELS[meta.lang];
@@ -152,6 +183,7 @@ const QuotationSheet: React.FC<SheetProps> = ({ data, metadata, company, meta, t
 export const QuotationModal: React.FC<Props> = ({ isOpen, onClose, metadata, company, items, onOpenSettings }) => {
   const [meta, setMeta] = useState<QuotationMeta>(() => defaultQuotationMeta(metadata, company));
   const [termsText, setTermsText] = useState("");
+  const [mobileTab, setMobileTab] = useState<"preview" | "edit">("preview");
 
   useEffect(() => {
     if (!isOpen) return;
@@ -192,15 +224,24 @@ export const QuotationModal: React.FC<Props> = ({ isOpen, onClose, metadata, com
 
   return (
     <>
-      <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 qto-fade-in print:hidden">
-        <div className="qto-pop-in bg-white rounded-3xl shadow-2xl w-full max-w-6xl max-h-[94vh] flex flex-col overflow-hidden text-right">
+      <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-0 sm:p-6 qto-fade-in print:hidden">
+        <div className="qto-pop-in bg-white sm:rounded-3xl shadow-2xl w-full max-w-6xl h-[100dvh] sm:h-auto sm:max-h-[94vh] flex flex-col overflow-hidden text-right">
           <div className="bg-slate-900 text-white px-5 py-3.5 flex items-center justify-between">
             <h2 className="text-base font-bold">عرض السعر — معاينة وطباعة</h2>
             <button onClick={onClose} aria-label="إغلاق" className="p-2 rounded-xl hover:bg-white/10"><X className="w-5 h-5" /></button>
           </div>
 
-          <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-[320px_1fr]">
-            <div className="overflow-y-auto p-4 space-y-3 border-b lg:border-b-0 lg:border-l border-slate-200 bg-slate-50 text-xs">
+          <div className="lg:hidden grid grid-cols-2 gap-1 p-1.5 bg-slate-100 border-b border-slate-200">
+            {([["preview", "المعاينة"], ["edit", "التعديل"]] as const).map(([id, label]) => (
+              <button key={id} onClick={() => setMobileTab(id)}
+                className={`py-2 rounded-xl text-sm font-bold transition ${mobileTab === id ? "bg-white shadow-sm text-slate-900" : "text-slate-500"}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex-1 min-h-0 overflow-hidden grid grid-cols-1 lg:grid-cols-[320px_1fr]">
+            <div className={`${mobileTab === "edit" ? "block" : "hidden"} lg:block overflow-y-auto p-4 space-y-3 border-b lg:border-b-0 lg:border-l border-slate-200 bg-slate-50 text-xs`}>
               {(data.zeroPriceCount > 0 || data.pendingCount > 0 || noCompany) && (
                 <div className="rounded-xl bg-amber-50 border border-amber-200 text-amber-900 p-3 space-y-1 leading-relaxed">
                   <div className="flex items-center gap-1.5 font-bold"><AlertTriangle className="w-4 h-4" /> قبل الإرسال للعميل</div>
@@ -242,7 +283,7 @@ export const QuotationModal: React.FC<Props> = ({ isOpen, onClose, metadata, com
                   value={termsText} onChange={(e) => setTermsText(e.target.value)} />
               </label>
 
-              <div className="flex flex-col gap-2 pt-1">
+              <div className="hidden lg:flex flex-col gap-2 pt-1">
                 <button onClick={doPrint}
                   className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold">
                   <Printer className="w-4 h-4" /> طباعة / حفظ PDF
@@ -258,11 +299,20 @@ export const QuotationModal: React.FC<Props> = ({ isOpen, onClose, metadata, com
               </div>
             </div>
 
-            <div className="overflow-auto bg-slate-200 p-4">
-              <div className="mx-auto shadow-xl origin-top qt-preview-scale" style={{ width: "fit-content" }}>
+            <div className={`${mobileTab === "preview" ? "block" : "hidden"} lg:block overflow-auto bg-slate-200 p-2 sm:p-4`}>
+              <PreviewScaler>
                 <QuotationSheet data={data} metadata={metadata} company={company} meta={meta} terms={terms} />
-              </div>
+              </PreviewScaler>
             </div>
+          </div>
+
+          <div className="lg:hidden grid grid-cols-2 gap-2 p-3 border-t border-slate-200 bg-white" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
+            <button onClick={doPrint} className="flex items-center justify-center gap-2 py-3 rounded-xl bg-amber-500 text-slate-950 font-bold text-sm">
+              <Printer className="w-4 h-4" /> طباعة / PDF
+            </button>
+            <button onClick={() => exportQuotationExcel(metadata, company, items, meta)} className="flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-700 text-white font-bold text-sm">
+              <FileSpreadsheet className="w-4 h-4" /> Excel
+            </button>
           </div>
         </div>
       </div>

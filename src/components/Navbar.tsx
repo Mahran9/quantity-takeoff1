@@ -66,7 +66,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     "shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold border transition-colors whitespace-nowrap";
   const navBtn = (active: boolean) =>
     `flex-1 flex flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-bold whitespace-nowrap transition-colors ${
-      active ? "text-amber-600" : "text-slate-500"
+      active ? "qto-nav-active text-amber-600" : "text-slate-500"
     }`;
   const sheetRow =
     "w-full flex items-center gap-3 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 px-4 py-3.5 text-sm font-bold text-slate-800 text-right";
@@ -184,7 +184,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             الجدول{takeoffItems.length > 0 && <span className="text-[10px] font-mono">({takeoffItems.length})</span>}
           </button>
           <div className="flex-1 flex justify-center">
-            <button onClick={onOpenUpload} aria-label="إضافة مخطط" className="-mt-5 w-14 h-14 rounded-full bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/40 flex items-center justify-center active:scale-95 transition border-4 border-white">
+            <button onClick={onOpenUpload} aria-label="إضافة مخطط" className={`${sheets.length === 0 ? "qto-fab-attention " : ""}-mt-5 w-14 h-14 rounded-full bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/40 flex items-center justify-center active:scale-95 transition border-4 border-white`}>
               <Plus className="w-7 h-7" />
             </button>
           </div>
@@ -209,7 +209,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* More sheet (mobile) */}
       {more && (
         <div className="sm:hidden fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm flex items-end print:hidden" onClick={() => setMore(false)}>
-          <div className="qto-slide-up w-full max-h-[85vh] overflow-y-auto bg-white rounded-t-3xl p-4 pb-8 text-right" onClick={(e) => e.stopPropagation()}>
+          <div className="qto-sheet-up w-full max-h-[85vh] overflow-y-auto bg-white rounded-t-3xl p-4 pb-8 text-right" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-bold text-slate-900">المزيد</h2>
               <button onClick={() => setMore(false)} aria-label="إغلاق" className="p-2 rounded-lg hover:bg-slate-100 text-slate-500"><X className="w-5 h-5" /></button>

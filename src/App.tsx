@@ -29,6 +29,7 @@ import {
 } from "./types";
 import { initialProjectMetadata, LEGACY_DEMO_SHEET_IDS } from "./data/sampleBlueprints";
 import { EmptyWorkspace } from "./components/EmptyWorkspace";
+import { exportBoqToExcel } from "./utils/boqExporter";
 import { SheetSummary } from "./components/SheetSummary";
 import { getSheetVisualTokens, searchSheetTokens } from "./utils/visualSearchEngine";
 import {
@@ -454,6 +455,8 @@ export default function App() {
     pushUndoSnapshot();
     updateActiveProject((p) => ({ ...p, sheets: [...p.sheets, newSheet] }));
     setActiveSheetId(newSheet.id);
+    // Go straight to counting: DXF/DWG open the extraction center right after the file is added.
+    if (newSheet.fileType === "dxf") setIsExtractionModalOpen(true);
   };
 
   const handleMultipleSheetsCreated = (newSheets: BlueprintSheet[]) => {
@@ -632,6 +635,8 @@ export default function App() {
                 items={currentSheetItems}
                 currencySymbol={metadata.currencySymbol}
                 onOpenExtraction={() => setIsExtractionModalOpen(true)}
+                onOpenBoq={() => setActiveView("boq")}
+                onExportExcel={() => exportBoqToExcel(metadata, sheets, takeoffItems, company)}
               />
             )}
 

@@ -445,25 +445,25 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
   return (
     <div
       id="quantity-extraction-modal"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-0 sm:p-4 overflow-y-auto"
       dir="rtl"
     >
-      <div className="relative w-full max-w-5xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="relative w-full max-w-5xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden flex flex-col h-[100dvh] sm:h-auto sm:max-h-[90vh] rounded-none sm:rounded-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/60">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-xl">
+        <div className="flex items-center justify-between gap-2 px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-800 bg-slate-950/60">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="p-2.5 shrink-0 bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-xl">
               <Calculator className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                مركز استخراج الكميات الهندسية التفصيلية
+              <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                <span className="sm:hidden">استخراج الكميات</span><span className="hidden sm:inline">مركز استخراج الكميات الهندسية التفصيلية</span>
                 <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 font-mono">
                   {sheet.code}
                 </span>
               </h2>
-              <p className="text-xs text-slate-400">
-                اللوحة الحالية: <span className="text-slate-200 font-semibold">{sheet.title}</span> | ربط تلقائي باللوحة لمنع تداخل الكميات
+              <p className="text-xs text-slate-400 truncate max-w-[60vw] sm:max-w-none">
+                <span className="hidden sm:inline">اللوحة الحالية: </span><span className="text-slate-200 font-semibold">{sheet.title}</span><span className="hidden sm:inline"> | ربط تلقائي باللوحة لمنع تداخل الكميات</span>
               </p>
             </div>
           </div>
@@ -476,7 +476,7 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
         </div>
 
         {/* Blueprint Linkage Security Banner */}
-        <div className="bg-emerald-950/40 border-b border-emerald-800/40 px-6 py-2.5 flex items-center justify-between text-xs text-emerald-300">
+        <div className="hidden sm:flex bg-emerald-950/40 border-b border-emerald-800/40 px-6 py-2.5 items-center justify-between text-xs text-emerald-300">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
             <span>
@@ -493,7 +493,7 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex border-b border-slate-800 bg-slate-900/80 px-6 pt-2 gap-2">
+        <div className="flex border-b border-slate-800 bg-slate-900/80 px-3 sm:px-6 pt-2 gap-2 overflow-x-auto no-scrollbar">
           {sheet.fileType === "dxf" && (
             <button
               onClick={() => setActiveTab("cad")}
@@ -504,7 +504,7 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
               }`}
             >
               <Layers className="w-4 h-4" />
-              <span>استخراج هندسي مباشر من عناصر الأوتوكاد (DXF)</span>
+              <span><span className="sm:hidden">عناصر الرسم</span><span className="hidden sm:inline">استخراج هندسي مباشر من عناصر الأوتوكاد (DXF)</span></span>
               <span className="px-1.5 py-0.2 bg-blue-500/20 text-blue-300 rounded text-[10px]">
                 {cadQuantities.length}
               </span>
@@ -536,7 +536,7 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
             }`}
           >
             <Calculator className="w-4 h-4" />
-            <span>حاسبة الأبعاد السريعة (حجوم / مساحات / أطوال)</span>
+            <span><span className="sm:hidden">حاسبة سريعة</span><span className="hidden sm:inline">حاسبة الأبعاد السريعة (حجوم / مساحات / أطوال)</span></span>
           </button>
         </div>
 
@@ -544,7 +544,7 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
 
         {/* Tab 1: CAD Entity Extraction Engine */}
         {activeTab === "cad" && (
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4 sm:space-y-6">
             {/* Audit header: traffic light + confidence + coverage */}
             {audit && (
               <div
@@ -915,14 +915,14 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
 
             {/* Filter by Dimension Type */}
             <div className="flex items-center justify-between flex-wrap gap-3">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400 flex items-center gap-1">
+              <div className="flex items-center gap-2 min-w-0 w-full sm:w-auto">
+                <span className="hidden sm:flex text-xs text-slate-400 items-center gap-1">
                   <Filter className="w-3.5 h-3.5" /> تصفية نوع الكمية:
                 </span>
-                <div className="flex gap-1.5">
+                <div className="flex gap-1.5 overflow-x-auto no-scrollbar min-w-0">
                   <button
                     onClick={() => setTypeFilter("all")}
-                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                    className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                       typeFilter === "all"
                         ? "bg-slate-700 text-white"
                         : "bg-slate-800 text-slate-400 hover:text-white"
@@ -932,7 +932,7 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
                   </button>
                   <button
                     onClick={() => setTypeFilter("volume")}
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                    className={`flex items-center gap-1.5 shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                       typeFilter === "volume"
                         ? "bg-purple-600 text-white"
                         : "bg-slate-800 text-purple-300 hover:bg-slate-700"
@@ -946,7 +946,7 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
                   </button>
                   <button
                     onClick={() => setTypeFilter("area")}
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                    className={`flex items-center gap-1.5 shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                       typeFilter === "area"
                         ? "bg-blue-600 text-white"
                         : "bg-slate-800 text-blue-300 hover:bg-slate-700"
@@ -960,7 +960,7 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
                   </button>
                   <button
                     onClick={() => setTypeFilter("linear")}
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                    className={`flex items-center gap-1.5 shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                       typeFilter === "linear"
                         ? "bg-emerald-600 text-white"
                         : "bg-slate-800 text-emerald-300 hover:bg-slate-700"
@@ -974,7 +974,7 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
                   </button>
                   <button
                     onClick={() => setTypeFilter("count")}
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                    className={`flex items-center gap-1.5 shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                       typeFilter === "count"
                         ? "bg-amber-600 text-white"
                         : "bg-slate-800 text-amber-300 hover:bg-slate-700"
@@ -1207,7 +1207,7 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
 
         {/* Tab 3: Manual Quick Calc */}
         {activeTab === "calc" && (
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4 sm:space-y-6">
             <div className="bg-slate-800/60 border border-slate-700/80 rounded-xl p-5 space-y-5">
               <div className="flex items-center gap-2">
                 <Calculator className="w-5 h-5 text-amber-400" />
@@ -1410,16 +1410,16 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
         )}
 
         {/* Footer Actions */}
-        <div className="px-6 py-4 border-t border-slate-800 bg-slate-950/80 flex items-center justify-between">
-          <div className="text-xs text-slate-400 flex items-center gap-2">
+        <div className="px-3 sm:px-6 py-3 sm:py-4 border-t border-slate-800 bg-slate-950/90 flex items-center justify-between gap-2" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
+          <div className="hidden sm:flex text-xs text-slate-400 items-center gap-2">
             <span>اللوحة المستهدفة:</span>
             <span className="text-white font-semibold">{sheet.code} - {sheet.title}</span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <button
               onClick={onClose}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-xl transition-colors"
+              className="px-4 py-3 sm:py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-xl transition-colors"
             >
               إلغاء
             </button>
@@ -1435,10 +1435,10 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
                     ? "ثقة التدقيق منخفضة — أقرّ بمراجعة التحذيرات أولاً"
                     : undefined
                 }
-                className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl shadow-lg transition-all disabled:opacity-50"
+                className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-5 py-3 sm:py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm sm:text-xs font-bold rounded-xl shadow-lg transition-all disabled:opacity-50"
               >
                 <Plus className="w-4 h-4" />
-                <span>إدراج ({selectedCadCount}) بنود هندسية إلى اللوحة</span>
+                <span><span className="sm:hidden">إدراج ({selectedCadCount}) بنود</span><span className="hidden sm:inline">إدراج ({selectedCadCount}) بنود هندسية إلى اللوحة</span></span>
               </button>
             )}
 

@@ -1,22 +1,20 @@
 import React, { useMemo } from "react";
 import { BlueprintSheet, TakeoffItem } from "../types";
-import { Layers, ScanLine, CheckCircle2, AlertTriangle, FileSpreadsheet, Table2, Sparkles, ScanText } from "lucide-react";
+import { Layers, ScanLine, CheckCircle2, AlertTriangle, FileSpreadsheet, Table2 } from "lucide-react";
 
 interface Props {
   sheet: BlueprintSheet;
   items: TakeoffItem[];
   currencySymbol: string;
-  onOpenExtraction: () => void;
+  onAnalyze: () => void;
   onOpenBoq: () => void;
   onExportExcel: () => void;
-  onOpenAi?: () => void;
-  onOpenOcr?: () => void;
 }
 
 const fmt = (n: number, d = 2) => n.toLocaleString("en-US", { maximumFractionDigits: d });
 
 /** Live numbers for the drawing on screen: how it was read and what has been counted so far. */
-export const SheetSummary: React.FC<Props> = ({ sheet, items, currencySymbol, onOpenExtraction, onOpenBoq, onExportExcel, onOpenAi, onOpenOcr }) => {
+export const SheetSummary: React.FC<Props> = ({ sheet, items, currencySymbol, onAnalyze, onOpenBoq, onExportExcel }) => {
   const live = useMemo(() => items.filter((i) => i.reviewStatus !== "rejected"), [items]);
   const stats = useMemo(() => {
     const byUnit = new Map<string, number>();
@@ -73,11 +71,11 @@ export const SheetSummary: React.FC<Props> = ({ sheet, items, currencySymbol, on
 
       <div className="mt-3 grid grid-cols-3 gap-2">
         <button
-          onClick={onOpenExtraction}
+          onClick={onAnalyze}
           className="col-span-3 sm:col-span-1 flex items-center justify-center gap-2 qto-cta rounded-xl px-4 py-3 text-sm font-bold transition active:scale-[0.98]"
         >
           <Layers className="w-5 h-5" />
-          <span>① حصر الكميات من الملف</span>
+          <span>① حلّل اللوحة</span>
         </button>
         <button
           onClick={onOpenBoq}
@@ -96,18 +94,8 @@ export const SheetSummary: React.FC<Props> = ({ sheet, items, currencySymbol, on
           <span><span className="hidden sm:inline">③ </span>Excel</span>
         </button>
       </div>
-      {onOpenOcr && sheet.imageUrl && (
-        <button onClick={onOpenOcr} className="mt-2 w-full flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-bold text-slate-800 hover:bg-slate-100 active:scale-[0.98]">
-          <ScanText className="w-4 h-4 text-slate-700" /> قراءة الأرقام المدوّنة على اللوحة (بدون إنترنت)
-        </button>
-      )}
-      {onOpenAi && sheet.imageUrl && (
-        <button onClick={onOpenAi} className="mt-2 w-full flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm font-bold text-slate-900 hover:bg-amber-50 active:scale-[0.98]">
-          <Sparkles className="w-4 h-4" /> قراءة اللوحة بالذكاء الاصطناعي (اختياري)
-        </button>
-      )}
       {live.length === 0 && (
-        <p className="mt-2 text-[11px] text-slate-500">زر Excel يعمل بعد إدراج بنود: ابدأ بـ «حصر الكميات من الملف» ثم أدرج ما تريده.</p>
+        <p className="mt-2 text-[11px] text-slate-500">زر Excel يعمل بعد إدراج بنود: ابدأ بـ «حلّل اللوحة» ثم أدرج ما تريده.</p>
       )}
 
       <div className={`mt-3 flex items-start gap-2 rounded-xl border px-3 py-2 text-xs leading-relaxed ${toneCls}`}>

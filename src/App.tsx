@@ -9,7 +9,7 @@ import { VisualSearchModal } from "./components/VisualSearchModal";
 import { QuantityExtractionModal } from "./components/QuantityExtractionModal";
 import { PdfVectorModal } from "./components/PdfVectorModal";
 import { AiTakeoffModal } from "./components/AiTakeoffModal";
-import { OcrLabelsModal } from "./components/OcrLabelsModal";
+import { AnalyzeSheetModal } from "./components/AnalyzeSheetModal";
 import { CompanySettingsModal } from "./components/CompanySettingsModal";
 import { QuotationModal } from "./components/QuotationModal";
 import { SaveStatusBar, StorageNotice } from "./components/SaveStatusBar";
@@ -142,7 +142,7 @@ export default function App() {
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isVisualSearchOpen, setIsVisualSearchOpen] = useState(false);
   const [isAiOpen, setIsAiOpen] = useState(false);
-  const [isOcrOpen, setIsOcrOpen] = useState(false);
+  const [isAnalyzeOpen, setIsAnalyzeOpen] = useState(false);
   const [isExtractionModalOpen, setIsExtractionModalOpen] = useState(false);
   const [isProjectsOpen, setIsProjectsOpen] = useState(false);
   const [isSteelCalcOpen, setIsSteelCalcOpen] = useState(false);
@@ -480,7 +480,7 @@ export default function App() {
     updateActiveProject((p) => ({ ...p, sheets: [...p.sheets, newSheet] }));
     setActiveSheetId(newSheet.id);
     // Go straight to counting: DXF/DWG open the extraction center right after the file is added.
-    if (newSheet.fileType === "dxf") setIsExtractionModalOpen(true);
+    if (newSheet.fileType === "dxf") setIsAnalyzeOpen(true);
   };
 
   const handleMultipleSheetsCreated = (newSheets: BlueprintSheet[]) => {
@@ -658,10 +658,8 @@ export default function App() {
                 sheet={currentSheet}
                 items={currentSheetItems}
                 currencySymbol={metadata.currencySymbol}
-                onOpenExtraction={openExtraction}
+                onAnalyze={() => setIsAnalyzeOpen(true)}
                 onOpenBoq={() => setActiveView("boq")}
-                  onOpenAi={() => setIsAiOpen(true)}
-                  onOpenOcr={() => setIsOcrOpen(true)}
                 onExportExcel={() => exportBoqToExcel(metadata, sheets, takeoffItems, company)}
               />
             )}
@@ -750,12 +748,15 @@ export default function App() {
       )}
 
       {currentSheet && (
-        <OcrLabelsModal
-          isOpen={isOcrOpen}
-          onClose={() => setIsOcrOpen(false)}
+        <AnalyzeSheetModal
+          isOpen={isAnalyzeOpen}
+          onClose={() => setIsAnalyzeOpen(false)}
           sheet={currentSheet}
           existingItemsCount={takeoffItems.length}
+          previousCadCount={takeoffItems.filter((it) => it.sheetId === currentSheet.id && it.extractionSource === "cad_geometry").length}
           onAddItems={handleApplyExtractedItems}
+          onOpenAdvanced={openExtraction}
+          onOpenAi={() => setIsAiOpen(true)}
         />
       )}
 

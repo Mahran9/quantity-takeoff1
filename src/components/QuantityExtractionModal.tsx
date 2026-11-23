@@ -43,7 +43,7 @@ export interface QuantityExtractionModalProps {
   activeSheet?: BlueprintSheet;
   isOpen: boolean;
   onClose: () => void;
-  onAddExtractedItems?: (items: TakeoffItem[]) => void;
+  onAddExtractedItems?: (items: TakeoffItem[], opts?: { replaceSheetId?: string }) => void;
   onApplyTakeoffItems?: (items: TakeoffItem[]) => void;
   existingItemsCount?: number;
   /** Items already in the project (used to prevent restoring the same excluded hatch twice). */
@@ -88,9 +88,9 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
 }) => {
   const sheet = propSheet || activeSheet;
 
-  const handleAddItems = (items: TakeoffItem[]) => {
+  const handleAddItems = (items: TakeoffItem[], opts?: { replaceSheetId?: string }) => {
     if (onAddExtractedItems) {
-      onAddExtractedItems(items);
+      onAddExtractedItems(items, opts);
     } else if (onApplyTakeoffItems) {
       onApplyTakeoffItems(items);
     }
@@ -109,6 +109,7 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
   }, [sheet?.fileType]);
 
   // CAD Extraction Config
+  const [replacePrev, setReplacePrev] = useState(true);
   const [wallHeight, setWallHeight] = useState<number>(0);
   const [slabThickness, setSlabThickness] = useState<number>(0);
   const [floorSlabThickness, setFloorSlabThickness] = useState<number>(0);
@@ -332,6 +333,9 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
     setRestoredHatchIds((prev) => ({ ...prev, [rec.id]: true }));
   };
 
+  // Items from an earlier extraction of this same sheet: offer to replace them instead of duplicating
+  const prevCadCount = existingTakeoffItems.filter((it) => it.sheetId === sheet?.id && it.extractionSource === "cad_geometry").length;
+
   // Import CAD items
   const handleImportCadItems = () => {
     const itemsToImport: TakeoffItem[] = cadQuantities
@@ -373,7 +377,7 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
       });
 
     if (itemsToImport.length > 0) {
-      handleAddItems(itemsToImport);
+      handleAddItems(itemsToImport, replacePrev && prevCadCount > 0 ? { replaceSheetId: sheet.id } : undefined);
       onClose();
     }
   };
@@ -1457,7 +1461,13 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
             <span className="text-white font-semibold">{sheet.code} - {sheet.title}</span>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto flex-wrap">
+            {activeTab === "cad" && prevCadCount > 0 && (
+              <label className="w-full sm:w-auto flex items-center gap-2 text-xs text-amber-300 font-bold cursor-pointer">
+                <input type="checkbox" checked={replacePrev} onChange={(e) => setReplacePrev(e.target.checked)} />
+                حذف البنود المستخرجة سابقاً من هذه اللوحة ({prevCadCount}) قبل الإدراج
+              </label>
+            )}
             <button
               onClick={onClose}
               className="px-4 py-3 sm:py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-xl transition-colors"

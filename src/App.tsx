@@ -410,7 +410,7 @@ export default function App() {
     if (focusedItem?.id === itemId) setFocusedItem(null);
   };
 
-  const handleApplyExtractedItems = (newItems: TakeoffItem[]) => {
+  const handleApplyExtractedItems = (newItems: TakeoffItem[], opts?: { replaceSheetId?: string }) => {
     const dedupedRestores = newItems.filter((item) => {
       if (!item.restoredDeduplicatedId) return true;
       return !takeoffItems.some(
@@ -437,7 +437,12 @@ export default function App() {
     }));
     updateActiveProject((p) => ({
       ...p,
-      takeoffItems: [...stamped, ...p.takeoffItems],
+      takeoffItems: [
+        ...stamped,
+        ...p.takeoffItems.filter(
+          (it) => !(opts?.replaceSheetId && it.sheetId === opts.replaceSheetId && it.extractionSource === "cad_geometry")
+        ),
+      ],
     }));
   };
 

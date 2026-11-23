@@ -1,5 +1,5 @@
 import * as XLSX from "xlsx";
-import { buildXlsx, CellInput, CellStyle, downloadXlsx, SheetSpec } from "./xlsxWriter";
+import { buildXlsx, CellInput, CellStyle, colLetter, downloadXlsx, SheetSpec } from "./xlsxWriter";
 import { BlueprintSheet, CompanyProfile, EMPTY_COMPANY_PROFILE, ProjectMetadata, TakeoffItem } from "../types";
 import { getSiteExecutionRank, sortItemsBySiteExecutionOrder } from "./executionOrder";
 import { buildQuotation, isExportable, QUOTATION_LABELS, QuotationMeta } from "./quotation";
@@ -131,11 +131,22 @@ export function buildQuotationSheetSpec(
     return cells;
   };
 
+  const ar = meta.lang === "ar";
+  const side: "left" | "right" = ar ? "right" : "left";
   const companyName = (meta.lang === "en" ? company.nameEn || company.name : company.name || company.nameEn) || "";
   const titleStyle: CellStyle = { bold: true, fontSize: 16, color: C.white, fill: C.navy, align: "center", border: true };
-  rows.push(fillRow([{ v: [companyName, L.title].filter(Boolean).join(" — "), s: titleStyle }], titleStyle, 1));
+  rows.push(fillRow([{ v: L.title, s: titleStyle }], titleStyle, 1));
   mergeRow(0, 0, 5);
   heights[0] = 30;
+
+  const contact = [companyName, company.address, company.phone, company.email].filter(Boolean).join("  |  ");
+  if (contact) {
+    const r = rows.length;
+    const cs: CellStyle = { align: "center", fontSize: 10, color: "404040", border: true, wrap: true };
+    rows.push(fillRow([{ v: contact, s: cs }], cs, 1));
+    mergeRow(r, 0, 5);
+    heights[r] = contact.length > 90 ? 30 : 20;
+  }
 
   const info: [string, string][] = [
     [L.number, meta.number],
@@ -143,15 +154,22 @@ export function buildQuotationSheetSpec(
     [L.to, metadata.clientName],
     [L.project, metadata.projectName],
   ];
-  if (meta.subject) info.push([L.subject, meta.subject]);
+  if (meta.subject && meta.subject !== metadata.projectName) info.push([L.subject, meta.subject]);
   info.push([L.validity, `${meta.validityDays} ${L.days}`]);
   if (company.taxNumber) info.push([L.taxNumber, company.taxNumber]);
-  info.forEach(([k, v]) => {
-    const r = rows.length;
-    const vs: CellStyle = { align: meta.lang === "ar" ? "right" : "left", border: true };
-    rows.push(fillRow([{ v: k, s: { bold: true, fill: C.light, border: true, align: "center" } }, { v, s: vs }], vs, 2));
-    mergeRow(r, 1, 5);
-  });
+  if (company.crNumber) info.push([L.crNumber, company.crNumber]);
+  // No empty rows: lines without a value are simply left out.
+  info
+    .filter(([, v]) => String(v ?? "").trim() !== "")
+    .forEach(([k, v]) => {
+      const r = rows.length;
+      const ls: CellStyle = { bold: true, fill: C.light, border: true, align: side };
+      const vs: CellStyle = { border: true, align: side };
+      const cells: CellInput[] = [{ v: k, s: ls }, { v: "", s: ls }, { v, s: vs }, { v: "", s: vs }, { v: "", s: vs }, { v: "", s: vs }];
+      rows.push(cells);
+      mergeRow(r, 0, 1);
+      mergeRow(r, 2, 5);
+    });
 
   const hs: CellStyle = { bold: true, color: C.white, fill: C.blue, align: "center", border: true, wrap: true };
   const headerRow = rows.length;
@@ -169,6 +187,8 @@ export function buildQuotationSheetSpec(
       r = rows.length;
       const er = r + 1;
       const base: CellStyle = { border: true, valign: "center" };
+      const lines = Math.ceil((row.description || "").length / 54);
+      if (lines > 1) heights[r] = 15 * lines + 2;
       rows.push([
         { v: row.index, s: { ...base, align: "center" } },
         { v: row.description, s: { ...base, wrap: true, align: meta.lang === "ar" ? "right" : "left" } },
@@ -207,6 +227,39 @@ export function buildQuotationSheetSpec(
     mergeRow(r, 0, 4);
     heights[r] = grand ? 26 : 20;
   });
+
+  // Terms and conditions (from company settings) and the signature box, like the printed quotation.
+  const terms = (meta.lang === "en" ? company.termsTextEn : company.termsText || "")
+    ?.split("\n")
+    .map((t) => t.trim())
+    .filter(Boolean) || [];
+  if (terms.length) {
+    let r = rows.length;
+    const hs2: CellStyle = { bold: true, color: C.white, fill: C.navy, border: true, align: side };
+    rows.push(fillRow([{ v: L.terms, s: hs2 }], hs2, 1));
+    mergeRow(r, 0, 5);
+    terms.forEach((t, i) => {
+      r = rows.length;
+      const ts: CellStyle = { border: true, wrap: true, valign: "top", align: side };
+      rows.push(fillRow([{ v: `${i + 1}. ${t}`, s: ts }], ts, 1));
+      mergeRow(r, 0, 5);
+      heights[r] = 16 * Math.max(1, Math.ceil(t.length / 105)) + 4;
+    });
+  }
+  {
+    const r = rows.length;
+    const lab: CellStyle = { bold: true, border: true, align: "center", valign: "top", fill: C.light };
+    const box: CellStyle = { border: true, align: "center", valign: "bottom", wrap: true };
+    const who = [company.signatoryName, company.signatoryTitle].filter(Boolean).join(" - ");
+    const cells: CellInput[] = [
+      { v: who || companyName || L.signature, s: box }, { v: "", s: box }, { v: "", s: box },
+      { v: L.signature, s: lab }, { v: "", s: lab }, { v: "", s: lab },
+    ];
+    rows.push(cells);
+    mergeRow(r, 0, 2);
+    mergeRow(r, 3, 5);
+    heights[r] = 60;
+  }
 
   return {
     name,
@@ -249,37 +302,125 @@ export function exportQuotationExcel(
 /* Full workbook                                                       */
 /* ------------------------------------------------------------------ */
 
-function tableSheet(
+interface Col {
+  header: string;
+  width: number;
+  kind: "text" | "num" | "money";
+  /** Column is only written if at least one row has a meaningful value. */
+  optional?: boolean;
+  get: (item: TakeoffItem, i: number) => string | number | "";
+}
+
+const hasValue = (v: unknown) => v !== "" && v !== null && v !== undefined && v !== 0 && v !== "-";
+
+/** Table with only the columns that carry data (no empty columns), title bar, info line and totals. */
+function dynamicTableSheet(
   name: string,
-  headRows: CellInput[][],
-  header: string[],
-  body: CellInput[][],
-  footer: CellInput[][],
-  widths: number[],
-  numericCols: number[],
-  moneyCols: number[]
+  title: string,
+  infoLine: string,
+  cols: Col[],
+  items: TakeoffItem[],
+  totals: { taxRate?: number; sym: string; label: string }
 ): SheetSpec {
-  const hs: CellStyle = { bold: true, color: C.white, fill: C.blue, align: "center", border: true, wrap: true };
+  const active = cols.filter((c) => !c.optional || items.some((it, i) => hasValue(c.get(it, i))));
+  const n = active.length;
+  const idxOf = (h: string) => active.findIndex((c) => c.header === h);
   const rows: CellInput[][] = [];
-  headRows.forEach((r) => rows.push(r.map((v) => (v === "" || v == null ? null : typeof v === "object" ? v : { v, s: { bold: true } }))));
-  const headerIdx = rows.length;
-  rows.push(header.map((v) => ({ v, s: hs })));
-  body.forEach((row) =>
-    rows.push(
-      row.map((v, c) => ({
-        v: v as string | number,
+  const merges: NonNullable<SheetSpec["merges"]> = [];
+  const heights: Record<number, number> = {};
+  const fill = (cells: CellInput[], st: CellStyle) => {
+    for (let c = 0; c < n; c++) if (cells[c] === undefined) cells[c] = { v: "", s: st };
+    return cells;
+  };
+
+  const ts: CellStyle = { bold: true, fontSize: 14, color: C.white, fill: C.navy, align: "center", border: true };
+  rows.push(fill([{ v: title, s: ts }], ts));
+  merges.push({ r1: 0, c1: 0, r2: 0, c2: n - 1 });
+  heights[0] = 28;
+  if (infoLine) {
+    const is: CellStyle = { align: "right", border: true, fill: C.light, wrap: true };
+    rows.push(fill([{ v: infoLine, s: is }], is));
+    merges.push({ r1: 1, c1: 0, r2: 1, c2: n - 1 });
+    heights[1] = infoLine.length > 110 ? 32 : 20;
+  }
+
+  const hs: CellStyle = { bold: true, color: C.white, fill: C.blue, align: "center", border: true, wrap: true, valign: "center" };
+  const headerRow = rows.length;
+  rows.push(active.map((c) => ({ v: c.header, s: hs })));
+  heights[headerRow] = 26;
+
+  const qtyI = idxOf("الكمية");
+  const priceI = idxOf(`سعر الوحدة (${totals.sym})`);
+  const totI = idxOf(`الإجمالي (${totals.sym})`);
+  const first = rows.length + 1;
+  let sum = 0;
+  items.forEach((item, i) => {
+    const r = rows.length;
+    const er = r + 1;
+    const cells: CellInput[] = active.map((c) => {
+      const v = c.get(item, i);
+      const long = typeof v === "string" && v.length > c.width;
+      return {
+        v,
         s: {
           border: true,
           valign: "center" as const,
-          wrap: typeof v === "string" && v.length > 28,
-          align: numericCols.includes(c) ? ("center" as const) : undefined,
-          numFmt: moneyCols.includes(c) ? MONEY : undefined,
+          wrap: c.kind === "text",
+          align: c.kind === "text" ? ("right" as const) : ("center" as const),
+          numFmt: c.kind === "money" ? MONEY : undefined,
         },
-      }))
-    )
-  );
-  footer.forEach((row) => rows.push(row));
-  return { name, rows, colWidths: widths, rtl: true, freezeRows: headerIdx + 1, landscape: true, rowHeights: { [headerIdx]: 28 } };
+        ...(long ? {} : {}),
+      } as CellInput;
+    });
+    if (qtyI >= 0 && priceI >= 0 && totI >= 0) {
+      const qty = Number(((item.quantity as number) || 0).toFixed(2));
+      const price = Number(((item.unitPrice as number) || 0).toFixed(2));
+      const total = Number((qty * price).toFixed(2));
+      sum += total;
+      (cells[totI] as any).f = `ROUND(ROUND(${colLetter(qtyI)}${er}*${colLetter(priceI)}${er}*100,4),0)/100`;
+      (cells[totI] as any).v = total;
+    }
+    const descLen = Math.max(...active.map((c, k) => (c.kind === "text" ? String(c.get(item, i) ?? "").length / Math.max(8, c.width) : 0)));
+    if (descLen > 1) heights[r] = 15 * Math.ceil(descLen) + 3;
+    rows.push(cells);
+  });
+  const last = rows.length;
+
+  if (totI >= 0 && items.length) {
+    sum = Number(sum.toFixed(2));
+    const tax = totals.taxRate ? Number(((sum * totals.taxRate) / 100).toFixed(2)) : 0;
+    const grand = Number((sum + tax).toFixed(2));
+    const totalStyle: CellStyle = { bold: true, fill: C.light, border: true, numFmt: MONEY, align: "center" };
+    const labelStyle: CellStyle = { ...totalStyle, numFmt: undefined, align: "right" };
+    const addRow = (label: string, v: number, f: string, st: CellStyle, ls: CellStyle, h?: number) => {
+      const r = rows.length;
+      const cells: CellInput[] = [{ v: label, s: ls }];
+      for (let c = 1; c < totI; c++) cells[c] = { v: "", s: ls };
+      cells[totI] = { v, f, s: st };
+      rows.push(cells);
+      if (totI > 0) merges.push({ r1: r, c1: 0, r2: r, c2: totI - 1 });
+      if (h) heights[r] = h;
+      return r + 1;
+    };
+    const T = colLetter(totI);
+    const subR = addRow(totals.label, sum, `ROUND(SUM(${T}${first}:${T}${last}),2)`, totalStyle, labelStyle);
+    if (totals.taxRate) {
+      const taxR = addRow(`ضريبة القيمة المضافة (${totals.taxRate}%)`, tax, `ROUND(ROUND(${T}${subR}*${totals.taxRate},4),0)/100`, totalStyle, labelStyle);
+      const gs: CellStyle = { ...totalStyle, color: C.gold, fill: C.black, fontSize: 12 };
+      addRow("الإجمالي شامل الضريبة", grand, `ROUND(${T}${subR}+${T}${taxR},2)`, gs, { ...gs, numFmt: undefined, align: "right" }, 24);
+    }
+  }
+
+  return {
+    name,
+    rows,
+    merges,
+    colWidths: active.map((c) => c.width),
+    rtl: true,
+    freezeRows: headerRow + 1,
+    landscape: n > 7,
+    rowHeights: heights,
+  };
 }
 
 export function buildBoqWorkbookBytes(
@@ -292,132 +433,82 @@ export function buildBoqWorkbookBytes(
   const takeoffItems = allItems.filter(isExportable);
   const used = new Set<string>();
   const qm = defaultQuotationMeta(metadata, company);
-  const contractor = metadata.contractorName || company.name || "";
   const specs: SheetSpec[] = [];
+  const sym = metadata.currencySymbol;
 
   specs.push(
     buildQuotationSheetSpec(metadata, company, takeoffItems, qm, uniqueSheetName(QUOTATION_LABELS[qm.lang].sheetName, used))
   );
 
-  const totalStyle: CellStyle = { bold: true, fill: C.light, border: true, numFmt: MONEY, align: "center" };
+  const infoLine = [
+    metadata.projectName && `المشروع: ${metadata.projectName}`,
+    metadata.projectCode && `الكود: ${metadata.projectCode}`,
+    metadata.clientName && `العميل: ${metadata.clientName}`,
+    metadata.consultantName && `الاستشاري: ${metadata.consultantName}`,
+    metadata.date && `التاريخ: ${metadata.date}`,
+  ]
+    .filter(Boolean)
+    .join("   |   ");
+
+  const pending = takeoffItems.some((i) => !(i.reviewStatus === "approved" || i.isVerified));
+  const sheetOf = (item: TakeoffItem) => sheets.find((s) => s.id === item.sheetId);
+  const q2 = (n: unknown) => Number((Number(n || 0)).toFixed(2));
+
+  // Detailed table across all drawings (execution order).
   const ordered = sortItemsBySiteExecutionOrder(takeoffItems);
-  const masterBody: CellInput[][] = [];
-  let subtotalCost = 0;
-  ordered.forEach((item, i) => {
-    const parentSheet = sheets.find((s) => s.id === item.sheetId);
-    const qty = Number((item.quantity || 0).toFixed(2));
-    const price = Number((item.unitPrice || 0).toFixed(2));
-    const itemTotal = Number((qty * price).toFixed(2));
-    subtotalCost += itemTotal;
-    masterBody.push([
-      i + 1,
-      item.itemCode || "",
-      parentSheet?.code || item.sheetCode || "",
-      parentSheet?.title || "لوحة عامة",
-      parentSheet?.discipline || "",
-      dimName(item.dimensionType),
-      item.category || "",
-      item.description || "",
-      item.location || "",
-      item.formula || "",
-      item.deduction || 0,
-      qty,
-      item.unit || "",
-      price,
-      itemTotal,
-      sourceLabel(item),
-      item.reviewStatus === "approved" || item.isVerified ? "معتمد" : "قيد المراجعة",
-      item.notes || "",
-    ]);
-  });
-  subtotalCost = Number(subtotalCost.toFixed(2));
-  const taxAmount = Number(((subtotalCost * metadata.taxRate) / 100).toFixed(2));
-  const grand = Number((subtotalCost + taxAmount).toFixed(2));
-  const first = 6; // header is on row 5
-  const lastRow = first + masterBody.length - 1;
-  const pad = (label: string, v: number, f?: string, st: CellStyle = totalStyle): CellInput[] => {
-    const r: CellInput[] = Array(18).fill(null);
-    r[13] = { v: label, s: { ...st, numFmt: undefined } };
-    r[14] = { v, f, s: st };
-    return r;
-  };
-  const sumRow = first + masterBody.length;
+  const master: Col[] = [
+    { header: "م", width: 6, kind: "num", get: (_i, k) => k + 1 },
+    { header: "اللوحة", width: 12, kind: "text", optional: true, get: (i) => sheetOf(i)?.code || i.sheetCode || "" },
+    { header: "تصنيف الأعمال", width: 24, kind: "text", get: (i) => i.category || "" },
+    { header: "وصف البند والمواصفات", width: 46, kind: "text", get: (i) => i.description || "" },
+    { header: "الموقع / المحاور", width: 18, kind: "text", optional: true, get: (i) => i.location || "" },
+    { header: "معادلة الحساب", width: 24, kind: "text", optional: true, get: (i) => i.formula || "" },
+    { header: "الخصومات", width: 10, kind: "num", optional: true, get: (i) => i.deduction || 0 },
+    { header: "الكمية", width: 12, kind: "money", get: (i) => q2(i.quantity) },
+    { header: "الوحدة", width: 9, kind: "text", get: (i) => i.unit || "" },
+    { header: `سعر الوحدة (${sym})`, width: 14, kind: "money", get: (i) => q2(i.unitPrice) },
+    { header: `الإجمالي (${sym})`, width: 16, kind: "money", get: (i) => q2(q2(i.quantity) * q2(i.unitPrice)) },
+    { header: "المصدر", width: 18, kind: "text", optional: true, get: (i) => sourceLabel(i) },
+    { header: "المراجعة", width: 12, kind: "text", optional: true, get: (i) => (pending ? (i.reviewStatus === "approved" || i.isVerified ? "معتمد" : "قيد المراجعة") : "") },
+    { header: "ملاحظات", width: 28, kind: "text", optional: true, get: (i) => i.notes || "" },
+  ];
   specs.push(
-    tableSheet(
-      uniqueSheetName("جدول الكميات العام", used),
-      [
-        ["مشروع:", metadata.projectName, "", "كود المشروع:", metadata.projectCode],
-        ["المالك / العميل:", metadata.clientName, "", "الاستشاري:", metadata.consultantName],
-        ["المقاول العام:", contractor, "", "التاريخ:", metadata.date],
-        ["العملة:", metadata.currencySymbol, "", "معدل الضريبة:", `${metadata.taxRate}%`],
-      ],
-      [
-        "م", "كود البند", "رمز اللوحة", "اسم المخطط الهندسي", "التخصص", "نوع القياس الهندسي", "تصنيف الأعمال",
-        "وصف البند والمواصفات الفنية", "الموقع / المحاور", "معادلة الحساب", "الخصومات", "الكمية الصافية", "الوحدة",
-        `سعر الوحدة (${metadata.currencySymbol})`, `الإجمالي (${metadata.currencySymbol})`, "مصدر الحصر", "حالة المراجعة", "ملاحظات هندسية",
-      ],
-      masterBody,
-      [
-        pad("الإجمالي قبل الضريبة", subtotalCost, masterBody.length ? `ROUND(SUM(O${first}:O${lastRow}),2)` : undefined),
-        pad(`ضريبة القيمة المضافة (${metadata.taxRate}%)`, taxAmount, `ROUND(ROUND(O${sumRow}*${metadata.taxRate},4),0)/100`),
-        pad("الإجمالي العام النهائي", grand, `ROUND(O${sumRow}+O${sumRow + 1},2)`, { ...totalStyle, color: C.gold, fill: C.black }),
-      ],
-      [6, 14, 12, 22, 14, 16, 22, 50, 20, 24, 10, 14, 10, 14, 16, 16, 14, 30],
-      [0, 10, 11, 13],
-      [13, 14]
-    )
+    dynamicTableSheet(uniqueSheetName("جدول الكميات", used), "جدول الكميات التفصيلي", infoLine, master, ordered, {
+      taxRate: metadata.taxRate,
+      sym,
+      label: "الإجمالي قبل الضريبة",
+    })
   );
 
+  // One compact sheet per drawing.
   sheets.forEach((sheet) => {
     const sheetItems = takeoffItems.filter((i) => i.sheetId === sheet.id);
-    let sheetTotal = 0;
-    const body: CellInput[][] = sheetItems.map((item, idx) => {
-      const qty = Number((item.quantity || 0).toFixed(2));
-      const price = Number((item.unitPrice || 0).toFixed(2));
-      const total = Number((qty * price).toFixed(2));
-      sheetTotal += total;
-      return [
-        idx + 1,
-        item.itemCode || "",
-        dimName(item.dimensionType),
-        item.category || "",
-        item.description || "",
-        item.location || "",
-        item.count || 1,
-        item.length ?? "",
-        item.width ?? "",
-        item.height ?? "",
-        item.formula || "",
-        item.deduction || 0,
-        qty,
-        item.unit || "",
-        price,
-        total,
-        [item.extractionSource === "cad_geometry" ? `[CAD: ${item.sourceDetails?.layer || "Geometry"}]` : "", item.notes || ""]
-          .filter(Boolean)
-          .join(" "),
-      ];
-    });
-    const foot: CellInput[] = Array(17).fill(null);
-    foot[14] = { v: "إجمالي كميات اللوحة", s: { ...totalStyle, numFmt: undefined } };
-    foot[15] = { v: Number(sheetTotal.toFixed(2)), s: totalStyle };
+    if (sheetItems.length === 0) return;
+    const per: Col[] = [
+      { header: "م", width: 6, kind: "num", get: (_i, k) => k + 1 },
+      { header: "تصنيف الأعمال", width: 22, kind: "text", get: (i) => i.category || "" },
+      { header: "وصف البند والمواصفة", width: 44, kind: "text", get: (i) => i.description || "" },
+      { header: "الموقع والمحاور", width: 18, kind: "text", optional: true, get: (i) => i.location || "" },
+      { header: "العدد", width: 8, kind: "num", optional: true, get: (i) => (i.count && i.count !== 1 ? i.count : "") },
+      { header: "الطول (م)", width: 10, kind: "money", optional: true, get: (i) => i.length ?? "" },
+      { header: "العرض (م)", width: 10, kind: "money", optional: true, get: (i) => i.width ?? "" },
+      { header: "الارتفاع (م)", width: 11, kind: "money", optional: true, get: (i) => i.height ?? "" },
+      { header: "معادلة الحساب", width: 24, kind: "text", optional: true, get: (i) => i.formula || "" },
+      { header: "الخصم", width: 9, kind: "num", optional: true, get: (i) => i.deduction || 0 },
+      { header: "الكمية", width: 12, kind: "money", get: (i) => q2(i.quantity) },
+      { header: "الوحدة", width: 9, kind: "text", get: (i) => i.unit || "" },
+      { header: `سعر الوحدة (${sym})`, width: 14, kind: "money", get: (i) => q2(i.unitPrice) },
+      { header: `الإجمالي (${sym})`, width: 16, kind: "money", get: (i) => q2(q2(i.quantity) * q2(i.unitPrice)) },
+      { header: "ملاحظات", width: 26, kind: "text", optional: true, get: (i) => [i.extractionSource === "cad_geometry" ? `[CAD: ${i.sourceDetails?.layer || "Geometry"}]` : "", i.notes || ""].filter(Boolean).join(" ") },
+    ];
     specs.push(
-      tableSheet(
+      dynamicTableSheet(
         uniqueSheetName(`${sheet.code} ${sheet.discipline}`, used),
-        [
-          ["المخطط الهندسي:", `${sheet.code} - ${sheet.title}`, "التخصص:", sheet.discipline, "مقياس الرسم:", sheet.scale],
-          ["اسم الملف المصدري:", sheet.fileName, "تاريخ الحصر:", metadata.date],
-        ],
-        [
-          "ت", "كود البند", "نوع القياس", "تصنيف الأعمال", "وصف البند والمواصفة الفنية", "الموقع والمحاور", "العدد", "الطول (م)",
-          "العرض (م)", "الارتفاع/السمك (م)", "معادلة الحساب", "الخصم", "الكمية الصافية", "الوحدة",
-          `سعر الوحدة (${metadata.currencySymbol})`, `الإجمالي (${metadata.currencySymbol})`, "الملاحظات ومصدر الحصر",
-        ],
-        body,
-        [foot],
-        [6, 14, 16, 22, 48, 20, 8, 11, 11, 14, 24, 9, 14, 10, 14, 16, 30],
-        [0, 6, 7, 8, 9, 11, 12, 14, 15],
-        [7, 8, 9, 11, 12, 14, 15]
+        `${sheet.code} - ${sheet.title}`,
+        [`التخصص: ${sheet.discipline}`, sheet.scale && `المقياس: ${sheet.scale}`, sheet.fileName && `الملف: ${sheet.fileName}`].filter(Boolean).join("   |   "),
+        per,
+        sheetItems,
+        { sym, label: "إجمالي اللوحة" }
       )
     );
   });

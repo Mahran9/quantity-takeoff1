@@ -33,7 +33,7 @@ export async function renderPdfPage(
   pageNumber: number = 1,
   scale: number = 2.0
 ): Promise<PdfPageRenderResult> {
-  const loadingTask = pdfjsLib.getDocument({ data: fileData });
+  const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(fileData.slice(0)) });
   const pdfDoc = await loadingTask.promise;
   try {
     return await renderLoadedPage(pdfDoc, pageNumber, scale);
@@ -176,7 +176,7 @@ export { parsePdfEngineeringText } from "./pdfText";
 
 export async function getPdfPageCount(fileData: ArrayBuffer): Promise<number> {
   try {
-    const loadingTask = pdfjsLib.getDocument({ data: fileData });
+    const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(fileData.slice(0)) });
     const pdfDoc = await loadingTask.promise;
     const n = pdfDoc.numPages;
     await loadingTask.destroy().catch(() => undefined);

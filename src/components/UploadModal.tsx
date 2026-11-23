@@ -96,7 +96,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
         const createdSheets: BlueprintSheet[] = [];
 
         for (let p = start; p <= end; p++) {
-          const rendered = await renderPdfPage(pdfArrayBuffer.slice(0), p, 1.8);
+          const rendered = await renderPdfPage(pdfArrayBuffer, p, 1.8);
           createdSheets.push({
             id: `sheet-${Date.now()}-p${p}`,
             code: `${sheetCode || "PLN"}-P${p}`,
@@ -149,7 +149,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
         dxfRawSummary = parsed;
         dxfLayers = parsed.layers;
       } else if (fileType === "pdf" && pdfArrayBuffer) {
-        const rendered = await renderPdfPage(pdfArrayBuffer.slice(0), selectedPage, 2.0);
+        const rendered = await renderPdfPage(pdfArrayBuffer, selectedPage, 2.0);
         imageUrl = rendered.dataUrl;
         pdfTextContent = rendered.extractedText;
         visualTokens = rendered.visualTokens;

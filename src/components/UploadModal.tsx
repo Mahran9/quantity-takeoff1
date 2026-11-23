@@ -54,12 +54,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
     const cleanName = selected.name.replace(/\.[^/.]+$/, "");
     if (!sheetTitle) setSheetTitle(cleanName);
 
-    if (ext === "dwg") {
-      setError("ملفات DWG بصيغة AutoCAD الثنائية غير مدعومة. افتح الملف في AutoCAD واختر: حفظ باسم ← DXF (إصدار 2000/2004/2013 ASCII)، أو صدّره PDF بخطوط متجهة.");
-      setFile(null);
-      return;
-    }
-    if (ext === "dxf") {
+    if (ext === "dxf" || ext === "dwg") {
       setFileType("dxf");
       setSheetCode("CAD-01");
     } else if (ext === "pdf") {
@@ -134,7 +129,19 @@ export const UploadModal: React.FC<UploadModalProps> = ({
       let visualTokens: any = undefined;
       let pdfVector: any = undefined;
 
-      if (fileType === "dxf") {
+      const isDwg = /\.dwg$/i.test(file.name);
+      if (fileType === "dxf" && isDwg) {
+        if (file.size > 150 * 1024 * 1024) {
+          throw new Error("ملف DWG كبير جداً (أكثر من 150 م.ب). احفظه DXF بطبقات أقل ثم أعد المحاولة.");
+        }
+        const { readDwgFile } = await import("../utils/dwgReader");
+        const { result: parsedDwg } = await readDwgFile(await file.arrayBuffer());
+        if (!parsedDwg.layers || parsedDwg.layers.length === 0) {
+          throw new Error("لم يُعثر على طبقات في ملف DWG. احفظه DXF أو صدّره PDF.");
+        }
+        dxfRawSummary = parsedDwg;
+        dxfLayers = parsedDwg.layers;
+      } else if (fileType === "dxf") {
         if (file.size > 150 * 1024 * 1024) {
           throw new Error("ملف DXF كبير جداً (أكثر من 150 م.ب). صدّره بطبقات أقل أو قسّمه ثم أعد المحاولة.");
         }
@@ -217,19 +224,25 @@ export const UploadModal: React.FC<UploadModalProps> = ({
 
         <div className="p-6 space-y-4">
           <label className="block border-2 border-dashed border-slate-300 hover:border-amber-400 rounded-2xl p-6 text-center cursor-pointer bg-slate-50 transition-all">
-            <input type="file" accept=".pdf,.dxf,.png,.jpg,.jpeg,.webp" onChange={handleFileChange} className="hidden" />
+            <input type="file" accept=".pdf,.dxf,.dwg,.png,.jpg,.jpeg,.webp" onChange={handleFileChange} className="hidden" />
             <div className="flex justify-center gap-3 mb-2 text-slate-400">
               <FileText className="w-6 h-6 text-rose-500" />
               <FileCode2 className="w-6 h-6 text-cyan-600" />
               <ImageIcon className="w-6 h-6 text-emerald-600" />
             </div>
             <div className="text-sm font-bold text-slate-800">
-              {file ? file.name : "انقر لاختيار ملف المخطط (PDF / DXF / صورة)"}
+              {file ? file.name : "اختر ملف المخطط"}
             </div>
             <div className="text-xs text-slate-500 mt-1">
-              يتم فهرسة النصوص تلقائياً لمحرك البحث البصري المحلي بدون إنترنت
+              PDF · DXF · DWG · صورة — تتم القراءة على جهازك بدون إنترنت
             </div>
           </label>
+
+          {file && /\.dwg$/i.test(file.name) && (
+            <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 leading-6">
+              قراءة DWG مباشرة <b>تجريبية</b>. راجع الطبقات والكميات قبل الاعتماد، وإن بدت الأرقام غريبة فاحفظ الملف DXF من AutoCAD وأعد رفعه.
+            </div>
+          )}
 
           {fileType === "pdf" && pdfTotalPages > 1 && (
             <div className="p-4 rounded-2xl bg-cyan-50 border border-cyan-200 space-y-3">

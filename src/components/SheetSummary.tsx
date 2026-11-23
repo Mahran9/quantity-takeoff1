@@ -88,12 +88,15 @@ export const SheetSummary: React.FC<Props> = ({ sheet, items, currencySymbol, on
           onClick={onExportExcel}
           disabled={live.length === 0}
           title={live.length === 0 ? "احصر الكميات أولاً" : "تصدير جدول الكميات Excel"}
-          className="col-span-1 flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-3 text-sm font-bold text-white transition hover:bg-emerald-500 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+          className="col-span-1 flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-3 py-3 text-sm font-bold text-white transition hover:bg-slate-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
         >
           <FileSpreadsheet className="w-5 h-5" />
           <span><span className="hidden sm:inline">③ </span>Excel</span>
         </button>
       </div>
+      {live.length === 0 && (
+        <p className="mt-2 text-[11px] text-slate-500">زر Excel يعمل بعد إدراج بنود: ابدأ بـ «حصر الكميات من الملف» ثم أدرج ما تريده.</p>
+      )}
 
       <div className={`mt-3 flex items-start gap-2 rounded-xl border px-3 py-2 text-xs leading-relaxed ${toneCls}`}>
         {reading.tone === "ok" ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /> : reading.tone === "warn" ? <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> : <ScanLine className="mt-0.5 h-4 w-4 shrink-0" />}

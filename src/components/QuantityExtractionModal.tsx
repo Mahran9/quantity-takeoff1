@@ -667,6 +667,150 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
               </div>
             )}
 
+            {/* CAD Extracted Table */}
+            <div className="sm:hidden space-y-2">
+              {filteredCadItems.length === 0 ? (
+                <div className="p-6 text-center text-slate-400 text-sm border border-slate-700 rounded-xl">
+                  لا توجد عناصر مطابقة لهذا النوع في الملف.
+                </div>
+              ) : (
+                filteredCadItems.map((item) => {
+                  const isSelected = Boolean(selectedItems[item.id]);
+                  return (
+                    <button
+                      key={`m-${item.id}`}
+                      type="button"
+                      onClick={() => setSelectedItems((prev) => ({ ...prev, [item.id]: !prev[item.id] }))}
+                      className={`w-full text-right rounded-xl border p-3 flex items-start gap-3 transition-colors ${
+                        isSelected ? "border-amber-500/60 bg-amber-950/30" : "border-slate-700 bg-slate-900"
+                      }`}
+                    >
+                      {isSelected ? (
+                        <CheckSquare className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                      ) : (
+                        <EmptySquare className="w-5 h-5 text-slate-500 shrink-0 mt-0.5" />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-semibold text-white leading-snug">{item.description}</div>
+                        <div className="mt-1 text-[11px] text-slate-400 font-mono truncate">{item.layer}</div>
+                        <div className="mt-1 text-[11px] text-slate-500 truncate">{item.suggestedCategory}</div>
+                      </div>
+                      <div className="text-left shrink-0">
+                        <div className="font-mono font-bold text-emerald-400 text-base leading-none">
+                          {item.value.toLocaleString("ar-SA", { maximumFractionDigits: 2 })}
+                        </div>
+                        <div className="text-[11px] text-slate-300 mt-1">{item.unit}</div>
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+            <div className="hidden sm:block border border-slate-700 rounded-xl overflow-hidden bg-slate-900">
+              <div className="overflow-x-auto">
+                <table className="w-full text-right text-xs">
+                  <thead className="bg-slate-800/90 text-slate-300 border-b border-slate-700">
+                    <tr>
+                      <th className="p-3 w-10 text-center">اختيار</th>
+                      <th className="p-3">نوع الكمية</th>
+                      <th className="p-3">طبقة / بلوك الأوتوكاد</th>
+                      <th className="p-3">الوصف الهندسي المقترح</th>
+                      <th className="p-3">معادلة الحساب الهندسية</th>
+                      <th className="p-3 text-center">الكمية الصافية</th>
+                      <th className="p-3 text-center">الوحدة</th>
+                      <th className="p-3">التصنيف</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800">
+                    {filteredCadItems.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="p-8 text-center text-slate-400">
+                          لا توجد عناصر هندسية مطابقة لهذا النوع في ملف الأوتوكاد.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredCadItems.map((item) => {
+                        const isSelected = Boolean(selectedItems[item.id]);
+                        return (
+                          <tr
+                            key={item.id}
+                            className={`hover:bg-slate-800/50 transition-colors ${
+                              isSelected ? "bg-amber-950/20" : ""
+                            }`}
+                          >
+                            <td className="p-3 text-center">
+                              <button
+                                onClick={() =>
+                                  setSelectedItems((prev) => ({
+                                    ...prev,
+                                    [item.id]: !prev[item.id],
+                                  }))
+                                }
+                                className="text-slate-400 hover:text-white"
+                              >
+                                {isSelected ? (
+                                  <CheckSquare className="w-4 h-4 text-amber-400" />
+                                ) : (
+                                  <EmptySquare className="w-4 h-4" />
+                                )}
+                              </button>
+                            </td>
+
+                            <td className="p-3">
+                              {item.type === "volume" && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[11px] font-semibold">
+                                  <Box className="w-3 h-3" /> حجوم (م³)
+                                </span>
+                              )}
+                              {item.type === "area" && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[11px] font-semibold">
+                                  <Square className="w-3 h-3" /> مساحات (م²)
+                                </span>
+                              )}
+                              {item.type === "linear" && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[11px] font-semibold">
+                                  <Ruler className="w-3 h-3" /> أطوال (م.ط)
+                                </span>
+                              )}
+                              {item.type === "count" && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[11px] font-semibold">
+                                  <Hash className="w-3 h-3" /> أعداد (عدد)
+                                </span>
+                              )}
+                            </td>
+
+                            <td className="p-3 font-mono text-slate-300 text-xs">
+                              {item.layer}
+                            </td>
+
+                            <td className="p-3 font-medium text-white max-w-xs truncate">
+                              {item.description}
+                            </td>
+
+                            <td className="p-3 font-mono text-slate-400 text-[11px] max-w-sm truncate" dir="ltr">
+                              {item.formula}
+                            </td>
+
+                            <td className="p-3 text-center font-mono font-bold text-emerald-400 text-sm">
+                              {item.value.toLocaleString("ar-SA", { maximumFractionDigits: 2 })}
+                            </td>
+
+                            <td className="p-3 text-center text-slate-300 font-semibold">
+                              {item.unit}
+                            </td>
+
+                            <td className="p-3 text-slate-400 text-[11px] max-w-[140px] truncate">
+                              {item.suggestedCategory}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
             {/* Geometric Config Toolbar */}
             <details className="group bg-slate-800/60 border border-slate-700/80 rounded-xl p-4">
               <summary className="flex items-center gap-2 text-xs font-bold text-slate-300 cursor-pointer list-none">
@@ -1099,149 +1243,6 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
               </div>
             )}
 
-            {/* CAD Extracted Table */}
-            <div className="sm:hidden space-y-2">
-              {filteredCadItems.length === 0 ? (
-                <div className="p-6 text-center text-slate-400 text-sm border border-slate-700 rounded-xl">
-                  لا توجد عناصر مطابقة لهذا النوع في الملف.
-                </div>
-              ) : (
-                filteredCadItems.map((item) => {
-                  const isSelected = Boolean(selectedItems[item.id]);
-                  return (
-                    <button
-                      key={`m-${item.id}`}
-                      type="button"
-                      onClick={() => setSelectedItems((prev) => ({ ...prev, [item.id]: !prev[item.id] }))}
-                      className={`w-full text-right rounded-xl border p-3 flex items-start gap-3 transition-colors ${
-                        isSelected ? "border-amber-500/60 bg-amber-950/30" : "border-slate-700 bg-slate-900"
-                      }`}
-                    >
-                      {isSelected ? (
-                        <CheckSquare className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-                      ) : (
-                        <EmptySquare className="w-5 h-5 text-slate-500 shrink-0 mt-0.5" />
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-semibold text-white leading-snug">{item.description}</div>
-                        <div className="mt-1 text-[11px] text-slate-400 font-mono truncate">{item.layer}</div>
-                        <div className="mt-1 text-[11px] text-slate-500 truncate">{item.suggestedCategory}</div>
-                      </div>
-                      <div className="text-left shrink-0">
-                        <div className="font-mono font-bold text-emerald-400 text-base leading-none">
-                          {item.value.toLocaleString("ar-SA", { maximumFractionDigits: 2 })}
-                        </div>
-                        <div className="text-[11px] text-slate-300 mt-1">{item.unit}</div>
-                      </div>
-                    </button>
-                  );
-                })
-              )}
-            </div>
-            <div className="hidden sm:block border border-slate-700 rounded-xl overflow-hidden bg-slate-900">
-              <div className="overflow-x-auto">
-                <table className="w-full text-right text-xs">
-                  <thead className="bg-slate-800/90 text-slate-300 border-b border-slate-700">
-                    <tr>
-                      <th className="p-3 w-10 text-center">اختيار</th>
-                      <th className="p-3">نوع الكمية</th>
-                      <th className="p-3">طبقة / بلوك الأوتوكاد</th>
-                      <th className="p-3">الوصف الهندسي المقترح</th>
-                      <th className="p-3">معادلة الحساب الهندسية</th>
-                      <th className="p-3 text-center">الكمية الصافية</th>
-                      <th className="p-3 text-center">الوحدة</th>
-                      <th className="p-3">التصنيف</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800">
-                    {filteredCadItems.length === 0 ? (
-                      <tr>
-                        <td colSpan={8} className="p-8 text-center text-slate-400">
-                          لا توجد عناصر هندسية مطابقة لهذا النوع في ملف الأوتوكاد.
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredCadItems.map((item) => {
-                        const isSelected = Boolean(selectedItems[item.id]);
-                        return (
-                          <tr
-                            key={item.id}
-                            className={`hover:bg-slate-800/50 transition-colors ${
-                              isSelected ? "bg-amber-950/20" : ""
-                            }`}
-                          >
-                            <td className="p-3 text-center">
-                              <button
-                                onClick={() =>
-                                  setSelectedItems((prev) => ({
-                                    ...prev,
-                                    [item.id]: !prev[item.id],
-                                  }))
-                                }
-                                className="text-slate-400 hover:text-white"
-                              >
-                                {isSelected ? (
-                                  <CheckSquare className="w-4 h-4 text-amber-400" />
-                                ) : (
-                                  <EmptySquare className="w-4 h-4" />
-                                )}
-                              </button>
-                            </td>
-
-                            <td className="p-3">
-                              {item.type === "volume" && (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[11px] font-semibold">
-                                  <Box className="w-3 h-3" /> حجوم (م³)
-                                </span>
-                              )}
-                              {item.type === "area" && (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[11px] font-semibold">
-                                  <Square className="w-3 h-3" /> مساحات (م²)
-                                </span>
-                              )}
-                              {item.type === "linear" && (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[11px] font-semibold">
-                                  <Ruler className="w-3 h-3" /> أطوال (م.ط)
-                                </span>
-                              )}
-                              {item.type === "count" && (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[11px] font-semibold">
-                                  <Hash className="w-3 h-3" /> أعداد (عدد)
-                                </span>
-                              )}
-                            </td>
-
-                            <td className="p-3 font-mono text-slate-300 text-xs">
-                              {item.layer}
-                            </td>
-
-                            <td className="p-3 font-medium text-white max-w-xs truncate">
-                              {item.description}
-                            </td>
-
-                            <td className="p-3 font-mono text-slate-400 text-[11px] max-w-sm truncate" dir="ltr">
-                              {item.formula}
-                            </td>
-
-                            <td className="p-3 text-center font-mono font-bold text-emerald-400 text-sm">
-                              {item.value.toLocaleString("ar-SA", { maximumFractionDigits: 2 })}
-                            </td>
-
-                            <td className="p-3 text-center text-slate-300 font-semibold">
-                              {item.unit}
-                            </td>
-
-                            <td className="p-3 text-slate-400 text-[11px] max-w-[140px] truncate">
-                              {item.suggestedCategory}
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
           </div>
         )}
 

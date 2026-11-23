@@ -8,20 +8,20 @@ interface Props {
 
 /** Shown when the project has no drawings yet. Nothing is pre-filled. */
 export const EmptyWorkspace: React.FC<Props> = ({ onOpenUpload, onOpenProjects }) => (
-  <section className="qto-rise-in mx-auto w-full max-w-xl text-center rounded-3xl border border-slate-800 bg-slate-900/80 px-5 py-10 sm:py-14 shadow-xl">
+  <section className="qto-rise-in mx-auto w-full max-w-xl text-center rounded-3xl border border-slate-200 bg-white px-5 py-9 sm:py-14 shadow-sm">
     <div className="mx-auto mb-5 flex items-center justify-center gap-3">
-      <span className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center">
-        <FileText className="w-6 h-6 text-rose-400" />
+      <span className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center">
+        <FileText className="w-6 h-6 text-rose-500" />
       </span>
-      <span className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
-        <FileCode2 className="w-6 h-6 text-cyan-400" />
+      <span className="w-12 h-12 rounded-2xl bg-cyan-50 border border-cyan-100 flex items-center justify-center">
+        <FileCode2 className="w-6 h-6 text-cyan-600" />
       </span>
-      <span className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-        <ImageIcon className="w-6 h-6 text-emerald-400" />
+      <span className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center">
+        <ImageIcon className="w-6 h-6 text-emerald-600" />
       </span>
     </div>
-    <h2 className="text-xl font-bold text-white">ابدأ بإضافة أول مخطط</h2>
-    <p className="mt-2 text-sm leading-relaxed text-slate-400">
+    <h2 className="text-xl font-bold text-slate-900">ابدأ بإضافة أول مخطط</h2>
+    <p className="mt-2 text-sm leading-relaxed text-slate-500">
       ارفع ملف PDF أو أوتوكاد DXF أو صورة. يقرأ التطبيق الخطوط والمقياس ويستخرج الكميات، وبعدها تراجعها وتسعّرها وتصدّر عرض السعر.
     </p>
     <div className="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5">
@@ -34,13 +34,13 @@ export const EmptyWorkspace: React.FC<Props> = ({ onOpenUpload, onOpenProjects }
       </button>
       <button
         onClick={onOpenProjects}
-        className="flex items-center justify-center gap-2 rounded-2xl border border-slate-700 bg-slate-800 px-5 py-3.5 text-sm font-semibold text-slate-200 transition hover:bg-slate-700"
+        className="flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-3.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
       >
-        <FolderKanban className="w-4 h-4 text-amber-400" />
+        <FolderKanban className="w-4 h-4 text-amber-600" />
         فتح مشروع محفوظ
       </button>
     </div>
-    <p className="mt-6 flex items-center justify-center gap-1.5 text-xs text-slate-500">
+    <p className="mt-6 flex items-center justify-center gap-1.5 text-xs text-slate-400">
       <ShieldCheck className="w-4 h-4 text-emerald-500" />
       ملفاتك تبقى على جهازك ولا تُرفع لأي خادم
     </p>

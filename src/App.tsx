@@ -612,7 +612,7 @@ export default function App() {
         onUndo={handleUndo}
       />
 
-      <main key={activeView} className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 flex flex-col gap-3 sm:gap-5 qto-view-in">
+      <main key={activeView} className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 flex flex-col gap-3 sm:gap-5 qto-view-in pb-28 sm:pb-6">
         {activeView === "workspace" && sheets.length === 0 ? (
           <EmptyWorkspace onOpenUpload={() => setIsUploadOpen(true)} onOpenProjects={() => setIsProjectsOpen(true)} />
         ) : activeView === "workspace" ? (

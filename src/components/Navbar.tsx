@@ -25,7 +25,6 @@ interface NavbarProps {
   onOpenUpload: () => void;
   onOpenVisualSearch: () => void;
   onOpenExtractionModal?: () => void;
-  onOpenApkModal?: () => void;
   onOpenProjectsModal: () => void;
   onOpenSteelCalc: () => void;
   onOpenSettings: () => void;
@@ -44,7 +43,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenUpload,
   onOpenVisualSearch,
   onOpenExtractionModal,
-  onOpenApkModal,
   onOpenProjectsModal,
   onOpenSteelCalc,
   onOpenSettings,
@@ -75,7 +73,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <h1 className="text-base sm:text-lg font-bold leading-tight text-white flex items-center gap-2">
               <span className="truncate">حصر الكميات</span>
               <span className="hidden sm:inline text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 font-semibold border border-emerald-500/30">
-                v6.1.0
+                v6.2.0
               </span>
             </h1>
             <p className="text-xs text-slate-400 truncate">{metadata.projectName}</p>
@@ -157,7 +155,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <Calculator className="w-4 h-4" />
             حاسبة الحديد
           </button>
-          {onOpenApkModal && <PWAInstallButton onOpenApkModal={onOpenApkModal} className="shrink-0 !rounded-full !px-3.5 !py-2 whitespace-nowrap" />}
+          <PWAInstallButton className="shrink-0" />
         </div>
       </div>
 

@@ -1,6 +1,6 @@
 {
   "name": "حصر الكميات - Quantity Takeoff",
-  "version": "6.1.0",
+  "version": "6.2.0",
   "description": "حصر الكميات - Quantity Takeoff | منصة عربية محلية لمراجعة وحصر الكميات من مخططات PDF وDXF والصور، مع استخراج مساعد من ملفات CAD وتصدير عروض الأسعار",
   "requestFramePermissions": [],
   "majorCapabilities": [

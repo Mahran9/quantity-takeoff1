@@ -8,7 +8,6 @@ import { UploadModal } from "./components/UploadModal";
 import { VisualSearchModal } from "./components/VisualSearchModal";
 import { QuantityExtractionModal } from "./components/QuantityExtractionModal";
 import { PdfVectorModal } from "./components/PdfVectorModal";
-import { ApkInstallModal } from "./components/ApkInstallModal";
 import { CompanySettingsModal } from "./components/CompanySettingsModal";
 import { QuotationModal } from "./components/QuotationModal";
 import { SaveStatusBar, StorageNotice } from "./components/SaveStatusBar";
@@ -28,11 +27,9 @@ import {
   EMPTY_COMPANY_PROFILE,
   PROJECT_SCHEMA_VERSION,
 } from "./types";
-import {
-  initialProjectMetadata,
-  sampleSheets,
-  sampleTakeoffItems,
-} from "./data/sampleBlueprints";
+import { initialProjectMetadata, LEGACY_DEMO_SHEET_IDS } from "./data/sampleBlueprints";
+import { EmptyWorkspace } from "./components/EmptyWorkspace";
+import { SheetSummary } from "./components/SheetSummary";
 import { getSheetVisualTokens, searchSheetTokens } from "./utils/visualSearchEngine";
 import {
   loadProjectsFromStorage,
@@ -47,17 +44,34 @@ import {
   markBackupDone,
 } from "./utils/projectStorage";
 
-export const APP_VERSION = "6.1.0";
+export const APP_VERSION = "6.2.0";
 
 // Persistent high-capacity storage powered by IndexedDB (src/utils/projectStorage.ts)
 
+const DEFAULT_PROJECT_ID = "prj-default-sample"; // id kept so browsers that saved the old demo project upgrade in place
+
 function createInitialProject(): ProjectRecord {
   return {
-    id: "prj-default-sample",
-    metadata: { ...initialProjectMetadata },
-    sheets: sampleSheets,
-    takeoffItems: sampleTakeoffItems,
+    id: DEFAULT_PROJECT_ID,
+    metadata: { ...initialProjectMetadata, date: new Date().toISOString().slice(0, 10) },
+    sheets: [],
+    takeoffItems: [],
     updatedAt: new Date().toISOString(),
+  };
+}
+
+/** Removes the demo drawings/items that older versions saved into the browser. */
+function stripLegacyDemo(p: ProjectRecord): ProjectRecord {
+  const demo = new Set(LEGACY_DEMO_SHEET_IDS);
+  if (!p.sheets.some((s) => demo.has(s.id))) return p;
+  const isDemoName = /تجريبي|DEMO-01/.test(`${p.metadata.projectName} ${p.metadata.projectCode}`);
+  return {
+    ...p,
+    sheets: p.sheets.filter((s) => !demo.has(s.id)),
+    takeoffItems: p.takeoffItems.filter((i) => !demo.has(i.sheetId)),
+    metadata: isDemoName
+      ? { ...p.metadata, projectName: "مشروع جديد", projectCode: "", clientName: p.metadata.clientName === "العميل (مثال)" ? "" : p.metadata.clientName, notes: "" }
+      : p.metadata,
   };
 }
 
@@ -73,7 +87,7 @@ const HISTORY_LIMIT = 30;
 
 export default function App() {
   const [projects, setProjects] = useState<ProjectRecord[]>(() => [createInitialProject()]);
-  const [activeProjectId, setActiveProjectId] = useState<string>("prj-default-sample");
+  const [activeProjectId, setActiveProjectId] = useState<string>(DEFAULT_PROJECT_ID);
   const [storageReady, setStorageReady] = useState<boolean>(false);
   const [company, setCompany] = useState<CompanyProfile>(EMPTY_COMPANY_PROFILE);
   const [storageNotice, setStorageNotice] = useState<StorageNotice | null>(null);
@@ -83,10 +97,12 @@ export default function App() {
   useEffect(() => {
     let cancelled = false;
     Promise.all([loadProjectsFromStorage(), loadCompanyProfile()])
-      .then(([{ projects: loaded, activeProjectId: loadedId }, profile]) => {
+      .then(([{ projects: loadedRaw, activeProjectId: loadedId }, profile]) => {
+        let loaded = loadedRaw;
         if (cancelled) return;
         setCompany(profile);
         if (loaded && loaded.length > 0) {
+          loaded = loaded.map(stripLegacyDemo);
           setProjects(loaded);
           if (loadedId && loaded.some((p) => p.id === loadedId)) {
             setActiveProjectId(loadedId);
@@ -123,7 +139,6 @@ export default function App() {
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isVisualSearchOpen, setIsVisualSearchOpen] = useState(false);
   const [isExtractionModalOpen, setIsExtractionModalOpen] = useState(false);
-  const [isApkModalOpen, setIsApkModalOpen] = useState(false);
   const [isProjectsOpen, setIsProjectsOpen] = useState(false);
   const [isSteelCalcOpen, setIsSteelCalcOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -589,7 +604,6 @@ export default function App() {
         onOpenUpload={() => setIsUploadOpen(true)}
         onOpenVisualSearch={() => setIsVisualSearchOpen(true)}
         onOpenExtractionModal={() => setIsExtractionModalOpen(true)}
-        onOpenApkModal={() => setIsApkModalOpen(true)}
         onOpenProjectsModal={() => setIsProjectsOpen(true)}
         onOpenSteelCalc={() => setIsSteelCalcOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
@@ -599,7 +613,9 @@ export default function App() {
       />
 
       <main key={activeView} className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 flex flex-col gap-6 qto-view-in">
-        {activeView === "workspace" ? (
+        {activeView === "workspace" && sheets.length === 0 ? (
+          <EmptyWorkspace onOpenUpload={() => setIsUploadOpen(true)} onOpenProjects={() => setIsProjectsOpen(true)} />
+        ) : activeView === "workspace" ? (
           <>
             <BlueprintTabs
               sheets={sheets}
@@ -609,6 +625,15 @@ export default function App() {
               onOpenUpload={() => setIsUploadOpen(true)}
               onDeleteSheet={handleDeleteSheet}
             />
+
+            {currentSheet && (
+              <SheetSummary
+                sheet={currentSheet}
+                items={currentSheetItems}
+                currencySymbol={metadata.currencySymbol}
+                onOpenExtraction={() => setIsExtractionModalOpen(true)}
+              />
+            )}
 
             <div ref={viewerSectionRef}>
               {currentSheet && (
@@ -727,7 +752,6 @@ export default function App() {
         onImportProject={handleCreateProject}
       />
 
-      <ApkInstallModal isOpen={isApkModalOpen} onClose={() => setIsApkModalOpen(false)} />
       <CompanySettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}

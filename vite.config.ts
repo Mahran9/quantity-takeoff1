@@ -20,6 +20,8 @@ export default defineConfig(() => {
           theme_color: '#0f172a',
           background_color: '#0f172a',
           display: 'standalone',
+          lang: 'ar',
+          dir: 'rtl',
           orientation: 'any',
           start_url: '/',
           scope: '/',
@@ -45,7 +47,9 @@ export default defineConfig(() => {
           ],
         },
         workbox: {
-          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+          // .mjs = the PDF.js worker; without it PDF reading would fail offline
+          globPatterns: ['**/*.{js,mjs,css,html,ico,png,svg,woff,woff2,wasm}'],
+          maximumFileSizeToCacheInBytes: 12 * 1024 * 1024,
         },
       }),
     ],

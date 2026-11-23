@@ -1,21 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
 <defs>
-<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0f766e"/><stop offset="1" stop-color="#063b3a"/></linearGradient>
-<linearGradient id="gold" gradientUnits="userSpaceOnUse" x1="96" y1="120" x2="190" y2="400"><stop offset="0" stop-color="#fde68a"/><stop offset="1" stop-color="#f59e0b"/></linearGradient>
+<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#16294f"/><stop offset="1" stop-color="#060d1d"/></linearGradient>
+<linearGradient id="gold" gradientUnits="userSpaceOnUse" x1="120" y1="100" x2="400" y2="420"><stop offset="0" stop-color="#fde68a"/><stop offset="1" stop-color="#f59e0b"/></linearGradient>
+<pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0V32" fill="none" stroke="#fff" stroke-opacity="0.06" stroke-width="2"/></pattern>
 </defs>
 <rect width="512" height="512" rx="112" fill="url(#bg)"/>
-<!-- sheet -->
-<path d="M150 96H336L416 176V416H150Z" fill="#f8fafc"/>
-<path d="M336 96V176H416Z" fill="#cbd5e1"/>
-<!-- quantity bars -->
-<g stroke-linecap="round" stroke-width="22">
-<path d="M200 230H300" stroke="#0f766e"/>
-<path d="M200 290H370" stroke="#0f766e" opacity="0.75"/>
-<path d="M200 350H330" stroke="#f59e0b"/>
+<rect width="512" height="512" rx="112" fill="url(#grid)"/>
+<!-- Q ring -->
+<circle cx="244" cy="236" r="130" fill="none" stroke="url(#gold)" stroke-width="48"/>
+<!-- inner plan -->
+<g fill="none" stroke="#e2e8f0" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+<rect x="192" y="188" width="104" height="96" rx="4"/><path d="M244 188V284M192 236H244"/>
 </g>
-<!-- ruler -->
-<rect x="70" y="96" width="76" height="320" rx="14" fill="url(#gold)"/>
-<g stroke="#7c4a03" stroke-width="8" stroke-linecap="round">
-<path d="M80 128H112M80 160H96M80 192H112M80 224H96M80 256H112M80 288H96M80 320H112M80 352H96M80 384H112"/>
+<!-- ruler tail -->
+<g transform="rotate(45 372 364)">
+<rect x="302" y="334" width="140" height="60" rx="12" fill="#f8fafc"/>
+<g stroke="#0b1428" stroke-width="7" stroke-linecap="round"><path d="M326 334V362M350 334V352M374 334V362M398 334V352M422 334V362"/></g>
 </g>
 </svg>

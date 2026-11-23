@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { BlueprintSheet, TakeoffItem } from "../types";
-import { Layers, ScanLine, CheckCircle2, AlertTriangle, FileSpreadsheet, Table2, Sparkles } from "lucide-react";
+import { Layers, ScanLine, CheckCircle2, AlertTriangle, FileSpreadsheet, Table2, Sparkles, ScanText } from "lucide-react";
 
 interface Props {
   sheet: BlueprintSheet;
@@ -10,12 +10,13 @@ interface Props {
   onOpenBoq: () => void;
   onExportExcel: () => void;
   onOpenAi?: () => void;
+  onOpenOcr?: () => void;
 }
 
 const fmt = (n: number, d = 2) => n.toLocaleString("en-US", { maximumFractionDigits: d });
 
 /** Live numbers for the drawing on screen: how it was read and what has been counted so far. */
-export const SheetSummary: React.FC<Props> = ({ sheet, items, currencySymbol, onOpenExtraction, onOpenBoq, onExportExcel, onOpenAi }) => {
+export const SheetSummary: React.FC<Props> = ({ sheet, items, currencySymbol, onOpenExtraction, onOpenBoq, onExportExcel, onOpenAi, onOpenOcr }) => {
   const live = useMemo(() => items.filter((i) => i.reviewStatus !== "rejected"), [items]);
   const stats = useMemo(() => {
     const byUnit = new Map<string, number>();
@@ -95,6 +96,11 @@ export const SheetSummary: React.FC<Props> = ({ sheet, items, currencySymbol, on
           <span><span className="hidden sm:inline">③ </span>Excel</span>
         </button>
       </div>
+      {onOpenOcr && sheet.imageUrl && (
+        <button onClick={onOpenOcr} className="mt-2 w-full flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-bold text-slate-800 hover:bg-slate-100 active:scale-[0.98]">
+          <ScanText className="w-4 h-4 text-teal-600" /> قراءة الأرقام المدوّنة على اللوحة (بدون إنترنت)
+        </button>
+      )}
       {onOpenAi && sheet.imageUrl && (
         <button onClick={onOpenAi} className="mt-2 w-full flex items-center justify-center gap-2 rounded-xl border border-teal-300 bg-teal-50 px-3 py-2.5 text-sm font-bold text-teal-800 hover:bg-teal-100 active:scale-[0.98]">
           <Sparkles className="w-4 h-4" /> قراءة اللوحة بالذكاء الاصطناعي (اختياري)

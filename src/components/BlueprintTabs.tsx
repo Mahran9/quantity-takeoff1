@@ -65,34 +65,6 @@ export const BlueprintTabs: React.FC<BlueprintTabsProps> = ({
 
   return (
     <div className="bg-slate-900 border-b border-slate-800/90 shadow-inner">
-      {/* Upper Status & Segregation Assurance Bar */}
-      <div className="px-4 py-2 flex flex-wrap items-center justify-between gap-3 text-xs bg-slate-950/40 border-b border-slate-800/60">
-        <div className="flex items-center gap-2">
-          <span className="flex h-2 w-2 relative">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-          </span>
-          <span className="font-semibold text-slate-200">
-            نظام العزل الهندسي الصارم:
-          </span>
-          <span className="text-slate-400">
-            كميات كل لوحة مسجلة ومحسوبة في دفتر حصر مستقل بنسبة 100% دون أي اختلاط.
-          </span>
-        </div>
-
-        {activeSheet && (
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-slate-400">اللوحة المعروضة حالياً:</span>
-            <span className="font-bold text-amber-400 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
-              {activeSheet.code} - {activeSheet.title}
-            </span>
-            <span className="text-slate-500 font-mono">
-              ({activeItemsCount} بند حصر مستقل)
-            </span>
-          </div>
-        )}
-      </div>
-
       {/* Horizontal Scrollable Tabs */}
       <div className="flex items-center gap-2 px-4 py-2.5 overflow-x-auto scrollbar-thin scrollbar-thumb-slate-700">
         {sheets.map((sheet) => {

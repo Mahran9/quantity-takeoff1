@@ -151,3 +151,7 @@ input[type="number"] { font-variant-numeric: tabular-nums; }
   thead { display: table-header-group; }
   .app-shell main .rounded-2xl.border { box-shadow: none !important; }
 }
+
+/* Horizontal chip rows: scroll without a visible bar */
+.no-scrollbar{scrollbar-width:none;-ms-overflow-style:none}
+.no-scrollbar::-webkit-scrollbar{display:none}

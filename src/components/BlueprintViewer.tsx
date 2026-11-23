@@ -409,36 +409,6 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
             <RotateCcw className="w-4 h-4" />
           </button>
 
-          {onOpenSteelCalc && (
-            <button
-              onClick={onOpenSteelCalc}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 rounded-lg text-xs font-bold"
-              title="حاسبة أوزان الحديد والهناجر"
-            >
-              <Calculator className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">حاسبة الحديد</span>
-            </button>
-          )}
-
-          {onOpenExtractionModal && (
-            <button
-              onClick={onOpenExtractionModal}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold"
-              title="استخراج كميات CAD"
-            >
-              <Layers className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">استخراج CAD</span>
-            </button>
-          )}
-
-          <button
-            onClick={onOpenVisualSearch}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-xs font-bold shadow-sm"
-            title="محرك البحث البصري وقراءة الملفات محلياً"
-          >
-            <ScanSearch className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">بحث بصري</span>
-          </button>
         </div>
       </div>
 

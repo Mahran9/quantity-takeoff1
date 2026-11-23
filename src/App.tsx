@@ -312,6 +312,7 @@ export default function App() {
     open();
   };
   const openExtraction = needSheet(() => setIsExtractionModalOpen(true), "حصر الكميات");
+  const openAnalyze = needSheet(() => setIsAnalyzeOpen(true), "تحليل اللوحة");
   const openSteelCalc = needSheet(() => setIsSteelCalcOpen(true), "حاسبة الحديد");
   const openVisualSearch = needSheet(() => setIsVisualSearchOpen(true), "البحث البصري");
   const currentSheetItems = takeoffItems.filter((item) => item.sheetId === currentSheet?.id);
@@ -630,7 +631,8 @@ export default function App() {
         takeoffItems={takeoffItems}
         onOpenUpload={() => setIsUploadOpen(true)}
         onOpenVisualSearch={openVisualSearch}
-        onOpenExtractionModal={openExtraction}
+        onAnalyze={openAnalyze}
+        onOpenAdvanced={openExtraction}
         onOpenProjectsModal={() => setIsProjectsOpen(true)}
         onOpenSteelCalc={openSteelCalc}
         onOpenSettings={() => setIsSettingsOpen(true)}

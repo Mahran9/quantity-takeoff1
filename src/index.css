@@ -216,6 +216,7 @@ button:not(:disabled):active { transform: scale(0.965); }
   background: #131230; border-top: 2px solid #ffd62e;
   box-shadow: 0 -10px 30px rgb(19 18 48 / 0.25);
 }
+@media (min-width: 640px) { .qto-pillnav { display: none; } }
 .qto-pillnav > button {
   position: relative; padding: 8px 2px 4px; display: grid; justify-items: center; gap: 4px;
   color: #a9a7d6; font-size: 0.66rem; font-weight: 700; background: transparent; border-radius: 0;

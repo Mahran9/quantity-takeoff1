@@ -253,16 +253,6 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
           </div>
 
           <div className="grid grid-cols-2 sm:flex items-center gap-2 sm:flex-wrap w-full sm:w-auto">
-            {onOpenExtractionModal && (
-              <button
-                onClick={onOpenExtractionModal}
-                className="hidden sm:flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-sm transition-all"
-              >
-                <Layers className="w-4 h-4 text-blue-200" />
-                <span>استخراج الكميات الهندسية (CAD & Vision)</span>
-              </button>
-            )}
-
             {onImportExcelItems && (
               <>
                 <input
@@ -292,13 +282,6 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
               <span>بند يدوي</span>
             </button>
 
-            <button
-              onClick={onOpenVisualSearch}
-              className="col-span-2 sm:col-span-1 flex items-center justify-center gap-1.5 px-3 py-2.5 sm:py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-xl text-xs font-bold shadow-sm transition-all"
-            >
-              <Sparkles className="w-4 h-4 text-cyan-200" />
-              <span>بحث بصري في الملف</span>
-            </button>
           </div>
         </div>
 

@@ -99,47 +99,47 @@ export const BOQView: React.FC<BOQViewProps> = ({
   return (
     <div className="space-y-6">
       {/* Project Financial Summary Card (Screen & Print) */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 print:border-none print:shadow-none print:p-0">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6 print:border-none print:shadow-none print:p-0">
         {/* Engineering Header (appears cleanly in Print) */}
         <div className="border-b border-slate-200 pb-5 mb-5 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 text-amber-600 font-bold text-xs uppercase tracking-wider">
+            <div className="flex items-center gap-2 text-amber-600 font-bold text-xs">
               <Building2 className="w-4 h-4" />
-              <span>جدول الكميات والمواصفات المعتمد (Bill of Quantities - BOQ)</span>
+              <span><span className="sm:hidden">جدول الكميات (BOQ)</span><span className="hidden sm:inline">جدول الكميات والمواصفات المعتمد (Bill of Quantities - BOQ)</span></span>
             </div>
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
               {metadata.projectName}
             </h1>
-            <p className="text-xs text-slate-500 mt-1">
-              كود المشروع: <span className="font-mono font-bold text-slate-700">{metadata.projectCode}</span> |
-              المالك: <span className="text-slate-700">{metadata.clientName}</span> |
-              الاستشاري: <span className="text-slate-700">{metadata.consultantName}</span>
+            <p className="text-xs text-slate-500 mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+              {metadata.projectCode && <span>كود المشروع: <span className="font-mono font-bold text-slate-700">{metadata.projectCode}</span></span>}
+              {metadata.clientName && <span>المالك: <span className="text-slate-700">{metadata.clientName}</span></span>}
+              {metadata.consultantName && <span>الاستشاري: <span className="text-slate-700">{metadata.consultantName}</span></span>}
             </p>
           </div>
 
           {/* Action Toolbar (hidden on print) */}
-          <div className="flex items-center gap-2 print:hidden">
+          <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto print:hidden">
             <button
               onClick={onOpenQuotation}
-              className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-bold shadow-sm transition-all"
+              className="flex items-center justify-center gap-2 whitespace-nowrap px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-bold shadow-sm transition-all"
               title="معاينة عرض السعر وطباعته على الورق الرسمي أو حفظه PDF"
             >
               <FileCheck className="w-4 h-4" />
-              <span>عرض السعر (طباعة / PDF)</span>
+              <span>عرض السعر / PDF</span>
             </button>
 
             <button
               onClick={() => exportBoqToExcel(metadata, sheets, takeoffItems, company)}
-              className="flex items-center gap-2 px-3.5 py-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-sm transition-all"
+              className="flex items-center justify-center gap-2 whitespace-nowrap col-span-2 sm:col-span-1 order-first sm:order-none px-3.5 py-2.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-sm transition-all"
               title="تصدير ملف Excel شامل (عرض السعر + الموحد + صفحة لكل مخطط)"
             >
               <Download className="w-4 h-4" />
-              <span>تصدير Excel شامل</span>
+              <span>تصدير Excel</span>
             </button>
 
             <button
               onClick={() => exportBoqToCsv(metadata, sheets, takeoffItems)}
-              className="flex items-center gap-2 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-all border border-slate-200"
+              className="flex items-center justify-center gap-2 whitespace-nowrap px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-all border border-slate-200"
             >
               <FileSpreadsheet className="w-4 h-4" />
               <span>تصدير CSV</span>
@@ -147,7 +147,7 @@ export const BOQView: React.FC<BOQViewProps> = ({
 
             <button
               onClick={() => window.print()}
-              className="flex items-center gap-2 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold transition-all"
+              className="hidden sm:flex items-center justify-center gap-2 whitespace-nowrap px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold transition-all"
               title="طباعة جدول الكميات الظاهر على الشاشة"
             >
               <Printer className="w-4 h-4" />
@@ -220,12 +220,12 @@ export const BOQView: React.FC<BOQViewProps> = ({
       </div>
 
       {/* Mode Switcher & Filter Bar (hidden on print) */}
-      <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs print:hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-2xs print:hidden">
         {/* Toggle between per-sheet vs consolidated */}
-        <div className="flex items-center bg-slate-100 p-1 rounded-xl">
+        <div className="grid grid-cols-3 sm:flex items-center bg-slate-100 p-1 rounded-xl w-full sm:w-auto">
           <button
             onClick={() => setDisplayMode("quotation")}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center gap-2 justify-center px-2 sm:px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
               displayMode === "quotation"
                 ? "bg-amber-500 text-slate-950 shadow-xs"
                 : "text-slate-600 hover:text-slate-900"
@@ -237,39 +237,39 @@ export const BOQView: React.FC<BOQViewProps> = ({
 
           <button
             onClick={() => setDisplayMode("by-sheet")}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center gap-2 justify-center px-2 sm:px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
               displayMode === "by-sheet"
                 ? "bg-white text-slate-900 shadow-xs"
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
             <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            <span>حسب كل مخطط منفصل (معزول)</span>
+            <span><span className="sm:hidden">حسب المخطط</span><span className="hidden sm:inline">حسب كل مخطط منفصل (معزول)</span></span>
           </button>
 
           <button
             onClick={() => setDisplayMode("consolidated")}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center gap-2 justify-center px-2 sm:px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
               displayMode === "consolidated"
                 ? "bg-white text-slate-900 shadow-xs"
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
             <Layers className="w-4 h-4 text-blue-600" />
-            <span>مجمع حسب تصنيف الأعمال مع كود المخطط</span>
+            <span><span className="sm:hidden">مجمّع</span><span className="hidden sm:inline">مجمع حسب تصنيف الأعمال مع كود المخطط</span></span>
           </button>
         </div>
 
         {/* Search & Discipline Filter (the quotation always shows the complete list) */}
-        <div className={`flex items-center gap-3 ${displayMode === "quotation" ? "hidden" : ""}`}>
-          <div className="relative">
+        <div className={`flex items-center gap-2 w-full sm:w-auto ${displayMode === "quotation" ? "hidden" : ""}`}>
+          <div className="relative flex-1 sm:flex-none">
             <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="بحث في جدول الكميات..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pr-9 pl-3 py-1.5 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:border-amber-500 w-52"
+              className="pr-9 pl-3 py-1.5 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:border-amber-500 w-full sm:w-52"
             />
           </div>
 
@@ -686,7 +686,7 @@ export const BOQView: React.FC<BOQViewProps> = ({
       )}
 
       {/* Engineering Signatures Block (Standard in official engineering BOQs) */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 print:border-t-2 print:border-slate-800 print:mt-8">
+      <div className="hidden sm:block print:block bg-white rounded-2xl border border-slate-200 p-6 print:border-t-2 print:border-slate-800 print:mt-8">
         <div className="text-xs font-bold text-slate-800 mb-6 border-b border-slate-100 pb-2">
           اعتمادات وتواقيع جدول الكميات الهندسي:
         </div>

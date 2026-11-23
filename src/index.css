@@ -160,3 +160,6 @@ input[type="number"] { font-variant-numeric: tabular-nums; }
 :where(button, a, input, select, textarea):focus-visible { outline: 2px solid var(--qto-gold-strong); outline-offset: 2px; }
 /* Larger touch targets on phones */
 @media (max-width: 640px) { button { min-height: 36px; } }
+
+/* Never let one wide element push the whole page (and the fixed bottom bar) sideways */
+html, body { overflow-x: clip; max-width: 100%; }

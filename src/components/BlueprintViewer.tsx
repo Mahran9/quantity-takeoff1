@@ -272,7 +272,7 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
   const svgContent = sampleDrawingsSvg[sheet.id] || "";
 
   return (
-    <div className="flex flex-col h-[540px] lg:h-[640px] bg-slate-950 rounded-2xl border border-slate-800 shadow-xl overflow-hidden relative">
+    <div className="flex flex-col h-[62vh] min-h-[380px] max-h-[600px] lg:h-[640px] lg:max-h-none bg-slate-950 rounded-2xl border border-slate-800 shadow-xl overflow-hidden relative">
       {/* Toolbar */}
       <div className="bg-slate-900/95 backdrop-blur-md px-4 py-2.5 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2.5 z-10">
         {/* Measurement Tools */}

@@ -64,7 +64,7 @@ export const BlueprintTabs: React.FC<BlueprintTabsProps> = ({
   const activeItemsCount = takeoffItems.filter((i) => i.sheetId === activeSheetId).length;
 
   return (
-    <div className="bg-slate-900 border-b border-slate-800/90 shadow-inner">
+    <div className="bg-slate-900 rounded-2xl border border-slate-800 shadow-lg overflow-hidden">
       {/* Horizontal Scrollable Tabs */}
       <div className="flex items-center gap-2 px-4 py-2.5 overflow-x-auto scrollbar-thin scrollbar-thumb-slate-700">
         {sheets.map((sheet) => {

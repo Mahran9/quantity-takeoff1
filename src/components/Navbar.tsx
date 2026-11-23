@@ -5,7 +5,6 @@ import {
   ScanSearch,
   Plus,
   Printer,
-  Building2,
   FolderKanban,
   Calculator,
   Undo2,
@@ -66,9 +65,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* Row 1: brand + primary actions */}
       <div className="max-w-7xl mx-auto px-3 sm:px-6 pt-3 pb-2 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-10 h-10 shrink-0 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-400 flex items-center justify-center shadow-lg shadow-amber-500/20">
-            <Building2 className="w-6 h-6 text-slate-950 stroke-[2.2]" />
-          </div>
+          <img src="/icon.svg" alt="" width={40} height={40} className="w-10 h-10 shrink-0 rounded-xl shadow-lg shadow-black/30" />
           <div className="min-w-0">
             <h1 className="text-base sm:text-lg font-bold leading-tight text-white flex items-center gap-2">
               <span className="truncate">حصر الكميات</span>

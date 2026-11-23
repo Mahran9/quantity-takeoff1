@@ -593,7 +593,7 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell min-h-screen bg-slate-100 text-slate-900 flex flex-col font-sans" dir="rtl">
+    <div className="app-shell min-h-screen text-slate-900 flex flex-col font-sans" dir="rtl">
       <Navbar
         metadata={metadata}
         setMetadata={setMetadata}
@@ -612,7 +612,7 @@ export default function App() {
         onUndo={handleUndo}
       />
 
-      <main key={activeView} className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 flex flex-col gap-6 qto-view-in">
+      <main key={activeView} className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 flex flex-col gap-3 sm:gap-5 qto-view-in">
         {activeView === "workspace" && sheets.length === 0 ? (
           <EmptyWorkspace onOpenUpload={() => setIsUploadOpen(true)} onOpenProjects={() => setIsProjectsOpen(true)} />
         ) : activeView === "workspace" ? (

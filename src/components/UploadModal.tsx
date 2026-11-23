@@ -1,3 +1,4 @@
+import { importWithRecovery } from "../utils/lazyImport";
 import React, { useState } from "react";
 import {
   X,
@@ -134,7 +135,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
         if (file.size > 150 * 1024 * 1024) {
           throw new Error("ملف DWG كبير جداً (أكثر من 150 م.ب). احفظه DXF بطبقات أقل ثم أعد المحاولة.");
         }
-        const { readDwgFile } = await import("../utils/dwgReader");
+        const { readDwgFile } = await importWithRecovery(() => import("../utils/dwgReader"));
         const { result: parsedDwg } = await readDwgFile(await file.arrayBuffer());
         if (!parsedDwg.layers || parsedDwg.layers.length === 0) {
           throw new Error("لم يُعثر على طبقات في ملف DWG. احفظه DXF أو صدّره PDF.");

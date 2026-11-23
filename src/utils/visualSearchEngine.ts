@@ -1,3 +1,4 @@
+import { importWithRecovery } from "./lazyImport";
 import { BlueprintSheet, VisualSearchToken, TakeoffItem } from "../types";
 import { sampleDrawingsSvg } from "../data/sampleBlueprints";
 
@@ -50,7 +51,7 @@ export async function runLocalOcrOnImage(
   imageUrl: string,
   onProgress?: (pct: number) => void
 ): Promise<VisualSearchToken[]> {
-  const Tesseract = await import("tesseract.js");
+  const Tesseract = await importWithRecovery(() => import("tesseract.js"));
   const result = await Tesseract.recognize(imageUrl, "ara+eng", {
     logger: (m: any) => {
       if (m.status === "recognizing text" && typeof m.progress === "number" && onProgress) {

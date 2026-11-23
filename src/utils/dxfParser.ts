@@ -1235,9 +1235,16 @@ export function extractEngineeringQuantitiesFromDxf(
   const footingDepthM = defaultFootingDepth > 0 ? defaultFootingDepth : annotatedFootingDepth;
 
   // 1. Process Blocks (Counts / أعداد وبلوكات)
-  parsedDxf.detectedBlocks.forEach((block, idx) => {
+  // Drawings often hold hundreds of anonymous / annotation / symbol blocks. Only blocks we can
+  // classify (or that the user ruled on) are listed and pre-selected; unknown ones are capped
+  // and left unselected so an export never fills up with "بلوك أوتوكاد" lines.
+  const NOISE_BLOCK = /^(\*|\$|A\$C|_)|(^|[_\-\s|])(DIM|ARROW|TICK|HATCH|XREF|NORTH|TITLE|FRAME|BORDER|LEGEND|REV|SECTION|ELEV|GRID|AXIS|BUBBLE|TAG|SYMBOL|LOGO|STAMP)([_\-\s|0-9]|$)|\|/i;
+  let unknownListed = 0;
+  const unknownCap = 12;
+  [...parsedDxf.detectedBlocks].sort((a, b) => b.count - a.count).forEach((block, idx) => {
     const blockRule = matchLayerRule(block.name, layerRules);
     if (blockRule?.kind === "ignore") return;
+    if (!blockRule && NOISE_BLOCK.test(block.name.trim())) return;
     const blockUpper = block.name.trim().toUpperCase();
     const token = blockUpper.replace(/[\s-]+/g, "_");
     let category: TradeCategory = "أعمال متنوعة أخرى";
@@ -1284,6 +1291,11 @@ export function extractEngineeringQuantitiesFromDxf(
       desc = `بلوك أوتوكاد (${block.name}) — تصنيف حسب قاعدتك (${blockRule.match})`;
     }
 
+    const recognized = Boolean(blockRule) || category !== "أعمال متنوعة أخرى";
+    if (!recognized) {
+      if (unknownListed >= unknownCap) return;
+      unknownListed++;
+    }
     results.push({
       id: `cad-count-${idx}`,
       type: "count",
@@ -1296,7 +1308,7 @@ export function extractEngineeringQuantitiesFromDxf(
       suggestedCategory: category,
       entityCount: block.count,
       description: desc,
-      selected: true,
+      selected: recognized,
     });
   });
 

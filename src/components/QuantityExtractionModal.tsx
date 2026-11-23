@@ -246,7 +246,7 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
     if (cadQuantities.length > 0) {
       const initial: Record<string, boolean> = {};
       cadQuantities.forEach((q) => {
-        initial[q.id] = true;
+        initial[q.id] = q.selected !== false;
       });
       setSelectedItems(initial);
     }

@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { BlueprintSheet, TakeoffItem } from "../types";
-import { Layers, ScanLine, CheckCircle2, AlertTriangle, FileSpreadsheet, Table2 } from "lucide-react";
+import { Layers, ScanLine, CheckCircle2, AlertTriangle, FileSpreadsheet, Table2, Sparkles } from "lucide-react";
 
 interface Props {
   sheet: BlueprintSheet;
@@ -9,12 +9,13 @@ interface Props {
   onOpenExtraction: () => void;
   onOpenBoq: () => void;
   onExportExcel: () => void;
+  onOpenAi?: () => void;
 }
 
 const fmt = (n: number, d = 2) => n.toLocaleString("en-US", { maximumFractionDigits: d });
 
 /** Live numbers for the drawing on screen: how it was read and what has been counted so far. */
-export const SheetSummary: React.FC<Props> = ({ sheet, items, currencySymbol, onOpenExtraction, onOpenBoq, onExportExcel }) => {
+export const SheetSummary: React.FC<Props> = ({ sheet, items, currencySymbol, onOpenExtraction, onOpenBoq, onExportExcel, onOpenAi }) => {
   const live = useMemo(() => items.filter((i) => i.reviewStatus !== "rejected"), [items]);
   const stats = useMemo(() => {
     const byUnit = new Map<string, number>();
@@ -94,6 +95,11 @@ export const SheetSummary: React.FC<Props> = ({ sheet, items, currencySymbol, on
           <span><span className="hidden sm:inline">③ </span>Excel</span>
         </button>
       </div>
+      {onOpenAi && sheet.imageUrl && (
+        <button onClick={onOpenAi} className="mt-2 w-full flex items-center justify-center gap-2 rounded-xl border border-teal-300 bg-teal-50 px-3 py-2.5 text-sm font-bold text-teal-800 hover:bg-teal-100 active:scale-[0.98]">
+          <Sparkles className="w-4 h-4" /> قراءة اللوحة بالذكاء الاصطناعي (اختياري)
+        </button>
+      )}
       {live.length === 0 && (
         <p className="mt-2 text-[11px] text-slate-500">زر Excel يعمل بعد إدراج بنود: ابدأ بـ «حصر الكميات من الملف» ثم أدرج ما تريده.</p>
       )}

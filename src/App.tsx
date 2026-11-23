@@ -8,6 +8,7 @@ import { UploadModal } from "./components/UploadModal";
 import { VisualSearchModal } from "./components/VisualSearchModal";
 import { QuantityExtractionModal } from "./components/QuantityExtractionModal";
 import { PdfVectorModal } from "./components/PdfVectorModal";
+import { AiTakeoffModal } from "./components/AiTakeoffModal";
 import { CompanySettingsModal } from "./components/CompanySettingsModal";
 import { QuotationModal } from "./components/QuotationModal";
 import { SaveStatusBar, StorageNotice } from "./components/SaveStatusBar";
@@ -139,6 +140,7 @@ export default function App() {
   // Modals
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isVisualSearchOpen, setIsVisualSearchOpen] = useState(false);
+  const [isAiOpen, setIsAiOpen] = useState(false);
   const [isExtractionModalOpen, setIsExtractionModalOpen] = useState(false);
   const [isProjectsOpen, setIsProjectsOpen] = useState(false);
   const [isSteelCalcOpen, setIsSteelCalcOpen] = useState(false);
@@ -656,6 +658,7 @@ export default function App() {
                 currencySymbol={metadata.currencySymbol}
                 onOpenExtraction={openExtraction}
                 onOpenBoq={() => setActiveView("boq")}
+                  onOpenAi={() => setIsAiOpen(true)}
                 onExportExcel={() => exportBoqToExcel(metadata, sheets, takeoffItems, company)}
               />
             )}
@@ -739,6 +742,16 @@ export default function App() {
           isOpen={isExtractionModalOpen}
           onClose={() => setIsExtractionModalOpen(false)}
           sheet={currentSheet}
+          onAddItems={handleApplyExtractedItems}
+        />
+      )}
+
+      {currentSheet && (
+        <AiTakeoffModal
+          isOpen={isAiOpen}
+          onClose={() => setIsAiOpen(false)}
+          sheet={currentSheet}
+          existingItemsCount={takeoffItems.length}
           onAddItems={handleApplyExtractedItems}
         />
       )}

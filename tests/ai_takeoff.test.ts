@@ -1,0 +1,11 @@
+import { strict as assert } from "node:assert";
+import { parseAiResponse, aiItemsToTakeoff } from "../src/utils/aiTakeoff";
+const r = parseAiResponse('نص قبل ```json\n{"items":[{"category":"أعمال المباني والبلوك","description":"جدران","quantity":128,"unit":"م.ط","basis":"محيط 88.5+...","confidence":"medium"},{"description":"","quantity":1},{"description":"x","quantity":"abc"},{"category":"غير موجود","description":"باب","quantity":4,"unit":"عدد","confidence":"zzz"}],"warnings":["w"]}\n```');
+assert.equal(r.items.length, 2);
+assert.equal(r.items[1].category, "أعمال متنوعة أخرى");
+assert.equal(r.items[1].confidence, "low");
+assert.deepEqual(r.warnings, ["w"]);
+const t = aiItemsToTakeoff(r.items, { id: "s", code: "A", title: "t" }, 3);
+assert.equal(t[0].dimensionType, "linear"); assert.equal(t[1].dimensionType, "count"); assert.equal(t[0].itemCode, "AI-04");
+assert.throws(() => parseAiResponse("no json here"));
+console.log("ai_takeoff ok");

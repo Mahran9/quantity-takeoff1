@@ -1,0 +1,40 @@
+{
+  "name": "quantity-takeoff",
+  "private": true,
+  "version": "6.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview --host",
+    "clean": "rm -rf dist",
+    "lint": "tsc --noEmit",
+    "test:all": "node scripts/run-tests.mjs",
+    "verify:dxf": "tsx scripts/verify-dxf.ts",
+    "verify:pdf": "tsx scripts/verify-pdf.ts",
+    "android:sync": "npm run build && npx cap sync android",
+    "android:open": "npx cap open android"
+  },
+  "dependencies": {
+    "dxf-parser": "^1.1.2",
+    "lucide-react": "^0.546.0",
+    "pdfjs-dist": "^6.2.108",
+    "react": "^19.0.1",
+    "react-dom": "^19.0.1",
+    "tesseract.js": "^5.1.1",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.14",
+    "@types/node": "^22.14.0",
+    "@types/react": "^19.0.1",
+    "@types/react-dom": "^19.0.1",
+    "@vitejs/plugin-react": "^5.0.4",
+    "tailwindcss": "^4.1.14",
+    "tsx": "^4.21.0",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.3",
+    "vite-plugin-pwa": "^1.3.0"
+  },
+  "description": "حصر الكميات - Quantity Takeoff: offline-first quantity takeoff from PDF/DXF drawings"
+}

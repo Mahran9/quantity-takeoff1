@@ -1,0 +1,153 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------ */
+/* Design tokens                                                       */
+/* ------------------------------------------------------------------ */
+:root {
+  color-scheme: light;
+  --qto-navy-950: #070f20;
+  --qto-navy-900: #0b1730;
+  --qto-navy-800: #12213f;
+  --qto-gold: #e0b252;
+  --qto-gold-strong: #f59e0b;
+  --qto-surface: #f4f6fb;
+  --qto-ease: cubic-bezier(0.22, 0.9, 0.3, 1);
+  --qto-ease-spring: cubic-bezier(0.34, 1.4, 0.5, 1);
+  --qto-shadow-soft: 0 1px 2px rgb(15 23 42 / 0.05), 0 8px 24px -12px rgb(15 23 42 / 0.18);
+  --qto-shadow-lift: 0 2px 4px rgb(15 23 42 / 0.06), 0 18px 40px -16px rgb(15 23 42 / 0.28);
+  --qto-font: "Cairo", "Noto Sans Arabic", "Segoe UI", Tahoma, system-ui, -apple-system, sans-serif;
+}
+
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  min-width: 320px;
+  font-family: var(--qto-font);
+  background:
+    radial-gradient(1200px 520px at 100% -10%, rgb(224 178 82 / 0.10), transparent 60%),
+    radial-gradient(900px 480px at -10% 0%, rgb(30 58 95 / 0.10), transparent 55%),
+    var(--qto-surface);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+button, input, select, textarea { font: inherit; }
+button { -webkit-tap-highlight-color: transparent; cursor: pointer; }
+button:disabled { cursor: not-allowed; }
+::selection { background: rgb(224 178 82 / 0.35); }
+input[type="number"] { font-variant-numeric: tabular-nums; }
+
+/* Slim, quiet scrollbars */
+* { scrollbar-width: thin; scrollbar-color: rgb(100 116 139 / 0.45) transparent; }
+*::-webkit-scrollbar { width: 9px; height: 9px; }
+*::-webkit-scrollbar-thumb { background: rgb(100 116 139 / 0.4); border-radius: 999px; border: 2px solid transparent; background-clip: content-box; }
+*::-webkit-scrollbar-thumb:hover { background: rgb(100 116 139 / 0.7); background-clip: content-box; }
+
+/* ------------------------------------------------------------------ */
+/* Keyframes                                                           */
+/* ------------------------------------------------------------------ */
+@keyframes qto-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes qto-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes qto-pop { from { opacity: 0; transform: translateY(14px) scale(0.965); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes qto-slide-up { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes qto-spin { to { transform: rotate(360deg); } }
+@keyframes qto-tick { 0% { background-color: rgb(245 158 11 / 0.35); transform: scale(1.04); } 100% { background-color: transparent; transform: scale(1); } }
+@keyframes qto-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@keyframes qto-glow { 0%, 100% { box-shadow: 0 0 0 0 rgb(245 158 11 / 0); } 50% { box-shadow: 0 0 0 6px rgb(245 158 11 / 0.18); } }
+
+.qto-fade-in { animation: qto-fade 0.22s ease-out both; }
+.qto-rise-in { animation: qto-rise 0.4s var(--qto-ease) both; }
+.qto-pop-in { animation: qto-pop 0.3s var(--qto-ease) both; }
+.qto-slide-up { animation: qto-slide-up 0.35s var(--qto-ease) both; }
+.qto-tick { animation: qto-tick 0.7s ease-out; border-radius: 0.5rem; }
+.qto-view-in { animation: qto-rise 0.38s var(--qto-ease) both; }
+.qto-skeleton { background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%); background-size: 200% 100%; animation: qto-shimmer 1.4s linear infinite; border-radius: 0.5rem; }
+.qto-spinner { width: 38px; height: 38px; border-radius: 50%; border: 3px solid rgb(148 163 184 / 0.25); border-top-color: var(--qto-gold); animation: qto-spin 0.8s linear infinite; }
+.qto-glow { animation: qto-glow 2.4s ease-in-out infinite; }
+
+/* Staggered entrance for grids / lists: add .qto-stagger to the parent */
+.qto-stagger > * { animation: qto-rise 0.45s var(--qto-ease) both; }
+.qto-stagger > *:nth-child(1) { animation-delay: 0.02s; }
+.qto-stagger > *:nth-child(2) { animation-delay: 0.07s; }
+.qto-stagger > *:nth-child(3) { animation-delay: 0.12s; }
+.qto-stagger > *:nth-child(4) { animation-delay: 0.17s; }
+.qto-stagger > *:nth-child(5) { animation-delay: 0.22s; }
+.qto-stagger > *:nth-child(6) { animation-delay: 0.27s; }
+.qto-stagger > *:nth-child(n + 7) { animation-delay: 0.32s; }
+
+/* ------------------------------------------------------------------ */
+/* App shell polish (applies to existing components without rewrites)  */
+/* ------------------------------------------------------------------ */
+.app-shell { animation: qto-fade 0.45s ease-out both; }
+
+/* Frosted, sticky header */
+.app-shell > header {
+  background: linear-gradient(180deg, rgb(7 15 32 / 0.97), rgb(11 23 48 / 0.93)) !important;
+  -webkit-backdrop-filter: saturate(150%) blur(14px);
+  backdrop-filter: saturate(150%) blur(14px);
+  border-bottom: 1px solid rgb(224 178 82 / 0.22) !important;
+  box-shadow: 0 10px 30px -18px rgb(2 8 23 / 0.8);
+}
+
+/* Buttons: tactile micro-interactions */
+.app-shell button {
+  transition: transform 0.18s var(--qto-ease), box-shadow 0.2s ease, background-color 0.18s ease,
+    border-color 0.18s ease, color 0.18s ease, filter 0.18s ease, opacity 0.18s ease;
+}
+.app-shell button:not(:disabled):hover { filter: brightness(1.06); }
+.app-shell button:not(:disabled):active { transform: translateY(1px) scale(0.975); filter: brightness(0.97); }
+.app-shell :is(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid var(--qto-gold);
+  outline-offset: 2px;
+  border-radius: 0.6rem;
+}
+.app-shell :is(input, select, textarea) { transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease; }
+.app-shell :is(input, select, textarea):focus { box-shadow: 0 0 0 4px rgb(224 178 82 / 0.16); }
+
+/* Cards: soft depth, gentle lift on hover */
+.app-shell main .rounded-2xl.border { box-shadow: var(--qto-shadow-soft); transition: box-shadow 0.25s ease, transform 0.25s var(--qto-ease); }
+.app-shell main .rounded-2xl.border.bg-white:hover { box-shadow: var(--qto-shadow-lift); }
+
+/* Tables: row hover + smooth state changes */
+.app-shell tbody tr { transition: background-color 0.15s ease; }
+.app-shell tbody tr:hover { background-color: rgb(241 245 249 / 0.85); }
+
+/* Modals: every full-screen overlay fades in and its panel pops */
+.app-shell .fixed.inset-0.z-50 { animation: qto-fade 0.2s ease-out both; }
+.app-shell .fixed.inset-0.z-50 > div:not(.qto-pop-in) { animation: qto-pop 0.3s var(--qto-ease) both; }
+
+/* Keep keyboard/scroll position stable inside modals */
+.app-shell .fixed.inset-0.z-50 { overscroll-behavior: contain; }
+
+/* Numbers should never jump around while typing */
+.font-mono { font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .qto-spinner { animation-duration: 1.6s !important; animation-iteration-count: infinite !important; }
+}
+
+/* ------------------------------------------------------------------ */
+/* Print (BOQ screens). The quotation has its own print root.          */
+/* ------------------------------------------------------------------ */
+@media print {
+  @page { size: A4 portrait; margin: 1.5cm 1.2cm; }
+  body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .app-shell { animation: none !important; }
+  header, .no-print { display: none !important; }
+  main { padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
+  table { page-break-inside: auto; border-collapse: collapse !important; }
+  tr { page-break-inside: avoid; page-break-after: auto; }
+  thead { display: table-header-group; }
+  .app-shell main .rounded-2xl.border { box-shadow: none !important; }
+}

@@ -60,7 +60,7 @@ export const OcrLabelsModal: React.FC<Props> = ({ isOpen, onClose, sheet, existi
             <>
               <p className="text-[11px] text-slate-500">الأرقام تُقرأ بالتعرف الضوئي وقد تخطئ في خانة (مثلاً 53 قد تُقرأ 03). قارن كل رقم بالسطر المقروء.</p>
               {found.map((q, i) => (
-                <label key={i} className={`flex items-start gap-3 rounded-xl border p-3 cursor-pointer ${picked[i] ? "border-teal-400 bg-teal-50/40" : "border-slate-200"}`}>
+                <label key={i} className={`flex items-start gap-3 rounded-xl border p-3 cursor-pointer ${picked[i] ? "border-amber-400 bg-amber-50" : "border-slate-200"}`}>
                   <input type="checkbox" className="mt-1" checked={Boolean(picked[i])} onChange={(e) => setPicked((p) => ({ ...p, [i]: e.target.checked }))} />
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-bold text-slate-900">{q.label}</div>

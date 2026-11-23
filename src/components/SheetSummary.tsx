@@ -98,11 +98,11 @@ export const SheetSummary: React.FC<Props> = ({ sheet, items, currencySymbol, on
       </div>
       {onOpenOcr && sheet.imageUrl && (
         <button onClick={onOpenOcr} className="mt-2 w-full flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-bold text-slate-800 hover:bg-slate-100 active:scale-[0.98]">
-          <ScanText className="w-4 h-4 text-teal-600" /> قراءة الأرقام المدوّنة على اللوحة (بدون إنترنت)
+          <ScanText className="w-4 h-4 text-slate-700" /> قراءة الأرقام المدوّنة على اللوحة (بدون إنترنت)
         </button>
       )}
       {onOpenAi && sheet.imageUrl && (
-        <button onClick={onOpenAi} className="mt-2 w-full flex items-center justify-center gap-2 rounded-xl border border-teal-300 bg-teal-50 px-3 py-2.5 text-sm font-bold text-teal-800 hover:bg-teal-100 active:scale-[0.98]">
+        <button onClick={onOpenAi} className="mt-2 w-full flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm font-bold text-slate-900 hover:bg-amber-50 active:scale-[0.98]">
           <Sparkles className="w-4 h-4" /> قراءة اللوحة بالذكاء الاصطناعي (اختياري)
         </button>
       )}

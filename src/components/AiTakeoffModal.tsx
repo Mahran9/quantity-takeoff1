@@ -85,7 +85,7 @@ export const AiTakeoffModal: React.FC<Props> = ({ isOpen, onClose, sheet, existi
           {items.length > 0 && (
             <div className="space-y-2">
               {items.map((it, i) => (
-                <label key={i} className={`flex items-start gap-3 rounded-xl border p-3 cursor-pointer ${picked[i] ? "border-teal-400 bg-teal-50/40" : "border-slate-200"}`}>
+                <label key={i} className={`flex items-start gap-3 rounded-xl border p-3 cursor-pointer ${picked[i] ? "border-amber-400 bg-amber-50" : "border-slate-200"}`}>
                   <input type="checkbox" className="mt-1" checked={Boolean(picked[i])} onChange={(e) => setPicked((p) => ({ ...p, [i]: e.target.checked }))} />
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-bold text-slate-900">{it.description}</div>

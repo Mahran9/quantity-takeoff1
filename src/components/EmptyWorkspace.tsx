@@ -8,38 +8,40 @@ interface Props {
 
 /** Shown when the project has no drawings yet. Nothing is pre-filled. */
 export const EmptyWorkspace: React.FC<Props> = ({ onOpenUpload, onOpenProjects }) => (
-  <section className="qto-hero mx-auto w-full max-w-2xl px-5 py-9 sm:px-10 sm:py-12 text-center">
-    <svg className="qto-hero-art mx-auto mb-5 w-40 sm:w-48 overflow-visible" viewBox="0 0 200 110" fill="none" aria-hidden="true">
-      <path className="qto-beam-glow" d="M10 85 L70 30 L130 70 L190 20" stroke="#2dd4bf" strokeWidth="7" opacity=".3" style={{ filter: "blur(6px)" }} />
-      <path className="qto-beam-line" d="M10 85 L70 30 L130 70 L190 20" stroke="#ffffffdd" strokeWidth="1.8" strokeLinejoin="round" />
-      <g stroke="#6ee7d0" strokeWidth="1.2" opacity=".7">
-        <path d="M10 95h60M70 24v-8M130 76v8M190 14v-8" />
+  <section className="qto-hero mx-auto w-full max-w-2xl px-5 pt-8 pb-7 sm:px-10 sm:pt-10 text-right">
+    <svg className="w-full max-w-sm mb-6 overflow-visible" viewBox="0 0 320 150" fill="none" aria-hidden="true">
+      {/* plan outline with a door opening, drawn once */}
+      <path className="qto-draw" pathLength={1} d="M30 20H290V100H190M150 100H30V20" stroke="#fff" strokeWidth="3" strokeLinejoin="round" />
+      <path className="qto-draw d2" pathLength={1} d="M70 20V100M230 20V100" stroke="#a9a7d6" strokeWidth="1.5" />
+      {/* marker swipe: this wall is counted */}
+      <rect className="qto-mark" x="30" y="14" width="260" height="12" rx="2" fill="#ffd62e" opacity=".55" />
+      {/* dimension line */}
+      <g className="qto-draw d2" stroke="#ffd62e" strokeWidth="1.5">
+        <path pathLength={1} d="M30 128H290" />
+        <path d="M30 120V136M290 120V136" />
+        <path d="M30 128l9-4v8zM290 128l-9-4v8z" fill="#ffd62e" />
       </g>
-      <circle className="qto-spark" cx="70" cy="30" r="5" fill="#6ee7d0" />
-      <circle className="qto-spark s2" cx="130" cy="70" r="5" fill="#2dd4bf" />
-      <circle cx="10" cy="85" r="3.5" fill="#fff" />
-      <circle cx="190" cy="20" r="3.5" fill="#fff" />
     </svg>
-    <h2 className="text-xl sm:text-2xl font-bold">ابدأ بإضافة أول مخطط</h2>
-    <p className="mt-2 text-sm leading-relaxed text-slate-300 max-w-md mx-auto">
-      ارفع ملف PDF أو أوتوكاد DXF/DWG أو صورة. يقرأ التطبيق الخطوط والمقياس ويستخرج الكميات، وبعدها تراجعها وتصدّر جدول Excel احترافياً.
+    <h2 className="text-2xl sm:text-3xl font-extrabold leading-tight">ارفع المخطط، وخذ الكميات</h2>
+    <p className="mt-3 text-[15px] leading-8 text-slate-300 max-w-md">
+      PDF أو DXF أو DWG أو صورة. تحصر الأطوال والمساحات والأعداد، وتراجع كل رقم، ثم تصدّر جدول Excel جاهزاً.
     </p>
-    <div className="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5">
-      <button onClick={onOpenUpload} className="qto-cta flex items-center justify-center gap-2 rounded-2xl px-6 py-3.5 text-base font-bold">
+    <div className="mt-6 flex flex-col sm:flex-row gap-3">
+      <button onClick={onOpenUpload} className="qto-cta flex items-center justify-center gap-2 rounded-xl px-7 py-3.5 text-base">
         <Plus className="w-5 h-5" />
-        إضافة مخطط
+        ارفع مخططاً
       </button>
       <button
         onClick={onOpenProjects}
-        className="flex items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/10 px-5 py-3.5 text-sm font-semibold text-white hover:bg-white/15"
+        className="flex items-center justify-center gap-2 rounded-xl border-2 border-white/25 px-5 py-3 text-sm font-bold text-white hover:bg-white/10"
       >
         <FolderKanban className="w-4 h-4 text-amber-300" />
-        فتح مشروع محفوظ
+        افتح مشروعاً محفوظاً
       </button>
     </div>
-    <p className="mt-6 flex items-center justify-center gap-1.5 text-xs text-slate-400">
-      <ShieldCheck className="w-4 h-4 text-emerald-400" />
-      ملفاتك تبقى على جهازك ولا تُرفع لأي خادم
+    <p className="mt-6 flex items-center gap-1.5 text-xs text-slate-400">
+      <ShieldCheck className="w-4 h-4 text-amber-300" />
+      الملفات تبقى على جهازك ولا تُرفع إلى أي خادم.
     </p>
   </section>
 );

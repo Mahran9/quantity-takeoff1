@@ -1098,7 +1098,45 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
             )}
 
             {/* CAD Extracted Table */}
-            <div className="border border-slate-700 rounded-xl overflow-hidden bg-slate-900">
+            <div className="sm:hidden space-y-2">
+              {filteredCadItems.length === 0 ? (
+                <div className="p-6 text-center text-slate-400 text-sm border border-slate-700 rounded-xl">
+                  لا توجد عناصر مطابقة لهذا النوع في الملف.
+                </div>
+              ) : (
+                filteredCadItems.map((item) => {
+                  const isSelected = Boolean(selectedItems[item.id]);
+                  return (
+                    <button
+                      key={`m-${item.id}`}
+                      type="button"
+                      onClick={() => setSelectedItems((prev) => ({ ...prev, [item.id]: !prev[item.id] }))}
+                      className={`w-full text-right rounded-xl border p-3 flex items-start gap-3 transition-colors ${
+                        isSelected ? "border-blue-500/60 bg-blue-950/30" : "border-slate-700 bg-slate-900"
+                      }`}
+                    >
+                      {isSelected ? (
+                        <CheckSquare className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+                      ) : (
+                        <EmptySquare className="w-5 h-5 text-slate-500 shrink-0 mt-0.5" />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-semibold text-white leading-snug">{item.description}</div>
+                        <div className="mt-1 text-[11px] text-slate-400 font-mono truncate">{item.layer}</div>
+                        <div className="mt-1 text-[11px] text-slate-500 truncate">{item.suggestedCategory}</div>
+                      </div>
+                      <div className="text-left shrink-0">
+                        <div className="font-mono font-bold text-emerald-400 text-base leading-none">
+                          {item.value.toLocaleString("ar-SA", { maximumFractionDigits: 2 })}
+                        </div>
+                        <div className="text-[11px] text-slate-300 mt-1">{item.unit}</div>
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+            <div className="hidden sm:block border border-slate-700 rounded-xl overflow-hidden bg-slate-900">
               <div className="overflow-x-auto">
                 <table className="w-full text-right text-xs">
                   <thead className="bg-slate-800/90 text-slate-300 border-b border-slate-700">

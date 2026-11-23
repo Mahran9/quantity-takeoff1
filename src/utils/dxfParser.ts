@@ -1406,6 +1406,33 @@ export function extractEngineeringQuantitiesFromDxf(
     }
   });
 
+  // 2a. Columns / footings drawn as closed shapes: also report their number (عدد)
+  parsedDxf.layers.forEach((layer, idx) => {
+    const rule = matchLayerRule(layer.name, layerRules);
+    if (rule) return;
+    if (isIgnoredLayer(layer.name)) return;
+    const n = layer.closedPolylinesCount || 0;
+    if (n < 2) return;
+    const norm = normalizeLayerName(layer.name);
+    const isCol = layerHasAny(norm, ["COL*", "عمود", "اعمدة", "أعمدة", "عمدان"]);
+    const isFoot = layerHasAny(norm, ["FOOT*", "FOUND*", "FND", "قاعدة", "قواعد"]);
+    if (!isCol && !isFoot) return;
+    results.push({
+      id: `cad-autocount-${idx}`,
+      type: "count",
+      layer: layer.name,
+      name: `${layer.name} (عدد)`,
+      value: n,
+      unit: "عدد",
+      formula: `عدد الأشكال المغلقة في الطبقة = ${n}`,
+      count: n,
+      suggestedCategory: "أعمال خرسانية مسلحة وعادية",
+      entityCount: layer.entityCount,
+      description: isCol ? `عدد الأعمدة (${layer.name})` : `عدد القواعد (${layer.name})`,
+      selected: true,
+    });
+  });
+
   // 2b. Layers forced to "count" by a user rule: number of closed shapes (or entities)
   parsedDxf.layers.forEach((layer, idx) => {
     const rule = matchLayerRule(layer.name, layerRules);
@@ -1482,7 +1509,10 @@ export function extractEngineeringQuantitiesFromDxf(
     const divisor = isWall && wallLineDivisor === 2 ? 2 : 1;
     const openLen = (layer.lineLength || 0) * effectiveScale;
     const closedLen =
-      includeClosedPerimeter && (acceptsClosedPerimeter || rule) ? (layer.closedPerimeterSum || 0) * effectiveScale : 0;
+      (includeClosedPerimeter && (acceptsClosedPerimeter || rule)) ||
+      (!rule && acceptsClosedPerimeter && (layer.lineLength || 0) <= 0)
+        ? (layer.closedPerimeterSum || 0) * effectiveScale
+        : 0;
     const rawLen = (openLen + closedLen) / divisor;
     if (rawLen <= 1.0) return;
 

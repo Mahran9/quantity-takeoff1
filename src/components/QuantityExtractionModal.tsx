@@ -452,13 +452,13 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
         {/* Header */}
         <div className="flex items-center justify-between gap-2 px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-800 bg-slate-950/60">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="p-2.5 shrink-0 bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-xl">
+            <div className="p-2.5 shrink-0 bg-amber-500 text-slate-950/20 text-amber-400 border border-amber-500/30 rounded-xl">
               <Calculator className="w-6 h-6" />
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
                 <span className="sm:hidden">استخراج الكميات</span><span className="hidden sm:inline">مركز استخراج الكميات الهندسية التفصيلية</span>
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 font-mono">
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono">
                   {sheet.code}
                 </span>
               </h2>
@@ -499,13 +499,13 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
               onClick={() => setActiveTab("cad")}
               className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-t-xl border-t border-x transition-all ${
                 activeTab === "cad"
-                  ? "bg-slate-800 text-blue-400 border-slate-700 shadow-inner"
+                  ? "bg-slate-800 text-amber-400 border-slate-700 shadow-inner"
                   : "text-slate-400 border-transparent hover:text-slate-200"
               }`}
             >
               <Layers className="w-4 h-4" />
               <span><span className="sm:hidden">عناصر الرسم</span><span className="hidden sm:inline">استخراج هندسي مباشر من عناصر الأوتوكاد (DXF)</span></span>
-              <span className="px-1.5 py-0.2 bg-blue-500/20 text-blue-300 rounded text-[10px]">
+              <span className="px-1.5 py-0.2 bg-amber-500/20 text-amber-300 rounded text-[10px]">
                 {cadQuantities.length}
               </span>
             </button>
@@ -615,7 +615,7 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
                     <ul className="space-y-1.5">
                       {audit.unclassified.map((u) => (
                         <li key={u.layer} className="flex flex-wrap items-center gap-2">
-                          <span className="font-mono text-blue-300">{u.layer}</span>
+                          <span className="font-mono text-amber-300">{u.layer}</span>
                           <span className="opacity-75">
                             {u.entityCount} عنصر · {u.areaM2} م² · {u.lengthM} م
                           </span>
@@ -637,7 +637,7 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
                                 { match: u.layer, category: quickCategory[u.layer] ?? ruleCategory },
                               ])
                             }
-                            className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg"
+                            className="px-2.5 py-1 bg-amber-500 text-slate-950 hover:bg-amber-500 text-white font-bold rounded-lg"
                           >
                             تصنيف
                           </button>
@@ -668,11 +668,13 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
             )}
 
             {/* Geometric Config Toolbar */}
-            <div className="bg-slate-800/60 border border-slate-700/80 rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-3 text-xs font-bold text-slate-300">
-                <Settings2 className="w-4 h-4 text-blue-400" />
-                <span>معايير البثق والتحويل الهندسي لعناصر الأوتوكاد:</span>
-              </div>
+            <details className="group bg-slate-800/60 border border-slate-700/80 rounded-xl p-4">
+              <summary className="flex items-center gap-2 text-xs font-bold text-slate-300 cursor-pointer list-none">
+                <Settings2 className="w-4 h-4 text-amber-400" />
+                <span>معايير الارتفاع والسماكة (اختياري)</span>
+                <span className="mr-auto text-[11px] font-normal text-slate-500 group-open:hidden">اضغط للتعديل — الفارغ = بدون افتراض</span>
+              </summary>
+              <div className="mt-3" />
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
                 <div>
                   <label className="block text-slate-400 mb-1">ارتفاع الجدران من المخطط (م):</label>
@@ -760,7 +762,7 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
                   <span className="text-[10px] text-slate-400">معامل التحويل للأمتار القياسية</span>
                 </div>
               </div>
-            </div>
+            </details>
 
             {/* Unit confirmation banner (shown when the DXF has no $INSUNITS) */}
             {sheet?.dxfData?.unitInfo?.guessed && !unitConfirmed && (
@@ -831,11 +833,11 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
             )}
 
             {/* Layer / block rules */}
-            <div className="bg-slate-800/60 border border-slate-700/80 rounded-xl p-4 text-xs">
-              <div className="flex items-center gap-2 mb-1 font-bold text-slate-300">
-                <Settings2 className="w-4 h-4 text-blue-400" />
-                <span>قواعد تصنيف الطبقات والبلوكات (تُحفظ على جهازك)</span>
-              </div>
+            <details className="bg-slate-800/60 border border-slate-700/80 rounded-xl p-4 text-xs">
+              <summary className="flex items-center gap-2 mb-1 font-bold text-slate-300 cursor-pointer list-none">
+                <Settings2 className="w-4 h-4 text-amber-400" />
+                <span>قواعد تصنيف الطبقات والبلوكات (اختياري)</span>
+              </summary>
               <p className="text-[10px] text-slate-400 mb-3">
                 اكتب جزءاً من اسم الطبقة أو البلوك ليُصنَّف كما تريد، أو اختر «تجاهل». القواعد لها الأولوية على التصنيف التلقائي.
               </p>
@@ -884,7 +886,7 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
                 <button
                   onClick={handleAddLayerRule}
                   disabled={!ruleMatch.trim()}
-                  className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg disabled:opacity-50"
+                  className="flex items-center gap-1 px-3 py-1.5 bg-amber-500 text-slate-950 hover:bg-amber-500 text-white font-bold rounded-lg disabled:opacity-50"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>إضافة قاعدة</span>
@@ -897,7 +899,7 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
                       key={r.match}
                       className="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-slate-200"
                     >
-                      <span className="font-mono text-blue-300">{r.match}</span>
+                      <span className="font-mono text-amber-300">{r.match}</span>
                       <span className="text-slate-500">←</span>
                       <span>{r.kind === "ignore" ? "تجاهل" : `${r.category || "تلقائي"}${r.kind ? ` · ${RULE_KIND_LABELS[r.kind]}` : ""}`}</span>
                       <button
@@ -911,7 +913,7 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
                   ))}
                 </ul>
               )}
-            </div>
+            </details>
 
             {/* Filter by Dimension Type */}
             <div className="flex items-center justify-between flex-wrap gap-3">
@@ -934,7 +936,7 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
                     onClick={() => setTypeFilter("volume")}
                     className={`flex items-center gap-1.5 shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                       typeFilter === "volume"
-                        ? "bg-purple-600 text-white"
+                        ? "bg-amber-500 text-slate-950 text-white"
                         : "bg-slate-800 text-purple-300 hover:bg-slate-700"
                     }`}
                   >
@@ -948,8 +950,8 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
                     onClick={() => setTypeFilter("area")}
                     className={`flex items-center gap-1.5 shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                       typeFilter === "area"
-                        ? "bg-blue-600 text-white"
-                        : "bg-slate-800 text-blue-300 hover:bg-slate-700"
+                        ? "bg-amber-500 text-slate-950 text-white"
+                        : "bg-slate-800 text-amber-300 hover:bg-slate-700"
                     }`}
                   >
                     <Square className="w-3.5 h-3.5" />
@@ -992,7 +994,7 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
               <div className="flex items-center gap-3">
                 <button
                   onClick={toggleSelectAll}
-                  className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                  className="text-xs text-amber-400 hover:text-amber-300 flex items-center gap-1"
                 >
                   <CheckSquare className="w-3.5 h-3.5" />
                   تحديد / إلغاء تحديد الكل
@@ -1112,11 +1114,11 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
                       type="button"
                       onClick={() => setSelectedItems((prev) => ({ ...prev, [item.id]: !prev[item.id] }))}
                       className={`w-full text-right rounded-xl border p-3 flex items-start gap-3 transition-colors ${
-                        isSelected ? "border-blue-500/60 bg-blue-950/30" : "border-slate-700 bg-slate-900"
+                        isSelected ? "border-amber-500/60 bg-amber-950/30" : "border-slate-700 bg-slate-900"
                       }`}
                     >
                       {isSelected ? (
-                        <CheckSquare className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+                        <CheckSquare className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
                       ) : (
                         <EmptySquare className="w-5 h-5 text-slate-500 shrink-0 mt-0.5" />
                       )}
@@ -1165,7 +1167,7 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
                           <tr
                             key={item.id}
                             className={`hover:bg-slate-800/50 transition-colors ${
-                              isSelected ? "bg-blue-950/20" : ""
+                              isSelected ? "bg-amber-950/20" : ""
                             }`}
                           >
                             <td className="p-3 text-center">
@@ -1179,7 +1181,7 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
                                 className="text-slate-400 hover:text-white"
                               >
                                 {isSelected ? (
-                                  <CheckSquare className="w-4 h-4 text-blue-400" />
+                                  <CheckSquare className="w-4 h-4 text-amber-400" />
                                 ) : (
                                   <EmptySquare className="w-4 h-4" />
                                 )}
@@ -1193,7 +1195,7 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
                                 </span>
                               )}
                               {item.type === "area" && (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[11px] font-semibold">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[11px] font-semibold">
                                   <Square className="w-3 h-3" /> مساحات (م²)
                                 </span>
                               )}
@@ -1473,7 +1475,7 @@ export const QuantityExtractionModal: React.FC<QuantityExtractionModalProps> = (
                     ? "ثقة التدقيق منخفضة — أقرّ بمراجعة التحذيرات أولاً"
                     : undefined
                 }
-                className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-5 py-3 sm:py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm sm:text-xs font-bold rounded-xl shadow-lg transition-all disabled:opacity-50"
+                className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-5 py-3 sm:py-2 bg-amber-500 text-slate-950 hover:bg-amber-500 text-white text-sm sm:text-xs font-bold rounded-xl shadow-lg transition-all disabled:opacity-50"
               >
                 <Plus className="w-4 h-4" />
                 <span><span className="sm:hidden">إدراج ({selectedCadCount}) بنود</span><span className="hidden sm:inline">إدراج ({selectedCadCount}) بنود هندسية إلى اللوحة</span></span>

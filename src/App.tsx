@@ -142,6 +142,7 @@ export default function App() {
   const [isExtractionModalOpen, setIsExtractionModalOpen] = useState(false);
   const [isProjectsOpen, setIsProjectsOpen] = useState(false);
   const [isSteelCalcOpen, setIsSteelCalcOpen] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isQuotationOpen, setIsQuotationOpen] = useState(false);
 
@@ -295,6 +296,20 @@ export default function App() {
   };
 
   const currentSheet = sheets.find((s) => s.id === activeSheetId) || sheets[0];
+
+  // These tools add items to a drawing, so with no drawing yet we send the user to "add drawing" instead of doing nothing.
+  const needSheet = (open: () => void, what: string) => () => {
+    if (!currentSheet) {
+      setNotice(`أضف مخططاً أولاً لتستخدم ${what}`);
+      setIsUploadOpen(true);
+      window.setTimeout(() => setNotice(null), 4000);
+      return;
+    }
+    open();
+  };
+  const openExtraction = needSheet(() => setIsExtractionModalOpen(true), "حصر الكميات");
+  const openSteelCalc = needSheet(() => setIsSteelCalcOpen(true), "حاسبة الحديد");
+  const openVisualSearch = needSheet(() => setIsVisualSearchOpen(true), "البحث البصري");
   const currentSheetItems = takeoffItems.filter((item) => item.sheetId === currentSheet?.id);
 
   // Item handlers with Audit Trail & Undo support
@@ -605,10 +620,10 @@ export default function App() {
         sheets={sheets}
         takeoffItems={takeoffItems}
         onOpenUpload={() => setIsUploadOpen(true)}
-        onOpenVisualSearch={() => setIsVisualSearchOpen(true)}
-        onOpenExtractionModal={() => setIsExtractionModalOpen(true)}
+        onOpenVisualSearch={openVisualSearch}
+        onOpenExtractionModal={openExtraction}
         onOpenProjectsModal={() => setIsProjectsOpen(true)}
-        onOpenSteelCalc={() => setIsSteelCalcOpen(true)}
+        onOpenSteelCalc={openSteelCalc}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenQuotation={() => setIsQuotationOpen(true)}
         canUndo={historyStack.length > 0}
@@ -634,7 +649,7 @@ export default function App() {
                 sheet={currentSheet}
                 items={currentSheetItems}
                 currencySymbol={metadata.currencySymbol}
-                onOpenExtraction={() => setIsExtractionModalOpen(true)}
+                onOpenExtraction={openExtraction}
                 onOpenBoq={() => setActiveView("boq")}
                 onExportExcel={() => exportBoqToExcel(metadata, sheets, takeoffItems, company)}
               />
@@ -648,9 +663,9 @@ export default function App() {
                   onRemoveMeasurementPin={handleRemoveMeasurementPin}
                   onConvertPinToItem={handleConvertPinToItem}
                   onCalibrateSheet={handleCalibrateSheet}
-                  onOpenVisualSearch={() => setIsVisualSearchOpen(true)}
-                  onOpenExtractionModal={() => setIsExtractionModalOpen(true)}
-                  onOpenSteelCalc={() => setIsSteelCalcOpen(true)}
+                  onOpenVisualSearch={openVisualSearch}
+                  onOpenExtractionModal={openExtraction}
+                  onOpenSteelCalc={openSteelCalc}
                   highlightedTokens={highlightedTokens}
                   highlightLabel={highlightLabel}
                   onClearHighlights={() => {
@@ -672,8 +687,8 @@ export default function App() {
                 onUpdateItem={handleUpdateItem}
                 onDeleteItem={handleDeleteItem}
                 currencySymbol={metadata.currencySymbol}
-                onOpenVisualSearch={() => setIsVisualSearchOpen(true)}
-                onOpenExtractionModal={() => setIsExtractionModalOpen(true)}
+                onOpenVisualSearch={openVisualSearch}
+                onOpenExtractionModal={openExtraction}
                 onInspectItemOnSheet={handleInspectItemOnSheet}
                 onImportExcelItems={handleApplyExtractedItems}
                 onUpdateStatus={handleUpdateItemStatus}
@@ -740,6 +755,12 @@ export default function App() {
           activeSheet={currentSheet}
           onAddItem={handleAddItem}
         />
+      )}
+
+      {notice && (
+        <div className="fixed inset-x-3 bottom-24 sm:bottom-6 z-[60] mx-auto max-w-sm rounded-2xl bg-slate-900 text-white text-sm font-semibold px-4 py-3 shadow-2xl text-center qto-fade-in print:hidden" role="status">
+          {notice}
+        </div>
       )}
 
       <ProjectManagerModal

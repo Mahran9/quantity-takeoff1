@@ -285,18 +285,18 @@ export const SteelCalculatorModal: React.FC<SteelCalculatorModalProps> = ({
           </button>
         </div>
 
-        <div className="bg-slate-50 border-b border-slate-200 px-6 py-3 flex flex-wrap gap-2">
+        <div className="bg-slate-50 border-b border-slate-200 px-3 sm:px-6 py-3 flex gap-2 overflow-x-auto no-scrollbar">
           {[
-            { id: "sections", label: "كمرات وقطاعات (IPE/HEA/HEB/تيوب)" },
-            { id: "bars", label: "أعواد قياسية (12 م)" },
-            { id: "plates", label: "صاج وبيس بليت (Plates)" },
-            { id: "rebar", label: "حديد تسليح (Rebar)" },
-            { id: "panel", label: "ساندوتش بانل وشينكو" },
+            { id: "sections", label: "كمرات وقطاعات" },
+            { id: "bars", label: "أعواد 12 م" },
+            { id: "plates", label: "صاج وبيس بليت" },
+            { id: "rebar", label: "حديد تسليح" },
+            { id: "panel", label: "ساندوتش بانل" },
           ].map((t) => (
             <button
               key={t.id}
               onClick={() => setTab(t.id as CalcTab)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+              className={`shrink-0 whitespace-nowrap px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
                 tab === t.id
                   ? "bg-slate-900 text-amber-400 shadow-xs"
                   : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
@@ -307,7 +307,7 @@ export const SteelCalculatorModal: React.FC<SteelCalculatorModalProps> = ({
           ))}
         </div>
 
-        <div className="p-6 overflow-y-auto space-y-5 flex-1">
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1">
           {tab === "sections" && (
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

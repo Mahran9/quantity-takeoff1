@@ -105,7 +105,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
             <button
               onClick={onOpenQuotation}
-              className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-[13px] font-bold"
+              className="qto-cta flex items-center gap-1.5 px-3 py-2 rounded-xl text-[13px] font-bold"
               title="عرض السعر: معاينة وطباعة وتصدير Excel"
             >
               <Printer className="w-4 h-4" />
@@ -172,38 +172,34 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </header>
 
-      {/* Mobile bottom navigation */}
-      <nav className="sm:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-slate-200 shadow-[0_-8px_24px_-12px_rgba(15,23,42,0.25)] print:hidden" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
-        <div className="flex items-end px-2">
-          <button onClick={() => setActiveView("workspace")} className={navBtn(activeView === "workspace")}>
-            <Layers className="w-5 h-5" />
-            المخططات{sheets.length > 0 && <span className="text-[10px] font-mono">({sheets.length})</span>}
+      {/* Mobile floating pill navigation */}
+      <nav className="qto-pillnav sm:hidden print:hidden">
+        <button onClick={() => setActiveView("workspace")} className={activeView === "workspace" ? "is-active" : ""}>
+          <Layers className="w-[22px] h-[22px] justify-self-center" />
+          المخططات
+        </button>
+        <button onClick={() => setActiveView("boq")} className={activeView === "boq" ? "is-active" : ""}>
+          <FileSpreadsheet className="w-[22px] h-[22px] justify-self-center" />
+          الجدول
+        </button>
+        <button onClick={onOpenUpload} aria-label="إضافة مخطط" className={`qto-plus ${sheets.length === 0 ? "qto-fab-attention" : ""}`}>
+          <Plus className="w-6 h-6" />
+        </button>
+        {onOpenExtractionModal ? (
+          <button onClick={onOpenExtractionModal}>
+            <Calculator className="w-[22px] h-[22px] justify-self-center" />
+            الحصر
           </button>
-          <button onClick={() => setActiveView("boq")} className={navBtn(activeView === "boq")}>
-            <FileSpreadsheet className="w-5 h-5" />
-            الجدول{takeoffItems.length > 0 && <span className="text-[10px] font-mono">({takeoffItems.length})</span>}
+        ) : (
+          <button onClick={onOpenVisualSearch}>
+            <ScanSearch className="w-[22px] h-[22px] justify-self-center" />
+            بحث بصري
           </button>
-          <div className="flex-1 flex justify-center">
-            <button onClick={onOpenUpload} aria-label="إضافة مخطط" className={`${sheets.length === 0 ? "qto-fab-attention " : ""}-mt-5 w-14 h-14 rounded-full bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/40 flex items-center justify-center active:scale-95 transition border-4 border-white`}>
-              <Plus className="w-7 h-7" />
-            </button>
-          </div>
-          {onOpenExtractionModal ? (
-            <button onClick={onOpenExtractionModal} className={navBtn(false)}>
-              <Calculator className="w-5 h-5" />
-              الحصر
-            </button>
-          ) : (
-            <button onClick={onOpenVisualSearch} className={navBtn(false)}>
-              <ScanSearch className="w-5 h-5" />
-              بحث بصري
-            </button>
-          )}
-          <button onClick={() => setMore(true)} className={navBtn(more)}>
-            <MoreHorizontal className="w-5 h-5" />
-            المزيد
-          </button>
-        </div>
+        )}
+        <button onClick={() => setMore(true)} className={more ? "is-active" : ""}>
+          <MoreHorizontal className="w-[22px] h-[22px] justify-self-center" />
+          المزيد
+        </button>
       </nav>
 
       {/* More sheet (mobile) */}

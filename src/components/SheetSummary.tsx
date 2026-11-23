@@ -72,7 +72,7 @@ export const SheetSummary: React.FC<Props> = ({ sheet, items, currencySymbol, on
       <div className="mt-3 grid grid-cols-3 gap-2">
         <button
           onClick={onOpenExtraction}
-          className="col-span-3 sm:col-span-1 flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-500 active:scale-[0.98]"
+          className="col-span-3 sm:col-span-1 flex items-center justify-center gap-2 qto-cta rounded-xl px-4 py-3 text-sm font-bold transition active:scale-[0.98]"
         >
           <Layers className="w-5 h-5" />
           <span>① حصر الكميات من الملف</span>

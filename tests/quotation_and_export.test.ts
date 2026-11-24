@@ -83,6 +83,10 @@ assert.equal(imported[0].quantity, 10.5);
 assert.equal(imported[0].unit, "م³");
 assert.equal(imported[0].unitPrice, 200);
 
+// A text file read as a sheet (no header, no numbers) must not turn every line into an item.
+const junk = parseBoqRowsToItems([["TABLE:  \"PROGRAM CONTROL\""], ["   ProgramName=SAFE   Version=21"], [""], ["TABLE:  \"POINTS\""]], act);
+assert.equal(junk.length, 0, "text lines are not BOQ items");
+
 const w = getExportWarnings(items);
 assert.deepEqual([w.rejectedExcluded, w.zeroPrice], [1, 1]);
 

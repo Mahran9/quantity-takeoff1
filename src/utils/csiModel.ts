@@ -37,8 +37,20 @@ export interface ModelReadResult {
   stories: { name: string; height: number; elevation: number }[];
   items: ModelQuantity[];
   warnings: string[];
+  /** Plan area (m²) of blinding under footings/rafts, footprint grown by BLINDING_OFFSET on each side. */
+  blinding?: { area: number; count: number };
   /** Plan geometry (metres) of one representative level, for a preview picture. */
   plan: { columns: { x: number; y: number; b: number; d: number }[]; beams: [number, number, number, number][]; areas: { x: number; y: number }[][] };
+}
+
+export const BLINDING_T = 0.1;
+export const BLINDING_OFFSET = 0.1;
+
+/** Perimeter of a polygon. */
+function polyPerimeter(pts: { x: number; y: number }[]): number {
+  let p = 0;
+  for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length]; p += Math.hypot(b.x - a.x, b.y - a.y); }
+  return p;
 }
 
 const LEN_UNIT: Record<string, number> = { M: 1, MM: 0.001, CM: 0.01, IN: 0.0254, FT: 0.3048, INCH: 0.0254, FEET: 0.3048 };
@@ -361,6 +373,7 @@ export function readSafe(text: string): ModelReadResult {
   const agg = new Map<string, any>();
   const plan: ModelReadResult["plan"] = { columns: [], beams: [], areas: [] };
   let unassigned = 0;
+  let blindArea = 0, blindCount = 0;
   for (const r of t.get("FLOOR OBJECT CONNECTIVITY") || []) {
     const name = r["Unique Name"] ?? r.UniqueName;
     const ids = Object.keys(r).filter((k) => /^UniquePt\d+$/.test(k)).sort((a, b) => Number(a.slice(8)) - Number(b.slice(8))).map((k) => r[k]);
@@ -373,6 +386,11 @@ export function readSafe(text: string): ModelReadResult {
     const A = polyArea(poly);
     plan.areas.push(poly);
     const group: ModelGroup = /footing|mat/i.test(sp.type) ? "footings" : "slabs";
+    if (group === "footings") {
+      // Offset polygon area ≈ A + P·d + π·d² (exact for convex outlines).
+      blindArea += A + polyPerimeter(poly) * BLINDING_OFFSET + Math.PI * BLINDING_OFFSET ** 2;
+      blindCount++;
+    }
     addAgg(agg, group, "الأساسات", secName!, {
       area: A, volume: A * sp.t, dims: `سماكة ${round(sp.t, 2)}`, material: sp.material,
       formula: `المساحة × السماكة ${round(sp.t, 2)}`,
@@ -397,7 +415,10 @@ export function readSafe(text: string): ModelReadResult {
   }
   if (unassigned) warnings.push(`${unassigned} مسطح بلا خاصية مُسندة — تُرك.`);
   if (!agg.size) warnings.push("لم أجد قواعد أو لبشة أو بلاطات في ملف SAFE.");
-  return { program: "SAFE", version: ctrl.Version, unitToM, stories: [], items: finish(agg), warnings, plan };
+  return {
+    program: "SAFE", version: ctrl.Version, unitToM, stories: [], items: finish(agg), warnings, plan,
+    blinding: blindCount ? { area: round(blindArea, 2), count: blindCount } : undefined,
+  };
 }
 
 /** Reads either model type from its text; throws an Arabic message when it is neither. */
@@ -433,16 +454,18 @@ export function modelToTakeoffItems(
     if (!(q.volume > 0)) { skipped.push(`${GROUP_LABEL[q.group]} ${q.section} (${q.story}): ليس خرسانياً — طوله ${q.length ?? 0} م.`); continue; }
     const n = startIndex + items.length + 1;
     const where = q.story === "الأساسات" ? "الأساسات" : `الدور ${q.story}`;
+    // Description names the work (element + concrete grade) so the quotation can merge floors into one priced line;
+    // the section and its size stay in the location so the detailed table still shows every member type.
     items.push({
       id: `item-model-${Date.now()}-${n}`,
       sheetId: sheet.id,
       sheetCode: sheet.code,
       sheetTitle: sheet.title,
       itemCode: `${prefix[q.group]}-${String(n).padStart(2, "0")}`,
-      description: `خرسانة مسلحة ${GROUP_LABEL[q.group]} ${q.section} (${q.dims})`,
+      description: `توريد وصب خرسانة مسلحة — ${GROUP_LABEL[q.group]}${q.material ? ` (${q.material})` : ""}`,
       category: "أعمال خرسانية مسلحة وعادية",
       dimensionType: "volume",
-      location: where,
+      location: `${where} · ${q.section} ${q.dims}`,
       count: q.count,
       length: q.length,
       formula: q.formula,
@@ -457,6 +480,36 @@ export function modelToTakeoffItems(
       reviewFlags: ["لم يتم إدخال سعر وحدة"],
       extractionSource: "structural_model",
       sourceDetails: { layer: q.section },
+    });
+  }
+  // Blinding under footings/rafts: standard 10 cm lean concrete projecting 10 cm on every side. It is an assumption,
+  // not in the model, so it waits for review and says so.
+  if (r.blinding && r.blinding.area > 0) {
+    const n = startIndex + items.length + 1;
+    const vol = Math.round(r.blinding.area * BLINDING_T * 1000) / 1000;
+    items.push({
+      id: `item-model-${Date.now()}-${n}`,
+      sheetId: sheet.id,
+      sheetCode: sheet.code,
+      sheetTitle: sheet.title,
+      itemCode: `BLD-${String(n).padStart(2, "0")}`,
+      description: "توريد وصب خرسانة عادية (نظافة) أسفل القواعد",
+      category: "أعمال خرسانية مسلحة وعادية",
+      dimensionType: "volume",
+      location: "الأساسات",
+      count: r.blinding.count,
+      formula: `(مساحة القواعد + بروز ${BLINDING_OFFSET} م من كل جانب) ${Math.round(r.blinding.area * 100) / 100} م² × ${BLINDING_T}`,
+      deduction: 0,
+      quantity: vol,
+      unit: "م³",
+      unitPrice: 0,
+      totalPrice: 0,
+      notes: `افتراض قياسي: سماكة ${BLINDING_T * 100} سم وبروز ${BLINDING_OFFSET * 100} سم — غير موجود في النموذج، طابِقه مع لوحة الأساسات.`,
+      isVerified: false,
+      reviewStatus: "needs_review",
+      sourceEvidence: `${r.program}: ${r.blinding.count} قاعدة/لبشة`,
+      reviewFlags: ["افتراض: سماكة وبروز النظافة غير مذكورين في النموذج", "لم يتم إدخال سعر وحدة"],
+      extractionSource: "structural_model",
     });
   }
   return { items, skipped };

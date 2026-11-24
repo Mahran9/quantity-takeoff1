@@ -10,6 +10,8 @@ export type QuotationLang = "ar" | "en";
 
 export interface QuotationRow {
   id: string;
+  /** All takeoff items merged into this line (same section, description, unit and price). */
+  ids: string[];
   index: number;
   description: string;
   unit: string;
@@ -65,14 +67,25 @@ export function buildQuotation(items: TakeoffItem[], taxRate: number): Quotation
     const sorted = [...g.items].sort(
       (a, b) => getSiteExecutionRank(a.item) - getSiteExecutionRank(b.item) || a.order - b.order
     );
-    const rows: QuotationRow[] = sorted.map(({ item }) => {
-      const quantity = round2(item.quantity || 0);
-      const unitPrice = round2(item.unitPrice || 0);
+    // A quotation prices work, not drawings: the same item taken off on several floors or sheets
+    // (same description, unit and price) becomes one line with the summed quantity. The detailed table keeps every row.
+    const merged = new Map<string, { ids: string[]; first: TakeoffItem; qty: number }>();
+    for (const { item } of sorted) {
+      const description = (item.description || item.itemCode || "—").trim();
+      const key = `${description}\u0000${item.unit || ""}\u0000${round2(item.unitPrice || 0)}`;
+      const m = merged.get(key);
+      if (m) { m.ids.push(item.id); m.qty += item.quantity || 0; }
+      else merged.set(key, { ids: [item.id], first: item, qty: item.quantity || 0 });
+    }
+    const rows: QuotationRow[] = [...merged.values()].map(({ ids, first, qty }) => {
+      const quantity = round2(qty);
+      const unitPrice = round2(first.unitPrice || 0);
       return {
-        id: item.id,
+        id: first.id,
+        ids,
         index: ++counter,
-        description: item.description || item.itemCode || "—",
-        unit: item.unit || "",
+        description: first.description || first.itemCode || "—",
+        unit: first.unit || "",
         quantity,
         unitPrice,
         total: round2(quantity * unitPrice),
@@ -92,8 +105,9 @@ export function buildQuotation(items: TakeoffItem[], taxRate: number): Quotation
     taxRate: safeRate,
     tax,
     grandTotal: round2(subtotal + tax),
-    itemCount: counter,
-    zeroPriceCount: live.filter((i) => !(i.unitPrice > 0)).length,
+    itemCount: live.length,
+    // Counted in quotation lines (what the person prices), not in merged takeoff rows.
+    zeroPriceCount: sections.reduce((n, s) => n + s.rows.filter((r) => !(r.unitPrice > 0)).length, 0),
     pendingCount: live.filter((i) => i.reviewStatus !== "approved" && !i.isVerified).length,
   };
 }

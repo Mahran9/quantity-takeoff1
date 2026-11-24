@@ -116,6 +116,19 @@ assert.equal(s.items.length, 1);
 assert.equal(s.items[0].group, "footings");
 near(s.items[0].area!, 7, "footing area");
 near(s.items[0].volume, 4.2, "footing volume");
+// blinding: each footing grown 0.1 m all round → (2.2×2.2 + π·0.01 − 0.04·... ) ≈ A + P·0.1 + π·0.01
+near(s.blinding!.area, Math.round((4 + 8 * 0.1 + Math.PI * 0.01 + 3 + 8 * 0.1 + Math.PI * 0.01) * 100) / 100, "blinding area");
+const sfItems = modelToTakeoffItems(s, { id: "s2", code: "SAFE-01", title: "f" }, 0).items;
+const bl = sfItems.find((i) => /نظافة/.test(i.description))!;
+assert.equal(bl.reviewStatus, "needs_review", "blinding is an assumption → review");
+assert.equal(bl.quantity, Math.round(s.blinding!.area * 0.1 * 1000) / 1000);
+
+// Quotation merges the same work across floors into one line; the price edit reaches every merged row.
+import { buildQuotation } from "../src/utils/quotation";
+const qt = buildQuotation([...items, ...items.map((i) => ({ ...i, id: i.id + "-b", location: "Story2" }))], 15);
+const cols = qt.sections[0].rows.find((r) => /أعمدة/.test(r.description))!;
+assert.equal(cols.ids.length, 2);
+near(cols.quantity, Math.round(2 * get("columns").volume * 100) / 100, "merged qty");
 
 assert.throws(() => readStructuralModel("hello"), /ETABS/);
 
@@ -126,4 +139,14 @@ for (let i = 0; i < 5; i++) ents.push({ type: "LINE", vertices: [{ x: i, y: 0 },
 const m = mainClusterBounds(ents, { minX: -5000, minY: -113000, maxX: 6, maxY: 0 });
 assert.equal(m.stray, 5);
 assert.ok(m.bounds.maxY <= -112950 && m.bounds.minX === -5000, JSON.stringify(m.bounds));
+// "M-Cold Water Supply" is plumbing, not columns; "colum2" and "S-COL" are columns.
+{
+  const { analyzeParsedDxfObject, extractEngineeringQuantitiesFromDxf } = await import("../src/utils/dxfParser");
+  const sq = (layer: string, x: number) => ({ type: "LWPOLYLINE", layer, shape: true, vertices: [{ x, y: 0 }, { x: x + 0.3, y: 0 }, { x: x + 0.3, y: 0.3 }, { x, y: 0.3 }] });
+  const ents = ["M-Cold Water Supply", "colum2", "S-COL"].flatMap((l, k) => [sq(l, k * 10), sq(l, k * 10 + 2), sq(l, k * 10 + 4)]);
+  const p = analyzeParsedDxfObject({ header: { $INSUNITS: 6 }, tables: { layer: { layers: {} } }, blocks: {}, entities: ents } as any);
+  const q: any[] = extractEngineeringQuantitiesFromDxf(p as any, {} as any) as any;
+  const colCounts = q.filter((i) => /عدد الأعمدة/.test(i.description)).map((i) => i.layer).sort();
+  assert.deepEqual(colCounts, ["S-COL", "colum2"].sort(), JSON.stringify(colCounts));
+}
 console.log("structural_model ok");

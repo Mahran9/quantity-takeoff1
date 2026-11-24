@@ -63,6 +63,10 @@ function sourceLabel(item: TakeoffItem): string {
       return "قياس مباشر على المخطط";
     case "excel_import":
       return "مستورد من Excel";
+    case "structural_model":
+      return `نموذج إنشائي (${item.sourceDetails?.layer || "ETABS/SAFE"})`;
+    case "ai_vision":
+      return "قراءة بالذكاء الاصطناعي";
     default:
       return "حصر يدوي";
   }
@@ -711,6 +715,9 @@ export function parseBoqRowsToItems(rows: any[][], activeSheet: BlueprintSheet):
       continue;
     }
 
+    // Without a recognised header the columns are guessed, so a line only counts when its quantity cell holds a number;
+    // otherwise any text file would turn every line into a zero-quantity item.
+    if (headerIdx < 0 && String(row[colQty] ?? "").trim() === "") continue;
     const rawQty = colQty >= 0 ? parseLocaleNumber(row[colQty]) : 0;
     const rawPrice = colPrice >= 0 ? parseLocaleNumber(row[colPrice]) : 0;
     // A row whose quantity cell is non-numeric text is a section title / note, not a BOQ line.
@@ -751,6 +758,7 @@ const MAX_IMPORT_BYTES = 15 * 1024 * 1024;
 
 export async function importBoqFromExcel(file: File, activeSheet: BlueprintSheet): Promise<TakeoffItem[]> {
   if (file.size > MAX_IMPORT_BYTES) throw new Error("الملف كبير جداً (الحد الأقصى 15 ميجابايت).");
+  if (!/\.(xlsx|xlsm|xls|csv)$/i.test(file.name)) throw new Error("اختر ملف Excel (.xlsx أو .xls) أو CSV. لنماذج ETABS/SAFE والمخططات استخدم «إضافة» في شاشة اللوحات.");
   const buffer = await file.arrayBuffer();
   const wb = XLSX.read(buffer, { type: "array" });
   const firstSheetName = wb.SheetNames[0];

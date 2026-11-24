@@ -416,6 +416,9 @@ export function normalizeLayerName(name: string): string {
     .join("_");
 }
 
+/** Column layer names: COL, COLS, COL1, COLUMN(S), COLUM2, COLMN… — but not COLD, COLOR, COLLAR. */
+export const COLUMN_WORDS = ["COL", "COL#", "COLUM*", "COLMN*"];
+
 export function tokenizeLayerName(name: string): string[] {
   return normalizeLayerName(name).split("_").filter(Boolean);
 }
@@ -1458,7 +1461,7 @@ export function extractEngineeringQuantitiesFromDxf(
       const DEFAULT_CAT = "أعمال الأرضيات والرخام والبورسلين";
       const unrecognised = !rule && category === DEFAULT_CAT && desc.startsWith("مسطح ومساحة طبقة");
       if (unrecognised) {
-        if (has("WALL*", "COL*", "جدار", "جدران", "حائط", "عمود", "اعمدة", "أعمدة", "عمدان")) return;
+        if (has("WALL*", ...COLUMN_WORDS, "جدار", "جدران", "حائط", "عمود", "اعمدة", "أعمدة", "عمدان")) return;
         category = "أعمال متنوعة أخرى";
       }
 
@@ -1511,7 +1514,7 @@ export function extractEngineeringQuantitiesFromDxf(
     const n = layer.closedPolylinesCount || 0;
     if (n < 2) return;
     const norm = normalizeLayerName(layer.name);
-    const isCol = layerHasAny(norm, ["COL*", "عمود", "اعمدة", "أعمدة", "عمدان"]);
+    const isCol = layerHasAny(norm, [...COLUMN_WORDS, "عمود", "اعمدة", "أعمدة", "عمدان"]);
     const isFoot = layerHasAny(norm, ["FOOT*", "FOUND*", "FND", "قاعدة", "قواعد"]);
     if (!isCol && !isFoot) return;
     results.push({

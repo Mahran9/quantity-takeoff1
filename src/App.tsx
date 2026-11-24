@@ -553,11 +553,10 @@ export default function App() {
   const handleModelImported = (newSheet: BlueprintSheet, items: TakeoffItem[], message: string) => {
     pushUndoSnapshot();
     const now = new Date().toISOString();
-    const stamped = items.map((it) => ({
-      ...it,
-      reviewStatus: "extracted" as ReviewStatus,
-      auditLog: [{ timestamp: now, action: "قراءة نموذج إنشائي", newQty: it.quantity, status: "extracted" as ReviewStatus }],
-    }));
+    const stamped = items.map((it) => {
+      const status: ReviewStatus = it.reviewStatus || "extracted";
+      return { ...it, reviewStatus: status, auditLog: [{ timestamp: now, action: "قراءة نموذج إنشائي", newQty: it.quantity, status }] };
+    });
     updateActiveProject((p) => ({ ...p, sheets: [...p.sheets, newSheet], takeoffItems: [...stamped, ...p.takeoffItems] }));
     setActiveSheetId(newSheet.id);
     setDrawingOpen(false);

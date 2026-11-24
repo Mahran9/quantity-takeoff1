@@ -68,6 +68,13 @@ export const BOQView: React.FC<BOQViewProps> = ({
 
   // Single source of truth shared with Excel / print: rejected lines never count anywhere.
   const quotation = buildQuotation(takeoffItems, metadata.taxRate);
+  /** One price for a quotation line applies to every takeoff row merged into it. */
+  const setRowPrice = (ids: string[], price: number) => {
+    for (const id of ids) {
+      const it = takeoffItems.find((i) => i.id === id);
+      if (it) onUpdateItem({ ...it, unitPrice: price, totalPrice: Number((it.quantity * price).toFixed(2)) });
+    }
+  };
   const exportWarnings = getExportWarnings(takeoffItems);
   const totalCostBeforeTax = quotation.subtotal;
   const taxAmount = quotation.tax;
@@ -209,10 +216,10 @@ export const BOQView: React.FC<BOQViewProps> = ({
           </div>
         </div>
 
-        {(exportWarnings.zeroPrice > 0 || exportWarnings.rejectedExcluded > 0) && (
+        {(quotation.zeroPriceCount > 0 || exportWarnings.rejectedExcluded > 0) && (
           <div className="mt-4 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 flex flex-wrap items-center gap-x-4 gap-y-1 print:hidden">
-            {exportWarnings.zeroPrice > 0 && (
-              <span>⚠ {exportWarnings.zeroPrice} بند بسعر وحدة صفر سيظهر بقيمة 0 في العرض.</span>
+            {quotation.zeroPriceCount > 0 && (
+              <span>⚠ {quotation.zeroPriceCount} بند في العرض بلا سعر وحدة، وسيظهر بقيمة 0.</span>
             )}
             {exportWarnings.rejectedExcluded > 0 && (
               <span>{exportWarnings.rejectedExcluded} بند مرفوض مستبعد من الأرقام والملفات.</span>
@@ -346,8 +353,7 @@ export const BOQView: React.FC<BOQViewProps> = ({
                             type="number" min={0} step="any" inputMode="decimal" value={row.unitPrice} aria-label="سعر الوحدة"
                             onChange={(e) => {
                               if (!item) return;
-                              const price = Math.max(0, Number(e.target.value) || 0);
-                              onUpdateItem({ ...item, unitPrice: price, totalPrice: Number((item.quantity * price).toFixed(2)) });
+                              setRowPrice(row.ids, Math.max(0, Number(e.target.value) || 0));
                             }}
                             className={`w-full px-2 py-1.5 rounded-lg border text-center font-mono text-sm focus:outline-none focus:border-amber-500 ${row.unitPrice > 0 ? "border-slate-300" : "border-amber-400 bg-amber-50"}`}
                           />
@@ -422,8 +428,7 @@ export const BOQView: React.FC<BOQViewProps> = ({
                               aria-label="سعر الوحدة"
                               onChange={(e) => {
                                 if (!item) return;
-                                const price = Math.max(0, Number(e.target.value) || 0);
-                                onUpdateItem({ ...item, unitPrice: price, totalPrice: Number((item.quantity * price).toFixed(2)) });
+                                setRowPrice(row.ids, Math.max(0, Number(e.target.value) || 0));
                               }}
                               className={`w-24 px-2 py-1 rounded-lg border text-center font-mono text-xs focus:outline-none focus:border-amber-500 print:border-none print:bg-transparent ${
                                 row.unitPrice > 0 ? "border-slate-300" : "border-amber-400 bg-amber-50"

@@ -69,6 +69,10 @@ export default defineConfig(() => {
         '@': path.resolve(__dirname, '.'),
       },
     },
+    // Pre-bundling moves libredwg-web away from its .wasm file, so the dev server answered with HTML and DWG failed.
+    optimizeDeps: {
+      exclude: ['@mlightcad/libredwg-web'],
+    },
     server: {
       hmr: process.env.DISABLE_HMR !== 'true',
       watch: process.env.DISABLE_HMR === 'true' ? null : {},

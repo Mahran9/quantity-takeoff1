@@ -35,7 +35,7 @@ export const SheetsScreen: React.FC<Props> = ({ sheets, items, currencySymbol, o
             </g>
           </svg>
           <h2 className="text-xl font-extrabold text-slate-900">ابدأ بإضافة المخطط</h2>
-          <p className="mt-2 text-sm leading-7 text-slate-500 max-w-xs">PDF أو DXF أو DWG أو صورة. القراءة تتم على جهازك ولا يُرفع شيء إلى أي خادم.</p>
+          <p className="mt-2 text-sm leading-7 text-slate-500 max-w-xs">PDF أو DXF أو DWG أو صورة، أو نموذج ETABS / SAFE. القراءة تتم على جهازك ولا يُرفع شيء إلى أي خادم.</p>
           <button onClick={onUpload} className="qto-cta mt-6 flex items-center gap-2 rounded-xl px-8 py-3.5 text-base">
             <Plus className="w-5 h-5" /> إضافة مخطط
           </button>

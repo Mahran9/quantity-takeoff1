@@ -275,10 +275,10 @@ export function calibrateScale(
           t++;
           if (has(l)) m++;
         }
-        if (t >= 6 && (!top || m > top.matches || (m === top.matches && t < top.total))) top = { r: rk, matches: m, total: t };
+        if (t >= 12 && (!top || m > top.matches || (m === top.matches && t < top.total))) top = { r: rk, matches: m, total: t };
       }
     }
-    if (top && top.matches >= 6 && top.matches / top.total >= 0.6) {
+    if (top && top.matches >= 9 && top.matches / top.total >= 0.7) {
       const den = Math.round((1000 / (PT_TO_MM * top.r)) * 10) / 10;
       const free: ScaleCandidate = { denominator: den, unit: "m", matches: top.matches, total: top.total };
       return {

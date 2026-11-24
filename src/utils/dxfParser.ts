@@ -1817,6 +1817,25 @@ export function auditExtraction(
   };
 }
 
+/** Padding (canvas px) that renderDxfToCanvas leaves around the drawing. */
+export const DXF_CANVAS_PADDING = 40;
+
+/**
+ * Metres per canvas pixel for a DXF drawn by renderDxfToCanvas on a canvas of the given size.
+ * Uses the file's own unit ($INSUNITS, or the unit inferred from the drawing span). Returns 0 when unknown.
+ */
+export function dxfMetersPerCanvasPixel(parsedDxf: ParsedDxfResult | undefined, width: number, height: number): number {
+  if (!parsedDxf?.bounds || !parsedDxf.unitInfo || parsedDxf.unitInfo.code === 0) return 0;
+  const toM = parsedDxf.unitInfo.toMeters;
+  if (!(toM > 0)) return 0;
+  const { minX, minY, maxX, maxY } = parsedDxf.bounds;
+  const dxfWidth = maxX - minX || 1;
+  const dxfHeight = maxY - minY || 1;
+  const scale = Math.min((width - DXF_CANVAS_PADDING * 2) / dxfWidth, (height - DXF_CANVAS_PADDING * 2) / dxfHeight);
+  if (!(scale > 0) || !Number.isFinite(scale)) return 0;
+  return toM / scale;
+}
+
 export function renderDxfToCanvas(
   canvas: HTMLCanvasElement,
   parsedDxf: ParsedDxfResult,
@@ -1838,7 +1857,7 @@ export function renderDxfToCanvas(
   const dxfHeight = maxY - minY || 1;
 
   // Add padding
-  const padding = 40;
+  const padding = DXF_CANVAS_PADDING;
   const drawWidth = width - padding * 2;
   const drawHeight = height - padding * 2;
 

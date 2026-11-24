@@ -31,7 +31,7 @@ import {
   ReviewStatus,
 } from "../types";
 import { sampleDrawingsSvg } from "../data/sampleBlueprints";
-import { renderDxfToCanvas, ParsedDxfResult } from "../utils/dxfParser";
+import { renderDxfToCanvas, dxfMetersPerCanvasPixel, ParsedDxfResult } from "../utils/dxfParser";
 import { onPaperColor } from "../utils/paperColor";
 import { ptToMetres } from "../utils/pdfPlan";
 
@@ -53,6 +53,13 @@ interface BlueprintViewerProps {
 }
 
 type ToolMode = "select" | "calibrate" | "count" | "length" | "area";
+
+/** Short Arabic unit name for the scale chip (e.g. "مم"), marked when it was inferred rather than written in the file. */
+function dxfUnitShort(d: ParsedDxfResult): string {
+  const u = d.unitInfo;
+  const name = u?.code === 4 ? "مم" : u?.code === 5 ? "سم" : u?.code === 6 ? "م" : u?.code === 1 ? "بوصة" : u?.code === 2 ? "قدم" : "؟";
+  return u?.guessed ? `${name}، مستنتج` : name;
+}
 
 const STAGE_W = 1000;
 const STAGE_H = 700;
@@ -154,7 +161,10 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
 
   // Stage pixel -> metres. A person's own calibration wins; otherwise the scale the PDF reader verified from the drawing's
   // own dimension numbers is used (stage = page fitted into 1000x700, so one stage pixel is a fixed number of PDF points).
+  // A DXF carries real-world coordinates: the canvas fit transform plus the file's unit give the scale exactly.
+  const dxfSummary = sheet.fileType === "dxf" && !sheet.imageUrl ?(sheet.dxfRawSummary as ParsedDxfResult | undefined) : undefined;
   const autoMpp = (() => {
+    if (dxfSummary) return dxfMetersPerCanvasPixel(dxfSummary, STAGE_W, STAGE_H);
     const v = sheet.pdfVector;
     if (!v || !v.detectedDenominator || v.scaleConfidence === "low" || !v.pageWidthPt || !v.pageHeightPt) return 0;
     const usedW = Math.min(STAGE_W, (STAGE_H * v.pageWidthPt) / v.pageHeightPt);
@@ -399,7 +409,7 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
           title="معايرة مقياس الرسم بنقطتين معلومتي المسافة"
         >
           <SlidersHorizontal className="w-4 h-4" />
-          {scaleState === "manual" ? "المقياس: معاير ✓" : scaleState === "auto" ? `المقياس 1:${sheet.pdfVector?.detectedDenominator} (من الرسم)` : "المقياس غير معاير"}
+          {scaleState === "manual" ? "المقياس: معاير ✓" : scaleState === "auto" ? (dxfSummary ? `المقياس من الملف (${dxfUnitShort(dxfSummary)})` : `المقياس 1:${sheet.pdfVector?.detectedDenominator} (من الرسم)`) : "المقياس غير معاير"}
         </button>
 
         <div className="flex items-center gap-1.5 text-xs text-slate-500">

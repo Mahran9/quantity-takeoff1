@@ -9,8 +9,8 @@
  */
 import { readFileSync, existsSync } from "node:fs";
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
-import { extractVectorPaths } from "../src/utils/pdfVector";
-import { analyzePdfPaths, calibrateScale, extractTextScale, measureGroup, parseDimensionNumbers, suggestRole } from "../src/utils/pdfPlan";
+import { extractVectorPaths } from "../src/utils/pdfVector.js";
+import { analyzePdfPaths, calibrateScale, extractTextScale, measureGroup, parseDimensionNumbers, suggestRole } from "../src/utils/pdfPlan.js";
 
 const args = process.argv.slice(2);
 const file = args.find((a) => !a.startsWith("--"));

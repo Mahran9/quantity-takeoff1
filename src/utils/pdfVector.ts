@@ -24,6 +24,8 @@ export interface PdfPath {
   /** Optional-content layer name when the PDF has layers. */
   layer?: string;
   isRect: boolean;
+  /** True if the path uses a dashed line pattern. */
+  isDashed: boolean;
   /** Perimeter (closed) or length (open), points. */
   length: number;
   /** Shoelace area for closed paths, points². */
@@ -213,11 +215,12 @@ export function extractVectorPaths(
 ): { paths: PdfPath[]; truncated: boolean; stats: { total: number; unsupportedOps: number } } {
   const maxPaths = options.maxPaths ?? 250_000;
   const paths: PdfPath[] = [];
-  const stack: { ctm: Matrix; stroke: string; fill: string; lw: number }[] = [];
+  const stack: { ctm: Matrix; stroke: string; fill: string; lw: number; dashed: boolean }[] = [];
   let ctm: Matrix = IDENT;
   let stroke = "000000";
   let fill = "000000";
   let lw = 1;
+  let dashed = false;
   let truncated = false;
   let unsupportedOps = 0;
   const layerStack: (string | undefined)[] = [];
@@ -274,6 +277,7 @@ export function extractVectorPaths(
         lineWidth: lw * scaleLw,
         layer,
         isRect: rectLike,
+        isDashed: kind.stroke ? dashed : false,
         length: pathLength(pts, closed),
         area: closed ? pathArea(pts) : 0,
         bbox: [minX, minY, maxX, maxY],
@@ -287,20 +291,24 @@ export function extractVectorPaths(
     const args = opList.argsArray[i];
     if (truncated) break;
 
-    if (fn === OPS.save) stack.push({ ctm, stroke, fill, lw });
+    if (fn === OPS.save) stack.push({ ctm, stroke, fill, lw, dashed });
     else if (fn === OPS.restore) {
       const s = stack.pop();
-      if (s) ({ ctm, stroke, fill, lw } = s);
+      if (s) ({ ctm, stroke, fill, lw, dashed } = s);
     } else if (fn === OPS.transform) ctm = mul(ctm, args as Matrix);
     else if (fn === OPS.setLineWidth) lw = Number(args?.[0]) || 0;
+    else if (fn === OPS.setDash) {
+      const pattern = args?.[0];
+      dashed = Array.isArray(pattern) && pattern.length > 0;
+    }
     else if (fn === OPS.paintFormXObjectBegin) {
-      stack.push({ ctm, stroke, fill, lw });
+      stack.push({ ctm, stroke, fill, lw, dashed });
       formStack.push(ctm);
       if (Array.isArray(args?.[0]) && args[0].length === 6) ctm = mul(ctm, args[0] as Matrix);
     } else if (fn === OPS.paintFormXObjectEnd) {
       formStack.pop();
       const s = stack.pop();
-      if (s) ({ ctm, stroke, fill, lw } = s);
+      if (s) ({ ctm, stroke, fill, lw, dashed } = s);
     } else if (colorOps[fn]) {
       const c = colorFromArgs(colorOps[fn].name, Array.from(args || []));
       if (c) {

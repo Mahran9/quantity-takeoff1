@@ -84,12 +84,13 @@ export function analyzePdfPaths(
     }
 
     const lwBucket = Math.round(p.lineWidth * PT_TO_MM * 20) / 20; // 0.05 mm
-    const key = p.layer ? `L:${p.layer}` : `C:${p.color}|${lwBucket}|${p.stroked ? "s" : "f"}`;
+    const dashCode = p.isDashed ? "dashed" : "solid";
+    const key = p.layer ? `L:${p.layer}|${dashCode}` : `C:${p.color}|${lwBucket}|${p.stroked ? "s" : "f"}|${dashCode}`;
     let g = map.get(key);
     if (!g) {
       g = {
         id: `pdfg-${map.size + 1}`,
-        label: p.layer ? `طبقة ${p.layer}` : `لون #${p.color} · سُمك ${lwBucket.toFixed(2)} مم${p.stroked ? "" : " · تعبئة"}`,
+        label: p.layer ? `طبقة ${p.layer}${p.isDashed ? ' (متقطع)' : ''}` : `لون #${p.color} · سُمك ${lwBucket.toFixed(2)} مم${p.stroked ? "" : " · تعبئة"}${p.isDashed ? ' · متقطع' : ''}`,
         layer: p.layer,
         color: p.color,
         lineWidthMm: lwBucket,
@@ -443,6 +444,24 @@ export function buildPdfItems(args: {
 export function suggestRole(g: PdfVectorGroupSummary, denominator: number): { mode: GroupMode; hint: string } {
   const k = ptToMetres(1, denominator);
   const top = g.sizeClusters[0];
+
+  // Smart categorization by Layer Name
+  const layerName = (g.layer || g.label || "").toLowerCase();
+
+  if (/column|col|أعمدة|قواعد|عمود/.test(layerName)) {
+    return { mode: "count", hint: "يُصنف كأعمدة أو قواعد بناءً على اسم الطبقة (عدد/حجم)" };
+  }
+  if (/wall|جدار|حائط|جدران|مباني/.test(layerName)) {
+    return { mode: "length", hint: "يُصنف كجدران بناءً على اسم الطبقة (طول/مساحة بناء)" };
+  }
+  if (/door|window|أبواب|شبابيك|نافذة|باب/.test(layerName)) {
+    return { mode: "count", hint: "يُصنف كأبواب/شبابيك بناءً على اسم الطبقة (عدد)" };
+  }
+  if (/slab|floor|بلاط|سقف|أرضيات/.test(layerName)) {
+    return { mode: "area", hint: "يُصنف كبلاطات/أرضيات بناءً على اسم الطبقة (مساحة)" };
+  }
+
+  // Geometric heuristics fallback
   if (top && top.count >= 2 && top.wPt * k >= 0.15 && top.hPt * k <= 1.5 && g.rectCount >= g.pathCount * 0.6) {
     return { mode: "count", hint: `يبدو أعمدة/قواعد: ${top.count} عنصراً بمقاس ${(top.wPt * k).toFixed(2)}×${(top.hPt * k).toFixed(2)} م` };
   }

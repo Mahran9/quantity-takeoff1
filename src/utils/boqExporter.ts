@@ -58,11 +58,17 @@ function sourceLabel(item: TakeoffItem): string {
     case "pdf_vector":
       return `PDF متجه (${item.sourceDetails?.layer || "PDF"})`;
     case "visual_search":
-      return "بحث بصري محلي";
+      return item.sourceEvidence?.startsWith("السطر المقروء:") ? "OCR — نص مطبوع على اللوحة" : "بحث بصري محلي";
     case "manual_pin":
       return "قياس مباشر على المخطط";
     case "excel_import":
       return "مستورد من Excel";
+    case "ai_vision":
+      return "قراءة بالذكاء الاصطناعي";
+    case "structural_model":
+      return `نموذج إنشائي (${item.sourceDetails?.layer || "ETABS/SAFE"})`;
+    case "manual_input":
+      return "إدخال يدوي";
     default:
       return "حصر يدوي";
   }
@@ -570,6 +576,10 @@ export function exportBoqToExcel(
   allItems: TakeoffItem[],
   company: CompanyProfile = EMPTY_COMPANY_PROFILE
 ) {
+  if (!allItems.some(isExportable)) {
+    window.alert("لا توجد بنود حصر لتصديرها. أضف الكميات أو اقرأ اللوحات أولاً، ثم أعد تصدير Excel.");
+    return;
+  }
   downloadXlsx(
     buildBoqWorkbookBytes(metadata, sheets, allItems, company),
     `${safeFileName(`BOQ_${metadata.projectCode || metadata.projectName}`)}_${new Date().toISOString().slice(0, 10)}.xlsx`

@@ -13,6 +13,7 @@ import {
   Calculator,
   Settings,
   RefreshCw,
+  Loader2,
 } from "lucide-react";
 import { ProjectMetadata, BlueprintSheet, TakeoffItem } from "../types";
 import { buildQuotation } from "../utils/quotation";
@@ -28,7 +29,7 @@ interface Props {
   onUpload: () => void;
   onQuotation: () => void;
   onExcel: () => void;
-  onAutoAll: () => string;
+  onAutoAll: () => Promise<string>;
   onProjects: () => void;
   onVisualSearch: () => void;
   onSteelCalc: () => void;
@@ -120,6 +121,14 @@ export const HomeScreen: React.FC<Props> = ({ metadata, setMetadata, sheets, ite
     },
   ];
   const [autoMsg, setAutoMsg] = useState("");
+  const [autoRunning, setAutoRunning] = useState(false);
+  const runAutoTakeoff = async () => {
+    setAutoRunning(true);
+    setAutoMsg("جارٍ قراءة الأبعاد والأرقام المكتوبة في اللوحات…");
+    try { setAutoMsg(await onAutoAll()); }
+    catch { setAutoMsg("تعذرت قراءة بعض اللوحات. افتح تحليل اللوحة لمراجعتها."); }
+    finally { setAutoRunning(false); }
+  };
   const next = steps.find((s) => !s.done);
 
   const tool = "w-full flex items-center gap-3.5 px-4 py-3.5 text-right text-sm font-bold text-slate-800 border-b border-slate-100 last:border-b-0";
@@ -127,7 +136,8 @@ export const HomeScreen: React.FC<Props> = ({ metadata, setMetadata, sheets, ite
   const field = "rounded-xl border bg-white px-3 py-2.5 text-sm text-slate-900 w-full";
 
   return (
-    <div className="flex flex-col gap-5 qto-stagger">
+    <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 items-start qto-stagger">
+      <div className="lg:col-span-3 flex flex-col gap-5">
       {/* Project + total: the one dark, memorable block */}
       <section className="hero-card p-5 sm:p-6">
         <button onClick={onProjects} className="flex items-center gap-2 text-right max-w-full" title="المشاريع">
@@ -167,15 +177,19 @@ export const HomeScreen: React.FC<Props> = ({ metadata, setMetadata, sheets, ite
 
       {sheets.length > 0 && (
         <section className="card p-4">
-          <button onClick={() => setAutoMsg(onAutoAll())} className="qto-cta w-full h-14 rounded-xl text-[15px] flex items-center justify-center gap-2">
-            <ListChecks className="w-5 h-5" /> اقرأ المخطط واحصر الكميات
+          <button onClick={runAutoTakeoff} disabled={autoRunning} className="qto-cta w-full h-14 rounded-xl text-[15px] flex items-center justify-center gap-2 disabled:opacity-65">
+            {autoRunning ? <Loader2 className="w-5 h-5 animate-spin" /> : <ListChecks className="w-5 h-5" />}
+            {autoRunning ? "جارٍ قراءة اللوحات…" : "اقرأ الأبعاد واحصر الكميات"}
           </button>
           <p className="mt-2 text-[12.5px] leading-6 text-slate-500 font-semibold">
-            يقرأ كل لوحة: الأبعاد المقاسة والعلامات المكتوبة (أعمدة، كمرات، براغي…) ويملأ جدول الكميات. بعدها صدّر Excel من الأعلى.
+            يقرأ هندسة ملفات CAD والأرقام المطبوعة آلياً. اقتراحات خطوط PDF تحتاج مراجعة قبل إضافتها. بعدها راجع البنود وصدّر Excel.
           </p>
           {autoMsg && <p className="mt-2 rounded-lg bg-teal-50 px-3 py-2 text-[13px] font-bold text-teal-900">{autoMsg}</p>}
         </section>
       )}
+
+      </div>
+      <div className="lg:col-span-2 flex flex-col gap-5">
 
       {/* Workflow: what is done, what is next */}
       <section>
@@ -291,6 +305,7 @@ export const HomeScreen: React.FC<Props> = ({ metadata, setMetadata, sheets, ite
           <span className="font-mono text-slate-400" dir="ltr">{APP_BUILD}</span>
         </button>
       </section>
+      </div>
     </div>
   );
 };

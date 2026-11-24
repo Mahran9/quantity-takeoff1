@@ -418,6 +418,7 @@ function dynamicTableSheet(
     colWidths: active.map((c) => c.width),
     rtl: true,
     freezeRows: headerRow + 1,
+    filter: items.length > 1 ? { headerRow, lastRow: last - 1 } : undefined,
     landscape: n > 7,
     rowHeights: heights,
   };

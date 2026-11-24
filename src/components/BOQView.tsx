@@ -31,6 +31,8 @@ interface BOQViewProps {
   onOpenSettings: () => void;
 }
 
+const n2 = (v: number) => v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
 export const BOQView: React.FC<BOQViewProps> = ({
   metadata,
   setMetadata,
@@ -302,7 +304,67 @@ export const BOQView: React.FC<BOQViewProps> = ({
             </button>
           </div>
 
-          <div className="overflow-x-auto">
+                    {/* Phone: one card per line so quantity, price and total are all visible */}
+          <div className="sm:hidden print:hidden">
+            {quotation.sections.length === 0 && (
+              <p className="py-10 text-center text-slate-400 text-sm">لا توجد بنود بعد. أضف بنوداً من شاشة «المخططات والحصر».</p>
+            )}
+            {quotation.sections.map((section) => (
+              <div key={section.title}>
+                <div className="bg-slate-800 text-white px-4 py-2 text-xs font-bold">{section.title}</div>
+                {section.rows.map((row) => {
+                  const item = takeoffItems.find((i) => i.id === row.id);
+                  return (
+                    <div key={row.id} className="px-4 py-3 border-b border-slate-100">
+                      <div className="flex items-start gap-2">
+                        <span className="mt-0.5 font-mono text-[11px] text-slate-400 w-5 shrink-0">{row.index}</span>
+                        <span className="font-semibold text-slate-900 text-sm leading-snug">{row.description}</span>
+                      </div>
+                      <div className="mt-2 grid grid-cols-3 gap-2 items-end text-center">
+                        <div>
+                          <div className="text-[10px] text-slate-500">الكمية</div>
+                          <div className="font-mono font-bold text-slate-900 text-sm">{n2(row.quantity)}</div>
+                          <div className="text-[11px] text-slate-500">{row.unit}</div>
+                        </div>
+                        <label>
+                          <div className="text-[10px] text-slate-500">سعر الوحدة</div>
+                          <input
+                            type="number" min={0} step="any" inputMode="decimal" value={row.unitPrice} aria-label="سعر الوحدة"
+                            onChange={(e) => {
+                              if (!item) return;
+                              const price = Math.max(0, Number(e.target.value) || 0);
+                              onUpdateItem({ ...item, unitPrice: price, totalPrice: Number((item.quantity * price).toFixed(2)) });
+                            }}
+                            className={`w-full px-2 py-1.5 rounded-lg border text-center font-mono text-sm focus:outline-none focus:border-amber-500 ${row.unitPrice > 0 ? "border-slate-300" : "border-amber-400 bg-amber-50"}`}
+                          />
+                        </label>
+                        <div>
+                          <div className="text-[10px] text-slate-500">الإجمالي</div>
+                          <div className="font-mono font-bold text-slate-900 text-sm">{n2(row.total)}</div>
+                          <div className="text-[11px] text-slate-500">{metadata.currencySymbol}</div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                <div className="flex items-center justify-between bg-blue-50/70 px-4 py-2 text-xs font-bold text-slate-800 border-b border-slate-200">
+                  <span>الإجمالي الفرعي</span>
+                  <span className="font-mono">{n2(section.subtotal)} {metadata.currencySymbol}</span>
+                </div>
+              </div>
+            ))}
+            <div className="border-t-2 border-slate-300 bg-slate-100 px-4 py-3 flex justify-between text-sm font-bold text-slate-900">
+              <span>إجمالي قيمة الأعمال</span><span className="font-mono">{n2(totalCostBeforeTax)} {metadata.currencySymbol}</span>
+            </div>
+            <div className="bg-slate-50 px-4 py-2.5 flex justify-between text-sm text-slate-700">
+              <span>ضريبة القيمة المضافة ({metadata.taxRate}%)</span><span className="font-mono">{n2(taxAmount)} {metadata.currencySymbol}</span>
+            </div>
+            <div className="bg-amber-50 border-t border-amber-300 px-4 py-3.5 flex justify-between text-base font-black text-amber-950">
+              <span>الإجمالي شامل الضريبة</span><span className="font-mono">{n2(grandTotal)} {metadata.currencySymbol}</span>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto hidden sm:block print:block">
             <table className="w-full text-right text-sm border-collapse">
               <thead>
                 <tr className="bg-slate-900 text-white text-xs">
@@ -335,7 +397,7 @@ export const BOQView: React.FC<BOQViewProps> = ({
                           <td className="py-2.5 px-4 font-medium text-slate-900">{row.description}</td>
                           <td className="py-2.5 px-3 text-center text-slate-600">{row.unit}</td>
                           <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-900">
-                            {row.quantity.toLocaleString("en-US", { maximumFractionDigits: 2 })}
+                            {row.quantity.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </td>
                           <td className="py-2.5 px-3 text-center">
                             <input
@@ -355,7 +417,7 @@ export const BOQView: React.FC<BOQViewProps> = ({
                             />
                           </td>
                           <td className="py-2.5 px-4 text-left font-mono font-bold text-slate-900">
-                            {row.total.toLocaleString("en-US", { maximumFractionDigits: 2 })}
+                            {row.total.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </td>
                         </tr>
                       );
@@ -363,7 +425,7 @@ export const BOQView: React.FC<BOQViewProps> = ({
                     <tr className="bg-blue-50/70 font-bold text-slate-800 border-b border-slate-200">
                       <td colSpan={5} className="py-2 px-4 text-left text-xs">الإجمالي الفرعي - {section.title}</td>
                       <td className="py-2 px-4 text-left font-mono text-xs">
-                        {section.subtotal.toLocaleString("en-US", { maximumFractionDigits: 2 })}
+                        {section.subtotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                     </tr>
                   </React.Fragment>
@@ -373,19 +435,19 @@ export const BOQView: React.FC<BOQViewProps> = ({
                 <tr className="bg-slate-100 font-bold text-slate-900 border-t-2 border-slate-300">
                   <td colSpan={5} className="py-3 px-4 text-left">إجمالي قيمة الأعمال</td>
                   <td className="py-3 px-4 text-left font-mono">
-                    {totalCostBeforeTax.toLocaleString("en-US", { maximumFractionDigits: 2 })} {metadata.currencySymbol}
+                    {totalCostBeforeTax.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {metadata.currencySymbol}
                   </td>
                 </tr>
                 <tr className="bg-slate-50 text-slate-700">
                   <td colSpan={5} className="py-2.5 px-4 text-left">ضريبة القيمة المضافة ({metadata.taxRate}%)</td>
                   <td className="py-2.5 px-4 text-left font-mono">
-                    {taxAmount.toLocaleString("en-US", { maximumFractionDigits: 2 })} {metadata.currencySymbol}
+                    {taxAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {metadata.currencySymbol}
                   </td>
                 </tr>
                 <tr className="bg-amber-50 font-black text-amber-950 text-base border-t border-amber-300">
                   <td colSpan={5} className="py-3.5 px-4 text-left">الإجمالي الكلي شامل الضريبة</td>
                   <td className="py-3.5 px-4 text-left font-mono">
-                    {grandTotal.toLocaleString("en-US", { maximumFractionDigits: 2 })} {metadata.currencySymbol}
+                    {grandTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {metadata.currencySymbol}
                   </td>
                 </tr>
               </tfoot>

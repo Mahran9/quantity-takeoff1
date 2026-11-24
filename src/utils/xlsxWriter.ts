@@ -41,6 +41,8 @@ export interface SheetSpec {
   rowHeights?: Record<number, number>;
   rtl?: boolean;
   freezeRows?: number;
+  /** 0-based header row and last data row: adds Excel filter buttons on the header. */
+  filter?: { headerRow: number; lastRow: number };
   landscape?: boolean;
 }
 
@@ -216,6 +218,7 @@ function sheetXml(spec: SheetSpec, styles: StyleRegistry): string {
     `<sheetFormatPr defaultRowHeight="18"/>` +
     cols +
     `<sheetData>${rowsXml.join("")}</sheetData>` +
+    (spec.filter && maxCols > 0 ? `<autoFilter ref="${cellRef(spec.filter.headerRow, 0)}:${cellRef(spec.filter.lastRow, maxCols - 1)}"/>` : "") +
     merges +
     `<pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/>` +
     `<pageSetup paperSize="9" orientation="${spec.landscape ? "landscape" : "portrait"}" fitToWidth="1" fitToHeight="0"/>` +
@@ -343,11 +346,24 @@ export function buildXlsx(sheets: SheetSpec[]): Uint8Array {
     `<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>` +
     `</Relationships>`;
 
+  // Repeat the header row on every printed page, and register the filter ranges.
+  const quote = (n: string) => `'${n.replace(/'/g, "''")}'`;
+  const names: string[] = [];
+  sheets.forEach((sp, i) => {
+    if (sp.freezeRows) names.push(`<definedName name="_xlnm.Print_Titles" localSheetId="${i}">${esc(quote(sp.name))}!$${sp.freezeRows}:$${sp.freezeRows}</definedName>`);
+    if (sp.filter) {
+      const w = Math.max(1, ...sp.rows.map((r) => r.length));
+      names.push(`<definedName name="_xlnm._FilterDatabase" localSheetId="${i}" hidden="1">${esc(quote(sp.name))}!$A$${sp.filter.headerRow + 1}:$${colLetter(w - 1)}$${sp.filter.lastRow + 1}</definedName>`);
+    }
+  });
+  const definedNames = names.length ? `<definedNames>${names.join("")}</definedNames>` : "";
+
   const workbook =
     `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
     `<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">` +
     `<bookViews><workbookView activeTab="0"/></bookViews>` +
     `<sheets>${sheets.map((s, i) => `<sheet name="${esc(s.name)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join("")}</sheets>` +
+    `${definedNames}` +
     `<calcPr calcId="191029" fullCalcOnLoad="1"/>` +
     `</workbook>`;
 

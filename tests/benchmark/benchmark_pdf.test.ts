@@ -28,14 +28,17 @@ assert.equal(scale.best?.denominator, 100, "scale 1:100 detected from the drawin
 assert.equal(scale.confidence, "high");
 const c = readPdf({ pdfVector: summarizePdfPage({ analysis, page: pg, userUnit: 1, truncated: false, scale, numbers: nums }) } as any);
 
-const has = (unit: string, q: number, re?: RegExp) => c.some((x) => x.unit === unit && Math.abs(x.quantity - q) < 0.011 && (!re || re.test(x.description)) && x.selected);
+// Every true quantity must be measured exactly. Repeated identical shapes (counts) are preselected; lengths and areas
+// of unnamed colour buckets are offered for review only (8.11.1), since a colour alone does not say what the lines are.
+const has = (unit: string, q: number, re?: RegExp, selected?: boolean) =>
+  c.some((x) => x.unit === unit && Math.abs(x.quantity - q) < 0.011 && (!re || re.test(x.description)) && (selected === undefined || x.selected === selected));
 const rows: [string, boolean][] = [
-  ["قواعد 1.5×1.5 (8)", has("عدد", 8, /1\.50×1\.50/)],
-  ["قواعد 1.2×1.2 (4)", has("عدد", 4, /1\.20×1\.20/)],
-  ["أعمدة 0.25×0.5 (12)", has("عدد", 12, /0\.25×0\.50/)],
-  ["جدران 66 م.ط", has("م.ط", 66)],
-  ["كمرات 56 م.ط", has("م.ط", 56)],
-  ["بلاطة 128.96 م²", has("م²", 128.96)],
+  ["قواعد 1.5×1.5 (8)", has("عدد", 8, /1\.50×1\.50/, true)],
+  ["قواعد 1.2×1.2 (4)", has("عدد", 4, /1\.20×1\.20/, true)],
+  ["أعمدة 0.25×0.5 (12)", has("عدد", 12, /0\.25×0\.50/, true)],
+  ["جدران 66 م.ط (للمراجعة)", has("م.ط", 66, undefined, false)],
+  ["كمرات 56 م.ط (للمراجعة)", has("م.ط", 56, undefined, false)],
+  ["بلاطة 128.96 م² (للمراجعة)", has("م²", 128.96, undefined, false)],
 ];
 console.log(rows.map(([n, ok]) => `${ok ? "✔" : "✘"} ${n}`).join("\n"));
 assert.ok(rows.every(([, ok]) => ok), "a PDF benchmark quantity is wrong");

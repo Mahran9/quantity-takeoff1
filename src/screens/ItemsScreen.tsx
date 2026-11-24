@@ -1,5 +1,5 @@
 import React from "react";
-import { ScanLine } from "lucide-react";
+import { Loader2, ScanLine } from "lucide-react";
 import { BlueprintSheet, TakeoffItem } from "../types";
 import { ScreenHeader } from "../components/Nav";
 
@@ -9,7 +9,7 @@ interface Props {
   activeSheetId: string;
   onSelectSheet: (id: string) => void;
   onAnalyze: () => void;
-  onAuto: () => string;
+  onAuto: () => Promise<string>;
   onGoSheets: () => void;
   children: React.ReactNode; // the table for the active sheet
 }
@@ -17,6 +17,14 @@ interface Props {
 /** Quantities: pick a drawing, review its lines. */
 export const ItemsScreen: React.FC<Props> = ({ sheets, items, activeSheetId, onSelectSheet, onAnalyze, onAuto, onGoSheets, children }) => {
   const [msg, setMsg] = React.useState("");
+  const [reading, setReading] = React.useState(false);
+  const runAuto = async () => {
+    setReading(true);
+    setMsg("جارٍ قراءة المخطط…");
+    try { setMsg(await onAuto()); }
+    catch { setMsg("تعذرت قراءة المخطط. افتح تحليل اللوحة لمراجعتها."); }
+    finally { setReading(false); }
+  };
   if (sheets.length === 0) {
     return (
       <div className="flex flex-col gap-5">
@@ -35,8 +43,9 @@ export const ItemsScreen: React.FC<Props> = ({ sheets, items, activeSheetId, onS
         sub={`${items.filter((i) => i.reviewStatus !== "rejected").length} بند في المشروع`}
         action={
           <div className="flex gap-2">
-            <button onClick={() => setMsg(onAuto())} className="qto-cta flex h-10 items-center gap-1.5 rounded-xl px-4 text-sm">
-              <ScanLine className="w-[18px] h-[18px]" /> اقرأ واحصر
+            <button onClick={runAuto} disabled={reading} className="qto-cta flex h-10 items-center gap-1.5 rounded-xl px-4 text-sm disabled:opacity-65">
+              {reading ? <Loader2 className="w-[18px] h-[18px] animate-spin" /> : <ScanLine className="w-[18px] h-[18px]" />}
+              {reading ? "جارٍ القراءة…" : "اقرأ واحصر"}
             </button>
             <button onClick={onAnalyze} className="flex h-10 items-center rounded-xl border border-slate-300 px-3 text-sm font-bold text-slate-800">
               راجع

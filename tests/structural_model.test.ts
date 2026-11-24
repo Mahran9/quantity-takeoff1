@@ -149,4 +149,13 @@ assert.ok(m.bounds.maxY <= -112950 && m.bounds.minX === -5000, JSON.stringify(m.
   const colCounts = q.filter((i) => /عدد الأعمدة/.test(i.description)).map((i) => i.layer).sort();
   assert.deepEqual(colCounts, ["S-COL", "colum2"].sort(), JSON.stringify(colCounts));
 }
+// PDF layer names: same word rule as DXF.
+{
+  const { suggestRole } = await import("../src/utils/pdfPlan");
+  const g = (layer?: string): any => ({ id: "g", label: "لون #000000", layer, color: "000000", lineWidthMm: 0.25, pathCount: 10, lengthPt: 1000, closedCount: 0, areaPt2: 0, rectCount: 0, filledCount: 0, sizeClusters: [], maxPathPt: 100 });
+  const hint = (l?: string) => suggestRole(g(l), 100).hint;
+  assert.ok(/أعمدة/.test(hint("S-COL")) && /أعمدة/.test(hint("COLUMNS")) && /أعمدة/.test(hint("col2")), "column layers");
+  assert.ok(!/أعمدة/.test(hint("M-Cold Water")) && !/أعمدة/.test(hint("COLOR FILL")), "cold/color are not columns");
+  assert.ok(!/اسم الطبقة/.test(hint(undefined)), "no layer → geometry rules, not name rules");
+}
 console.log("structural_model ok");

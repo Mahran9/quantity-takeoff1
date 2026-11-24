@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ArrowRight, ChevronDown, ListChecks, ScanLine, Check } from "lucide-react";
+import { ArrowRight, ChevronDown, ListChecks, ScanLine, Check, Loader2 } from "lucide-react";
 import { BlueprintSheet } from "../types";
 
 interface Props {
@@ -9,7 +9,7 @@ interface Props {
   onBack: () => void;
   onSelectSheet: (id: string) => void;
   onAnalyze: () => void;
-  onAuto: () => string;
+  onAuto: () => Promise<string>;
   onOpenItems: () => void;
   children: React.ReactNode;
 }
@@ -18,6 +18,14 @@ interface Props {
 export const DrawingScreen: React.FC<Props> = ({ sheet, sheets, itemCount, onBack, onSelectSheet, onAnalyze, onAuto, onOpenItems, children }) => {
   const [pick, setPick] = useState(false);
   const [msg, setMsg] = useState("");
+  const [reading, setReading] = useState(false);
+  const runAuto = async () => {
+    setReading(true);
+    setMsg("جارٍ قراءة المخطط…");
+    try { setMsg(await onAuto()); }
+    catch { setMsg("تعذرت قراءة المخطط. افتح المراجعة للتحقق من الملف."); }
+    finally { setReading(false); }
+  };
   return (
     <div className="fixed inset-0 z-40 flex flex-col bg-white qto-fade-in" dir="rtl">
       <div className="h-14 shrink-0 flex items-center gap-2 px-2.5 border-b border-slate-200 bg-white relative">
@@ -33,9 +41,9 @@ export const DrawingScreen: React.FC<Props> = ({ sheet, sheets, itemCount, onBac
           <ListChecks className="w-[18px] h-[18px]" />
           <span className="font-mono">{itemCount}</span>
         </button>
-        <button onClick={() => setMsg(onAuto())} className="qto-cta flex h-10 items-center gap-1.5 rounded-xl px-3.5 text-[13px]">
-          <ScanLine className="w-[18px] h-[18px]" />
-          اقرأ واحصر
+        <button onClick={runAuto} disabled={reading} className="qto-cta flex h-10 items-center gap-1.5 rounded-xl px-3.5 text-[13px] disabled:opacity-65">
+          {reading ? <Loader2 className="w-[18px] h-[18px] animate-spin" /> : <ScanLine className="w-[18px] h-[18px]" />}
+          {reading ? "جارٍ القراءة…" : "اقرأ واحصر"}
         </button>
         <button onClick={onAnalyze} className="flex h-10 items-center rounded-xl border border-slate-300 px-3 text-[13px] font-bold text-slate-800">
           راجع

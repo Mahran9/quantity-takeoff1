@@ -8,16 +8,26 @@ import { TakeoffItem } from "../types";
 export interface LabelledQty {
   label: string;
   value: number;
-  unit: "م²" | "م.ط" | "عدد";
+  unit: "م³" | "م²" | "م.ط" | "عدد";
   kind: "area-label" | "table";
   raw: string;
 }
 
-const num = (s: string) => parseFloat(s.replace(/,/g, ""));
+const DIGITS: Record<string, string> = {
+  "٠": "0", "١": "1", "٢": "2", "٣": "3", "٤": "4", "٥": "5", "٦": "6", "٧": "7", "٨": "8", "٩": "9",
+  "۰": "0", "۱": "1", "۲": "2", "۳": "3", "۴": "4", "۵": "5", "۶": "6", "۷": "7", "۸": "8", "۹": "9",
+};
+const ascii = (s: string) => s.replace(/[٠-٩۰-۹]/g, (d) => DIGITS[d] || d).replace(/[٫]/g, ".").replace(/[٬]/g, ",");
+const num = (raw: string) => {
+  let s = ascii(raw).replace(/\s/g, "");
+  if (s.includes(",") && !s.includes(".")) s = /,\d{1,2}$/.test(s) ? s.replace(",", ".") : s.replace(/,/g, "");
+  else s = s.replace(/,/g, "");
+  return Number(s);
+};
 
 /** Orientation score: pages scanned sideways produce almost no real words. */
 export function ocrTextScore(text: string): number {
-  const words = (text.match(/[A-Za-z]{4,}/g) || []).length;
+  const words = (text.match(/[A-Za-z\u0600-\u06ff]{4,}/g) || []).length;
   const dims = (text.match(/\b\d{1,3}\.\d{2}\b/g) || []).length;
   return words + dims;
 }
@@ -25,19 +35,23 @@ export function ocrTextScore(text: string): number {
 export function extractLabelledQuantities(text: string): LabelledQty[] {
   const out: LabelledQty[] = [];
   const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-  const hasStore = /\bSTORE\b/i.test(text);
   for (const line of lines) {
-    // 1) "AREA = 330.38 SQ.M"  (OCR noise tolerated: "AREA} 508.91SO.M_")
-    const a = line.match(/AREA\W{0,4}(\d[\d,]*\.\d{1,3})\s*(?:SQ|SO|S0|M2|M²|m)/i);
+    const normalized = ascii(line);
+    // 1) English and Arabic area labels. The unit is optional only at end of line;
+    // a value followed by a unit is much less likely to be a room dimension.
+    const a = normalized.match(/(?:AREA|المساحة|مساحة|المسطح|مسطح)[^0-9]{0,30}(\d[\d,]*(?:\.\d{1,3})?)(?:\s*(?:SQ\.?\s*M(?:ETRE|ETER)?|SO\.?\s*M|S0\.?\s*M|M2|M²|متر\s*مربع|م\s*[²2]))?(?:\s*[.،:_\-|]{0,3}\s*)$/i); // OCR often adds "_" or "|" after the unit
     if (a && !/^(GROUND|TOTAL|FLOOR)/i.test(line)) {
-      out.push({ label: hasStore ? "مخزن (STORE)" : "مساحة مدوّنة", value: num(a[1]), unit: "م²", kind: "area-label", raw: line });
+      const label = /STORE|مخزن/i.test(line) ? "مخزن (STORE)" : "مساحة مدوّنة";
+      out.push({ label, value: num(a[1]), unit: "م²", kind: "area-label", raw: line });
       continue;
     }
     // 2) summary rows: "<WORDS> <number> <unit>"
-    const t = line.match(/^([A-Za-z][A-Za-z &\/\-]{3,40}?)\s+(\d[\d,]*(?:\.\d+)?)\s*(m[²2?7]+|sq\.?\s?m|l\.?\s?m|m\.?\s?l|cars?|nos?\.?|pcs)\b/i);
+    const t = normalized.match(/^([A-Za-z\u0600-\u06ff][A-Za-z\u0600-\u06ff &\/\-]{2,48}?)\s+(\d[\d,]*(?:\.\d+)?)\s*(m[³3]|m[²2?7]+|sq\.?\s?m|l\.?\s?m|m\.?\s?l|cars?|nos?\.?|pcs|متر\s*مكعب|متر\s*مربع|متر\s*طولي|م\s*[³3²2]|م\.ط|عدد|سيارة|سيارات)/i);
     if (t) {
       const u = t[3].toLowerCase();
-      const unit: LabelledQty["unit"] = /^m[²2?7]|^sq/.test(u) ? "م²" : /^l\.?\s?m|^m\.?\s?l/.test(u) ? "م.ط" : "عدد";
+      const unit: LabelledQty["unit"] = /m[³3]|متر\s*مكعب|م\s*[³3]/i.test(u) ? "م³"
+        : /m[²2?7]|^sq|متر\s*مربع|م\s*[²2]/i.test(u) ? "م²"
+        : /^l\.?\s?m|^m\.?\s?l|متر\s*طولي|م\.ط/i.test(u) ? "م.ط" : "عدد";
       out.push({ label: t[1].trim(), value: num(t[2]), unit, kind: "table", raw: line });
     }
   }
@@ -56,7 +70,7 @@ export function labelledToTakeoff(items: LabelledQty[], sheet: { id: string; cod
       itemCode: `TXT-${String(startIndex + idx + 1).padStart(2, "0")}`,
       description: desc,
       category: "أعمال متنوعة أخرى",
-      dimensionType: q.unit === "م²" ? "area" : q.unit === "م.ط" ? "linear" : "count",
+      dimensionType: q.unit === "م³" ? "volume" : q.unit === "م²" ? "area" : q.unit === "م.ط" ? "linear" : "count",
       location: "مقروء من النصوص المدوّنة على اللوحة",
       count: 1,
       deduction: 0,
@@ -97,7 +111,7 @@ export async function readPrintedLabels(
   img.src = imageUrl;
   await img.decode();
   const T = await loadTesseract();
-  const worker = await T.createWorker("eng");
+  const worker = await T.createWorker("eng+ara");
   try {
     await worker.setParameters({ tessedit_pageseg_mode: "11" });
     let best: { deg: 0 | 90 | 270; score: number } = { deg: 0, score: -1 };

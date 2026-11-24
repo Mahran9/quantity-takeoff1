@@ -52,7 +52,7 @@ export function fromOcr(found: LabelledQty[]): Candidate[] {
     id: `ocr-${i}`,
     description: q.kind === "area-label" ? `${q.label} — مساحة مدوّنة رقم ${++seq}` : `${q.label} (من جدول اللوحة)`,
     category: "أعمال متنوعة أخرى",
-    dim: q.unit === "م²" ? "area" : q.unit === "م.ط" ? "linear" : "count",
+    dim: q.unit === "م³" ? "volume" : q.unit === "م²" ? "area" : q.unit === "م.ط" ? "linear" : "count",
     unit: q.unit,
     quantity: q.value,
     sources: ["ocr"],
@@ -85,26 +85,22 @@ export function fromAi(items: AiItem[]): Candidate[] {
  * numbers. Only used when a scale was actually detected; a low-confidence scale yields nothing, because
  * a wrong scale would silently scale every quantity.
  */
-/** Black / grey is how every ordinary drawing is plotted; a colour bucket in black says nothing about what the lines are. */
-function isAchromatic(hex: string | undefined): boolean {
-  const h = String(hex || "").replace("#", "");
-  const f = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
-  if (!/^[0-9a-f]{6}$/i.test(f)) return true;
-  const [r, g, b] = [0, 2, 4].map((i) => parseInt(f.slice(i, i + 2), 16));
-  return Math.max(r, g, b) - Math.min(r, g, b) < 24;
-}
-
 export function readPdf(sheet: BlueprintSheet): Candidate[] {
   const v = sheet.pdfVector;
   const den = v?.detectedDenominator;
   if (!v || !den || v.scaleConfidence === "low") return [];
   const sure = v.scaleConfidence === "high";
   const out: Candidate[] = [];
-  const groups = [...v.groups].sort((a, b) => b.lengthPt - a.lengthPt).slice(0, 8);
+  // Keep every group found in the page summary. The old top-eight limit silently dropped
+  // most takeoff candidates on busy drawings and made the result look like a successful read.
+  const groups = [...v.groups].sort((a, b) => b.lengthPt - a.lengthPt);
   groups.forEach((g, i) => {
     const role = suggestRole(g, den);
-    // Trusted without a person pick: a layer the drawing itself named, same-size counted shapes, a coloured category, or a heavy (>= 0.4 mm) line weight.
-    const trusted = !!g.layer || role.mode === "count" || role.mode === "area" || !isAchromatic((g as any).color) || ((g as any).lineWidthMm ?? 0) >= 0.4;
+    // A colour, line weight, or closed outline does not identify a construction item, so anonymous length/area
+    // buckets stay review-only. Two things are safe to preselect: a layer the drawing itself named, and repeated
+    // identical shapes (e.g. 8 squares of 1.50×1.50) measured at a scale verified from the dimension numbers.
+    const named = Boolean(g.layer && !/^(0|default|layer\s*\d*)$/i.test(g.layer.trim()));
+    const trusted = named || (sure && role.mode === "count");
     const push = (q: number, mode: string, hint: string, idSuffix: string, count?: number) => {
       if (!(q > 0)) return;
       out.push({

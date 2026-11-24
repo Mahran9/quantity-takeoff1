@@ -34,8 +34,10 @@ import {
 } from "./types";
 import { initialProjectMetadata, LEGACY_DEMO_SHEET_IDS } from "./data/sampleBlueprints";
 import { exportBoqToExcel } from "./utils/boqExporter";
-import { readCad, readPdf } from "./engine/readers";
+import { fromOcr, readCad, readPdf } from "./engine/readers";
 import { readMarks } from "./engine/marks";
+import { readPrintedLabels } from "./utils/ocrLabels";
+import { importWithRecovery } from "./utils/lazyImport";
 import { reconcile } from "./engine/reconcile";
 import { candidatesToTakeoff } from "./engine/candidate";
 import { getSheetVisualTokens, searchSheetTokens } from "./utils/visualSearchEngine";
@@ -52,7 +54,7 @@ import {
   markBackupDone,
 } from "./utils/projectStorage";
 
-export const APP_VERSION = "6.2.0";
+export const APP_VERSION = "8.13.0";
 
 // Persistent high-capacity storage powered by IndexedDB (src/utils/projectStorage.ts)
 
@@ -473,19 +475,35 @@ export default function App() {
     }));
   };
 
-  /** One tap: read every sheet (CAD geometry, scaled PDF lines, written marks/bolts) and fill the takeoff table. */
-  const autoTakeoffAll = (onlySheetId?: string): string => {
+  /** Read CAD geometry, vector hints, marked quantities, and printed quantity labels. */
+  const autoTakeoffAll = async (onlySheetId?: string): Promise<string> => {
     const fresh: TakeoffItem[] = [];
     const replaced = new Set<string>();
     const base = takeoffItems.length;
     let readSheets = 0;
     let toReview = 0;
+    let ocrLabels = 0;
+    let ocrFailures = 0;
     const scope = onlySheetId ? sheets.filter((x) => x.id === onlySheetId) : sheets;
     for (const sh of scope) {
       let cands: ReturnType<typeof readMarks> = [];
       try {
         if (sh.dxfData) cands = readCad(sh, {});
-        else cands = [...(sh.pdfVector ? readPdf(sh) : []), ...readMarks(sh)];
+        else {
+          cands = [...(sh.pdfVector ? readPdf(sh) : []), ...readMarks(sh)];
+          if (sh.imageUrl) {
+            try {
+              const labels = await readPrintedLabels(
+                sh.imageUrl,
+                () => importWithRecovery(() => import("tesseract.js"))
+              );
+              ocrLabels += labels.quantities.length;
+              cands.push(...fromOcr(labels.quantities));
+            } catch {
+              ocrFailures++;
+            }
+          }
+        }
       } catch { cands = []; }
       const all = reconcile(cands).filter((c) => c.quantity > 0);
       // One tap adds only what is certain: CAD geometry, written marks, and PDF groups the drawing itself named.
@@ -498,8 +516,8 @@ export default function App() {
       fresh.push(...candidatesToTakeoff(chosen, sh, base + fresh.length));
     }
     if (!fresh.length) return toReview
-      ? `لم أضف شيئاً تلقائياً لأن القراءات (${toReview}) غير مؤكَّدة. افتح «الكميات» واضغط «حلّل اللوحة» لتختار منها ما تعتمده.`
-      : "هذه اللوحة لا تحوي أبعاداً أو علامات يمكن قراءتها آلياً (غالباً صورة أو بلا مقياس). اضغط على زر المقياس أعلى اللوحة وعايره بقياس بُعد معروف، ثم قِس بأدوات «مسافة» و«مساحة» و«عدّ» وأضف كل قياس للجدول.";
+      ? `وجدت ${toReview} قراءة هندسية تحتاج اختياراً. افتح «تحليل اللوحة» لمراجعتها.${ocrFailures ? ` تعذرت قراءة النص آلياً في ${ocrFailures} لوحة.` : ""}`
+      : `لم أجد كميات قابلة للإضافة. ${ocrLabels ? `قُرئ ${ocrLabels} رقم، لكن لم ينتج بنداً صالحاً.` : "جرّب «تحليل اللوحة» أو عاير المقياس واستخدم أدوات القياس."}${ocrFailures ? ` تعذرت قراءة النص آلياً في ${ocrFailures} لوحة.` : ""}`;
     pushUndoSnapshot();
     const now = new Date().toISOString();
     const stamped = fresh.map((it, i) => ({ ...it, id: `${it.id}-${i}`, reviewStatus: "extracted" as ReviewStatus,
@@ -508,10 +526,13 @@ export default function App() {
       ...p,
       takeoffItems: [
         ...stamped,
-        ...p.takeoffItems.filter((it) => !(replaced.has(it.sheetId) && (it.extractionSource === "cad_geometry" || it.extractionSource === "pdf_vector"))),
+        ...p.takeoffItems.filter((it) => !(replaced.has(it.sheetId) && (
+          it.extractionSource === "cad_geometry" || it.extractionSource === "pdf_vector" ||
+          (it.extractionSource === "visual_search" && it.sourceEvidence?.startsWith("السطر المقروء:"))
+        ))),
       ],
     }));
-    return `تم حصر ${fresh.length} بنداً من ${readSheets} لوحة من أصل ${scope.length}.${toReview ? ` وهناك ${toReview} قراءة أخرى تنتظر اختيارك في «حلّل اللوحة».` : ""} راجع ثم صدّر Excel.`;
+    return `أُضيف ${fresh.length} بنداً من ${readSheets} لوحة. ${ocrLabels ? `تم التقاط ${ocrLabels} رقم مطبوع.` : ""}${toReview ? ` بقيت ${toReview} قراءة هندسية للمراجعة.` : ""}${ocrFailures ? ` تعذرت قراءة النص في ${ocrFailures} لوحة.` : ""} راجع البنود ثم صدّر Excel.`;
   };
 
   // Reverse Link: Inspect a takeoff item on its blueprint
@@ -719,7 +740,7 @@ export default function App() {
       />
 
       <main key={tab} className="flex-1 w-full md:pr-64 pt-4 pb-28 md:pb-10 qto-view-in print:p-0">
-        <div className={`mx-auto w-full px-4 md:px-8 md:pt-4 ${tab === "home" || tab === "sheets" ? "max-w-3xl" : "max-w-3xl md:max-w-6xl"}`}>
+        <div className={`mx-auto w-full px-4 md:px-8 md:pt-4 ${tab === "home" ? "max-w-6xl" : tab === "sheets" ? "max-w-3xl" : "max-w-3xl md:max-w-6xl"}`}>
           {tab === "home" && (
             <HomeScreen
               metadata={metadata}

@@ -4,6 +4,7 @@ import { BlueprintSheet, TakeoffItem } from "../types";
 import { Candidate, SOURCE_LABEL, candidatesToTakeoff } from "../engine/candidate";
 import { reconcile, rank } from "../engine/reconcile";
 import { fromAi, fromOcr, readCad, readPdf, CadAssumptions } from "../engine/readers";
+import { readMarks } from "../engine/marks";
 import { readPrintedLabels } from "../utils/ocrLabels";
 import { buildPrompt, loadAiKey, prepareImages, runAiTakeoff } from "../utils/aiTakeoff";
 import { importWithRecovery } from "../utils/lazyImport";
@@ -58,7 +59,7 @@ export const AnalyzeSheetModal: React.FC<Props> = ({ isOpen, onClose, sheet, exi
     (async () => {
       try {
         if (sheet.dxfData) { raw.current.cad = readCad(sheet, assumptions()); apply(); }
-        else if (sheet.pdfVector) { raw.current.cad = readPdf(sheet); apply(); }
+        else if (sheet.pdfVector || sheet.visualTokens?.length) { raw.current.cad = [...(sheet.pdfVector ? readPdf(sheet) : []), ...readMarks(sheet)]; apply(); }
         if (sheet.imageUrl) {
           setBusy("قراءة الأرقام المدوّنة على اللوحة…");
           const r = await readPrintedLabels(sheet.imageUrl, () => importWithRecovery(() => import("tesseract.js")), (m, p) => { setBusy(m); setPct(p); });
@@ -103,7 +104,7 @@ export const AnalyzeSheetModal: React.FC<Props> = ({ isOpen, onClose, sheet, exi
   const insert = () => {
     const chosen = cands.filter((c) => picked[c.id]);
     if (!chosen.length) return;
-    const replace = replacePrev && previousCadCount > 0 && chosen.some((c) => c.sources.includes("cad") || c.sources.includes("pdf"));
+    const replace = replacePrev && previousCadCount > 0 && chosen.some((c) => c.sources.includes("cad") || c.sources.includes("pdf") || c.sources.includes("mark"));
     onAddItems(candidatesToTakeoff(chosen, sheet, existingItemsCount), replace ? { replaceSheetId: sheet.id } : undefined);
     onClose();
   };

@@ -55,7 +55,7 @@ import {
   markBackupDone,
 } from "./utils/projectStorage";
 
-export const APP_VERSION = "8.16.1";
+export const APP_VERSION = "8.16.2";
 
 // Persistent high-capacity storage powered by IndexedDB (src/utils/projectStorage.ts)
 
@@ -542,6 +542,9 @@ export default function App() {
       readSheets++;
       fresh.push(...candidatesToTakeoff(cands, sh, base + fresh.length));
     }
+    // From the drawing screen the button reads only the open sheet: say so, and where the whole file is read.
+    if (!fresh.length && onlySheetId && sheetList.length > 1)
+      return "هذه اللوحة وحدها لا تحوي كمية مؤكدة (الكميات تأتي من جمع علامات المخططات مع جداول المقاسات في لوحات أخرى). لقراءة الملف كله اضغط «اقرأ واحصر» في شاشة «الكميات» مع اختيار «كل اللوحات».";
     if (!fresh.length) return toReview
       ? `لم أجد كمية مؤكدة أضيفها وحدي. في «راجع» قراءات غير مؤكدة (أطوال خطوط وعلامات) يمكنك أن تختار منها ما تعرف أنه صحيح.${ocrFailures ? ` تعذرت قراءة النص آلياً في ${ocrFailures} لوحة.` : ""}`
       : `لم أجد كميات يمكن قراءتها آلياً في هذا الملف (غالباً صورة أو بلا أبعاد مكتوبة). ${ocrLabels ? `قُرئ ${ocrLabels} رقم، لكن لم ينتج بنداً صالحاً. ` : ""}يمكنك إضافة بند يدوياً، أو فتح اللوحة من «اللوحات» والقياس عليها.${ocrFailures ? ` تعذرت قراءة النص آلياً في ${ocrFailures} لوحة.` : ""}`;

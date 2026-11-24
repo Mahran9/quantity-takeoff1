@@ -267,7 +267,13 @@ export function calibrateScale(
     cands[0].matches >= 3 &&
     cands[0].matches / cands[0].total >= 0.5 &&
     !cands.slice(1).some((c) => c.matches * 1.5 > cands[0].matches);
-  if (!convincing && !textScale) {
+  // A scale written on the sheet often belongs to one detail ("SCALE 1:20" under a footing detail) while the plan
+  // itself is drawn — or printed shrunk — at another. Trust the text only when no other scale explains clearly
+  // more of the drawing's dimensions (a real villa sheet: "1:20" matched 8 numbers, the plan's scale 40).
+  const textCand = textScale ? cands.find((c) => c.denominator === textScale) : undefined;
+  const rival = textScale ? cands.find((c) => c.denominator !== textScale && c.matches >= Math.max(9, (textCand?.matches || 0) * 2)) : undefined;
+  const trustText = !!textScale && !rival;
+  if (!convincing && !trustText) {
     const longEdges = [...new Set(edgeKeys.filter((k) => k >= 600).map((k) => Math.round(k / 2) / 5))].slice(-200);
     let top: { r: number; matches: number; total: number; unit: "m" | "cm" | "mm" } | undefined;
     for (const unit of ["m", "mm", "cm"] as const) {
@@ -299,10 +305,11 @@ export function calibrateScale(
       const den = Math.round((1000 / (PT_TO_MM * top.r)) * 10) / 10;
       const free: ScaleCandidate = { denominator: den, unit: top.unit, matches: top.matches, total: top.total };
       return {
+        textScale,
         best: free,
         candidates: [free, ...cands.slice(0, 4)],
         confidence: "medium",
-        message: `مقياس غير قياسي ≈1:${Math.round(den)} من مطابقة ${top.matches} من ${top.total} بُعداً مع الرسم (اللوحة مصغّرة على الورقة). تحقق بقياس بُعد معروف.`,
+        message: `مقياس غير قياسي ≈1:${Math.round(den)} من مطابقة ${top.matches} من ${top.total} بُعداً مع الرسم (اللوحة مصغّرة على الورقة).${textScale ? ` المكتوب 1:${textScale} يخص تفصيلة على اللوحة لا المسقط.` : ""} تحقق بقياس بُعد معروف.`,
       };
     }
   }
@@ -312,7 +319,7 @@ export function calibrateScale(
   const dimsAgree =!!best && best.matches >= 3 && (best.matches / best.total >= 0.3) && (!second || best.matches >= second.matches * 1.5);
   const textMatches = textScale ? allCands.find((c) => c.denominator === textScale) : undefined;
 
-  if (textScale && textMatches && textMatches.matches >= 3) {
+  if (trustText && textMatches && textMatches.matches >= 3) {
     return { textScale, best: textMatches, candidates: cands.slice(0, 5), confidence: "high", message: `المقياس 1:${textScale} مكتوب في اللوحة ومطابق للأبعاد المقروءة (${textMatches.matches} بُعداً).` };
   }
   if (textScale && best && dimsAgree && best.denominator !== textScale) {

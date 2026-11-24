@@ -94,7 +94,15 @@ export default function App() {
   const [storageReady, setStorageReady] = useState<boolean>(false);
   const [company, setCompany] = useState<CompanyProfile>(EMPTY_COMPANY_PROFILE);
   const [storageNotice, setStorageNotice] = useState<StorageNotice | null>(null);
-  const [noticeDismissed, setNoticeDismissed] = useState<string>("");
+  const [noticeDismissed, setNoticeDismissed] = useState<string>(() => {
+    // a dismissed backup/storage reminder stays quiet for 3 days instead of coming back on every launch
+    try {
+      for (const k of ["backup", "quota"]) {
+        if (Number(localStorage.getItem(`qto-snooze-${k}`) || 0) > Date.now()) return k;
+      }
+    } catch { /* storage unavailable */ }
+    return "";
+  });
 
   // Hydrate projects asynchronously from IndexedDB (migrates legacy localStorage automatically)
   useEffect(() => {
@@ -842,7 +850,11 @@ export default function App() {
       <SaveStatusBar
         notice={storageNotice && `${storageNotice.kind}` !== noticeDismissed ? storageNotice : null}
         onBackup={handleBackupActive}
-        onDismiss={() => storageNotice && setNoticeDismissed(storageNotice.kind)}
+        onDismiss={() => {
+          if (!storageNotice) return;
+          setNoticeDismissed(storageNotice.kind);
+          try { localStorage.setItem(`qto-snooze-${storageNotice.kind}`, String(Date.now() + 3 * 24 * 3600 * 1000)); } catch { /* ignore */ }
+        }}
       />
       <OfflineIndicator />
     </div>

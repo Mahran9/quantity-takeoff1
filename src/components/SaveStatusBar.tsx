@@ -27,7 +27,7 @@ export const SaveStatusBar: React.FC<Props> = ({ notice, onBackup, onDismiss }) 
       ? "التخزين الأساسي غير متاح، والحفظ يتم في مساحة احتياطية محدودة. صدّر نسخة احتياطية بشكل دوري."
       : notice.kind === "quota"
       ? `مساحة التخزين المستخدمة ${notice.percent}% من المتاح. خذ نسخة احتياطية وانقل المشاريع المنتهية خارج التطبيق.`
-      : "مرّ أكثر من أسبوع على آخر نسخة احتياطية لمشروعك. بياناتك على جهازك فقط — خذ نسخة الآن.";
+      : "لم تأخذ نسخة احتياطية منذ أكثر من أسبوع. بياناتك على جهازك فقط.";
 
   const Icon = critical ? AlertTriangle : notice.kind === "backup" ? DatabaseBackup : HardDrive;
 
@@ -41,13 +41,13 @@ export const SaveStatusBar: React.FC<Props> = ({ notice, onBackup, onDismiss }) 
       }`}
     >
       <Icon className={`w-5 h-5 shrink-0 mt-0.5 ${critical ? "text-rose-400" : "text-amber-400"}`} />
-      <div className="flex-1 space-y-2">
-        <p>{text}</p>
+      <div className="flex-1 flex flex-wrap items-center gap-x-3 gap-y-2">
+        <p className="flex-1 min-w-[10rem]">{text}</p>
         <button
           onClick={onBackup}
-          className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold"
+          className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold whitespace-nowrap"
         >
-          تصدير نسخة احتياطية
+          نسخة احتياطية
         </button>
       </div>
       {!critical && (

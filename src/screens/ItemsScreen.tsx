@@ -1,5 +1,5 @@
 import React from "react";
-import { Loader2, ScanLine } from "lucide-react";
+import { FileSpreadsheet, Loader2, ScanLine } from "lucide-react";
 import { BlueprintSheet, TakeoffItem } from "../types";
 import { ScreenHeader } from "../components/Nav";
 
@@ -15,11 +15,14 @@ interface Props {
   onGoSheets: () => void;
   /** Result of the automatic read right after an upload. */
   readMsg?: string;
+  /** Download the quantities as an Excel workbook. */
+  onExcel?: () => void;
   children: React.ReactNode; // the table for the active sheet
 }
 
 /** Quantities: pick a drawing, review its lines. */
-export const ItemsScreen: React.FC<Props> = ({ sheets, items, activeSheetId, onSelectSheet, onAnalyze, onAuto, onGoSheets, readMsg, children }) => {
+export const ItemsScreen: React.FC<Props> = ({ sheets, items, activeSheetId, onSelectSheet, onAnalyze, onAuto, onGoSheets, readMsg, onExcel, children }) => {
+  const live = items.filter((i) => i.reviewStatus !== "rejected").length;
   const [msg, setMsg] = React.useState(readMsg || "");
   React.useEffect(() => { if (readMsg) setMsg(readMsg); }, [readMsg]);
   const [reading, setReading] = React.useState(false);
@@ -59,6 +62,13 @@ export const ItemsScreen: React.FC<Props> = ({ sheets, items, activeSheetId, onS
         }
       />
       {msg && <p className="rounded-lg bg-teal-50 px-3 py-2 text-[13px] font-bold leading-6 text-teal-900">{msg}</p>}
+      {/* The next step after a read: take the table out as Excel (all sheets, quotation + detailed sheet). */}
+      {onExcel && live > 0 && !reading && (
+        <button onClick={onExcel} className="qto-cta flex h-12 w-full items-center justify-center gap-2 rounded-xl text-[15px]">
+          <FileSpreadsheet className="w-5 h-5" />
+          تصدير جدول الكميات Excel ({live} بند)
+        </button>
+      )}
       {sheets.length > 1 && (() => {
         // One table for the whole project by default. A many-page PDF used to show a strip of 16 page buttons here;
         // picking a single sheet is now one dropdown, sheets with lines first.

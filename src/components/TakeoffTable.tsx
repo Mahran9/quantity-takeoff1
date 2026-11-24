@@ -548,6 +548,49 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
         </div>
       </div>
 
+      {/* Select all: tick (approve) every line now shown, or untick them all. Rejected lines stay as they are. */}
+      {(() => {
+        const shown = filteredItems.filter((i) => getEffectiveStatus(i) !== "rejected");
+        if (!shown.length) return null;
+        const allOn = shown.every((i) => getEffectiveStatus(i) === "approved");
+        // Unticking puts each line back to the status it had before it was approved (e.g. «يحتاج مراجعة» stays
+        // visible on lines built on an assumption), read from the line's own audit log.
+        const before = (it: TakeoffItem): ReviewStatus => {
+          const log = it.auditLog || [];
+          for (let k = log.length - 1; k >= 0; k--) {
+            const s = log[k].status;
+            if (s && s !== "approved") return s;
+          }
+          return "reviewed";
+        };
+        const setAll = () => {
+          for (const it of shown) {
+            const isOn = getEffectiveStatus(it) === "approved";
+            if (isOn !== allOn) continue;
+            const next: ReviewStatus = allOn ? before(it) : "approved";
+            if (onUpdateStatus) onUpdateStatus(it, next, allOn ? "إلغاء تحديد الكل" : "تحديد الكل");
+            else onUpdateItem({ ...it, reviewStatus: next, isVerified: next === "approved" });
+          }
+        };
+        return (
+          <div className="flex items-center gap-2.5 border-b border-slate-100 px-3 py-2 sm:px-4">
+            <button
+              onClick={setAll}
+              aria-pressed={allOn}
+              className={`flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[13px] font-bold ${allOn ? "text-emerald-700" : "text-slate-700"} hover:bg-slate-100`}
+            >
+              <span className={`grid h-6 w-6 place-items-center rounded-full border-2 ${allOn ? "bg-emerald-500 border-emerald-500 text-white" : "border-slate-300 text-transparent"}`}>
+                <Check className="w-3.5 h-3.5" />
+              </span>
+              {allOn ? "إلغاء تحديد الكل" : "تحديد الكل"}
+            </button>
+            <span className="text-[12px] text-slate-500">
+              {shown.filter((i) => getEffectiveStatus(i) === "approved").length} من {shown.length} معتمد
+            </span>
+          </div>
+        );
+      })()}
+
       {/* Adding New Item Form Row */}
       {isAddingNew && (
         <div className="p-4 bg-amber-50/50 border-b border-amber-200 text-xs">

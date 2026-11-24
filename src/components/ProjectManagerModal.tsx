@@ -269,7 +269,7 @@ export const ProjectManagerModal: React.FC<ProjectManagerModalProps> = ({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".json"
+                accept=".json,application/json,text/plain"
                 onChange={handleImportFile}
                 className="hidden"
               />

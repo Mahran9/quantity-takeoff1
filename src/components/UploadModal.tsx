@@ -225,7 +225,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
 
         <div className="p-4 sm:p-6 space-y-4">
           <label className="block border-2 border-dashed border-slate-300 hover:border-amber-400 rounded-2xl p-6 text-center cursor-pointer bg-slate-50 transition-all">
-            <input type="file" accept=".pdf,.dxf,.dwg,.png,.jpg,.jpeg,.webp" onChange={handleFileChange} className="hidden" />
+            <input type="file" accept=".pdf,.dxf,.dwg,.png,.jpg,.jpeg,.webp,application/pdf,image/*,application/dxf,application/acad,image/vnd.dwg,image/vnd.dxf,application/octet-stream" onChange={handleFileChange} className="hidden" />
             <div className="flex justify-center gap-3 mb-2 text-slate-400">
               <FileText className="w-6 h-6 text-slate-400" />
               <FileCode2 className="w-6 h-6 text-slate-400" />

@@ -80,7 +80,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const symbols: Record<string, string> = { SAR: "ر.س", AED: "د.إ", USD: "$", EGP: "ج.م", QAR: "ر.ق", KWD: "د.ك" };
 
   const deskTab = (active: boolean) =>
-    `flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+    `flex items-center gap-2 px-3 lg:px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition-all ${
       active ? "bg-amber-500 text-slate-950 shadow-sm" : "text-slate-300 hover:text-white hover:bg-slate-700/50"
     }`;
   const chip =
@@ -107,13 +107,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Desktop tabs */}
-          <div className="hidden sm:flex items-center gap-1 bg-slate-800/80 p-1 rounded-xl border border-slate-700/60">
+          <div className="hidden sm:flex items-center gap-1 bg-slate-800/80 p-1 rounded-xl border border-slate-700/60 whitespace-nowrap shrink-0">
             <button onClick={() => setActiveView("workspace")} className={deskTab(activeView === "workspace")}>
-              <Layers className="w-4 h-4" /> المخططات والحصر
+              <Layers className="w-4 h-4" /> <span className="hidden lg:inline">المخططات والحصر</span><span className="lg:hidden">الحصر</span>
               <span className="text-[11px] px-1.5 rounded-full bg-slate-900/30 font-mono">{sheets.length}</span>
             </button>
             <button onClick={() => setActiveView("boq")} className={deskTab(activeView === "boq")}>
-              <FileSpreadsheet className="w-4 h-4" /> الجدول وعرض السعر
+              <FileSpreadsheet className="w-4 h-4" /> <span className="hidden lg:inline">الجدول وعرض السعر</span><span className="lg:hidden">الجدول</span>
               <span className="text-[11px] px-1.5 rounded-full bg-slate-900/30 font-mono">{takeoffItems.length}</span>
             </button>
           </div>
@@ -145,13 +145,13 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Totals strip */}
         <div className="bg-slate-950 border-t border-slate-800">
-          <div className="max-w-7xl mx-auto px-3 sm:px-6 h-9 flex items-center justify-between gap-3 text-xs font-mono">
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 h-9 flex items-center justify-between gap-2 text-[11px] sm:text-xs font-mono whitespace-nowrap">
             <div className="flex items-center gap-2 text-slate-400">
               <span className="font-sans">الصافي</span>
               <b className="text-slate-100">{money(q.subtotal)} {metadata.currencySymbol}</b>
             </div>
             <div className="flex items-center gap-2 text-amber-300/80">
-              <span className="font-sans">شامل الضريبة {metadata.taxRate}%</span>
+              <span className="font-sans">شامل الضريبة<span className="hidden min-[360px]:inline"> {metadata.taxRate}%</span></span>
               <b className="text-amber-400">{money(q.grandTotal)} {metadata.currencySymbol}</b>
             </div>
           </div>

@@ -353,7 +353,7 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
               setToolMode("select");
               setActivePoints([]);
             }}
-            className={`p-1.5 rounded-lg text-xs flex items-center gap-1.5 ${
+            className={`p-1 sm:p-1.5 shrink-0 rounded-lg text-xs flex items-center gap-1.5 ${
               toolMode === "select" ? "bg-amber-500 text-slate-950 font-bold" : "text-slate-400 hover:text-white"
             }`}
             title="تحريك وتصفح المخطط"
@@ -367,7 +367,7 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
               setToolMode("calibrate");
               setActivePoints([]);
             }}
-            className={`p-1.5 rounded-lg text-xs flex items-center gap-1.5 ${
+            className={`p-1 sm:p-1.5 shrink-0 rounded-lg text-xs flex items-center gap-1.5 ${
               toolMode === "calibrate"
                 ? "bg-emerald-500 text-slate-950 font-bold"
                 : sheet.calibration
@@ -387,7 +387,7 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
               setToolMode("count");
               setActivePoints([]);
             }}
-            className={`p-1.5 rounded-lg text-xs flex items-center gap-1.5 ${
+            className={`p-1 sm:p-1.5 shrink-0 rounded-lg text-xs flex items-center gap-1.5 ${
               toolMode === "count" ? "bg-amber-500 text-slate-950 font-bold" : "text-slate-400 hover:text-white"
             }`}
           >
@@ -400,7 +400,7 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
               setToolMode("length");
               setActivePoints([]);
             }}
-            className={`p-1.5 rounded-lg text-xs flex items-center gap-1.5 ${
+            className={`p-1 sm:p-1.5 shrink-0 rounded-lg text-xs flex items-center gap-1.5 ${
               toolMode === "length" ? "bg-amber-500 text-slate-950 font-bold" : "text-slate-400 hover:text-white"
             }`}
           >
@@ -413,7 +413,7 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
               setToolMode("area");
               setActivePoints([]);
             }}
-            className={`p-1.5 rounded-lg text-xs flex items-center gap-1.5 ${
+            className={`p-1 sm:p-1.5 shrink-0 rounded-lg text-xs flex items-center gap-1.5 ${
               toolMode === "area" ? "bg-amber-500 text-slate-950 font-bold" : "text-slate-400 hover:text-white"
             }`}
           >

@@ -163,9 +163,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button onClick={onOpenUpload} className={`${chip} bg-amber-500 border-amber-400 text-slate-950 hover:bg-amber-400`}>
               <Plus className="w-4 h-4" /> إضافة مخطط
             </button>
-            <button onClick={onAnalyze} className={`${chip} bg-slate-700 border-slate-600 text-white hover:bg-slate-600`}>
-              <Layers className="w-4 h-4" /> حلّل اللوحة
-            </button>
             <button onClick={onOpenVisualSearch} className={`${chip} bg-slate-800 border-slate-700 text-cyan-300 hover:bg-slate-700`}>
               <ScanSearch className="w-4 h-4" /> بحث بصري
             </button>

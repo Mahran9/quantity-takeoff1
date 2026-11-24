@@ -34,7 +34,7 @@ export const SaveStatusBar: React.FC<Props> = ({ notice, onBackup, onDismiss }) 
   return (
     <div
       role={critical ? "alert" : "status"}
-      className={`fixed bottom-4 right-4 left-4 sm:left-auto sm:max-w-md z-[60] qto-slide-up rounded-2xl border px-4 py-3 shadow-2xl flex items-start gap-3 text-xs leading-relaxed print:hidden ${
+      className={`fixed bottom-[6.75rem] sm:bottom-4 right-3 left-3 sm:right-4 sm:left-auto sm:max-w-md z-40 qto-slide-up rounded-2xl border px-3.5 py-3 flex items-start gap-3 text-xs leading-relaxed print:hidden ${
         critical
           ? "bg-rose-950/95 border-rose-500/50 text-rose-100"
           : "bg-slate-900/95 border-amber-500/40 text-amber-100"

@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from "react";
 import {
   ZoomIn,
   ZoomOut,
-  RotateCcw,
   MousePointer,
   Hash,
   Ruler,
@@ -97,8 +96,7 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
       setZoom(saved.zoom);
       setPan(saved.pan);
     } else {
-      setZoom(1);
-      setPan({ x: 0, y: 0 });
+      fitView();
     }
     setActivePoints([]);
     setPendingCalibPts(null);
@@ -130,32 +128,105 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
     }));
   };
 
-  const handleZoomIn = () => setZoom((prev) => Math.min(prev + 0.25, 4));
-  const handleZoomOut = () => setZoom((prev) => Math.max(prev - 0.25, 0.4));
-  const handleResetView = () => {
-    setZoom(1);
-    setPan({ x: 0, y: 0 });
+  const handleZoomIn = () => setZoom((prev) => Math.min(prev + 0.25, 8));
+  const handleZoomOut = () => setZoom((prev) => Math.max(prev - 0.25, 0.2));
+  // Fit the whole sheet inside the stage (what a phone needs first); the stage is centred, so scale about its middle.
+  const fitView = () => {
+    const r = containerRef.current?.getBoundingClientRect();
+    if (!r || !r.width || !r.height) {
+      setZoom(1);
+      setPan({ x: 0, y: 0 });
+      return;
+    }
+    const z = Math.min(1, r.width / STAGE_W, r.height / STAGE_H);
+    setZoom(z);
+    setPan({ x: (r.width / 2) * (1 - z), y: (r.height / 2) * (1 - z) });
+  };
+  const handleResetView = fitView;
+
+  // ── Pan / pinch / wheel (pointer events: one code path for mouse, touch and pen) ──
+  const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const gestureRef = useRef<{ dist: number; zoom: number; pan: { x: number; y: number }; mid: { x: number; y: number } } | null>(null);
+  const suppressClickRef = useRef(false);
+  const viewRef = useRef({ zoom, pan });
+  viewRef.current = { zoom, pan };
+  const MAX_ZOOM = 8;
+  const MIN_ZOOM = 0.2;
+
+  const localPoint = (clientX: number, clientY: number) => {
+    const r = containerRef.current?.getBoundingClientRect();
+    return { x: clientX - (r?.left ?? 0), y: clientY - (r?.top ?? 0) };
   };
 
-  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (toolMode === "select" || e.button === 1 || e.altKey) {
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === "mouse" && e.button !== 0 && e.button !== 1) return;
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointersRef.current.size === 2) {
+      const [p1, p2] = [...pointersRef.current.values()];
+      gestureRef.current = {
+        dist: Math.hypot(p1.x - p2.x, p1.y - p2.y) || 1,
+        zoom: viewRef.current.zoom,
+        pan: viewRef.current.pan,
+        mid: localPoint((p1.x + p2.x) / 2, (p1.y + p2.y) / 2),
+      };
+      setIsDragging(false);
+      suppressClickRef.current = true;
+    } else if (pointersRef.current.size === 1 && (toolMode === "select" || e.button === 1 || e.altKey)) {
       setIsDragging(true);
       setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
     }
   };
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (isDragging) {
-      setPan({
-        x: e.clientX - dragStart.x,
-        y: e.clientY - dragStart.y,
-      });
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!pointersRef.current.has(e.pointerId)) return;
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const g = gestureRef.current;
+    if (pointersRef.current.size === 2 && g) {
+      const [p1, p2] = [...pointersRef.current.values()];
+      const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y) || 1;
+      const nz = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, g.zoom * (dist / g.dist)));
+      const mid = localPoint((p1.x + p2.x) / 2, (p1.y + p2.y) / 2);
+      // keep the drawing point that was under the fingers at the start under the fingers now
+      const cx = (g.mid.x - g.pan.x) / g.zoom;
+      const cy = (g.mid.y - g.pan.y) / g.zoom;
+      setZoom(nz);
+      setPan({ x: mid.x - cx * nz, y: mid.y - cy * nz });
+    } else if (isDragging) {
+      const dx = e.clientX - dragStart.x - pan.x;
+      const dy = e.clientY - dragStart.y - pan.y;
+      if (Math.abs(dx) + Math.abs(dy) > 4) suppressClickRef.current = true;
+      setPan({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
     }
   };
 
-  const handleMouseUp = () => {
-    setIsDragging(false);
+  const endPointer = (e: React.PointerEvent<HTMLDivElement>) => {
+    pointersRef.current.delete(e.pointerId);
+    if (pointersRef.current.size < 2) gestureRef.current = null;
+    if (pointersRef.current.size === 0) {
+      setIsDragging(false);
+      // a pinch or drag must not also drop a measuring point
+      window.setTimeout(() => { suppressClickRef.current = false; }, 300);
+    }
   };
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const onWheel = (ev: WheelEvent) => {
+      ev.preventDefault();
+      const { zoom: z0, pan: p0 } = viewRef.current;
+      const nz = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z0 * Math.exp(-ev.deltaY * 0.0015)));
+      const r = el.getBoundingClientRect();
+      const mx = ev.clientX - r.left;
+      const my = ev.clientY - r.top;
+      const cx = (mx - p0.x) / z0;
+      const cy = (my - p0.y) / z0;
+      setZoom(nz);
+      setPan({ x: mx - cx * nz, y: my - cy * nz });
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [sheet.id]);
 
   const finishPolygonArea = (pts: { x: number; y: number }[]) => {
     if (pts.length < 3) return;
@@ -209,7 +280,7 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
   };
 
   const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (isDragging || toolMode === "select") return;
+    if (isDragging || suppressClickRef.current || toolMode === "select") return;
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
 
@@ -272,9 +343,9 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
   const svgContent = sampleDrawingsSvg[sheet.id] || "";
 
   return (
-    <div className="flex flex-col h-[62vh] min-h-[380px] max-h-[600px] lg:h-[640px] lg:max-h-none bg-slate-950 rounded-2xl border border-slate-800 shadow-xl overflow-hidden relative">
+    <div className="flex flex-col h-[56dvh] min-h-[340px] max-h-[600px] lg:h-[640px] lg:max-h-none bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden relative">
       {/* Toolbar */}
-      <div className="bg-slate-900/95 backdrop-blur-md px-4 py-2.5 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2.5 z-10">
+      <div className="bg-slate-900/95 backdrop-blur-md px-2.5 sm:px-4 py-2 sm:py-2.5 border-b border-slate-800 flex items-center justify-between gap-2 z-10">
         {/* Measurement Tools */}
         <div className="flex items-center gap-1 bg-slate-950/70 p-1 rounded-xl border border-slate-800">
           <button
@@ -353,7 +424,7 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
 
         {/* Center Info & DXF Layers */}
         <div className="flex items-center gap-2 text-xs text-slate-400">
-          <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-slate-800/80 border border-slate-700/60 font-mono text-slate-200">
+          <div className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-md bg-slate-800/80 border border-slate-700/60 font-mono text-slate-200">
             <span>المقياس:</span>
             <span className="font-bold text-amber-400">{sheet.scale}</span>
           </div>
@@ -365,7 +436,7 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
                 className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-cyan-300 rounded-md text-xs font-mono border border-slate-700"
               >
                 <Layers className="w-3.5 h-3.5 text-cyan-400" />
-                <span>طبقات CAD ({sheet.dxfLayers.length})</span>
+                <span>طبقات ({sheet.dxfLayers.length})</span>
               </button>
 
               {showLayersDropdown && (
@@ -397,18 +468,15 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
         </div>
 
         {/* Right: Zoom & Self-Reliant Engines */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1">
           <button onClick={handleZoomIn} className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg" title="تكبير">
             <ZoomIn className="w-4 h-4" />
           </button>
-          <span className="text-xs font-mono text-slate-400 w-10 text-center">{Math.round(zoom * 100)}%</span>
+          <button onClick={handleResetView} className="text-xs font-mono text-slate-400 hover:text-white w-11 text-center" title="ملاءمة الشاشة">{Math.round(zoom * 100)}%</button>
           <button onClick={handleZoomOut} className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg" title="تصغير">
             <ZoomOut className="w-4 h-4" />
           </button>
-          <button onClick={handleResetView} className="hidden sm:block p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg" title="إعادة ضبط">
-            <RotateCcw className="w-4 h-4" />
-          </button>
-
+          
         </div>
       </div>
 
@@ -437,10 +505,12 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
       {/* Main Interactive Stage */}
       <div
         ref={containerRef}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={endPointer}
+        onPointerCancel={endPointer}
         onClick={handleContainerClick}
+        style={{ touchAction: "none" }}
         className={`flex-1 relative w-full h-full overflow-hidden select-none ${
           toolMode === "select" ? (isDragging ? "cursor-grabbing" : "cursor-grab") : "cursor-crosshair"
         }`}

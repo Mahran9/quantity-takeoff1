@@ -57,7 +57,7 @@ export const SheetSummary: React.FC<Props> = ({ sheet, items, currencySymbol, on
 
   const count = live.length;
   return (
-    <section className="qto-rise-in rounded-2xl border border-slate-200 bg-white p-3.5 sm:p-4 shadow-sm">
+    <section className="qto-rise-in sm:flex sm:items-center sm:justify-between sm:gap-6 rounded-2xl border border-slate-200 bg-white p-3 sm:p-4">
       <div className="min-w-0">
         <h2 className="truncate text-base font-bold text-slate-900">{sheet.code} <span className="text-slate-300">—</span> {sheet.title}</h2>
         <p className="mt-0.5 text-[12px] text-slate-500">
@@ -65,10 +65,10 @@ export const SheetSummary: React.FC<Props> = ({ sheet, items, currencySymbol, on
         </p>
       </div>
 
-      <div className="mt-3 flex gap-2">
+      <div className="mt-3 sm:mt-0 flex gap-2 sm:shrink-0">
         <button
           onClick={onAnalyze}
-          className="flex-1 flex items-center justify-center gap-2 qto-cta rounded-xl px-4 py-3.5 text-base font-bold transition active:scale-[0.98]"
+          className="flex-1 sm:flex-none flex items-center justify-center gap-2 qto-cta rounded-xl px-4 py-3 text-[15px] font-bold transition active:scale-[0.98]"
         >
           <Layers className="w-5 h-5" />
           <span>حلّل اللوحة</span>
@@ -77,7 +77,7 @@ export const SheetSummary: React.FC<Props> = ({ sheet, items, currencySymbol, on
           <button
             onClick={onExportExcel}
             title="تصدير جدول الكميات Excel"
-            className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3.5 text-sm font-bold text-white transition hover:bg-slate-800 active:scale-[0.98]"
+            className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800 active:scale-[0.98]"
           >
             <FileSpreadsheet className="w-5 h-5" />
             <span>Excel</span>

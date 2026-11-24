@@ -16,6 +16,7 @@ export function readCad(sheet: BlueprintSheet, a: CadAssumptions = {}): Candidat
     defaultFootingDepth: a.footingDepth || 0,
     defaultSlabThickness: a.slabThickness || 0,
     defaultFloorSlabThickness: a.floorSlabThickness || 0,
+    includeClosedPerimeter: true,
   }).map((q: any) => ({
     id: `cad-${q.id}`,
     description: q.description,

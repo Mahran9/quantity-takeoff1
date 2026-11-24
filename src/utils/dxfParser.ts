@@ -1,3 +1,4 @@
+import { pairedLineFraction, Seg } from "./parallelLines";
 import DxfParser from "dxf-parser";
 import { DxfLayerInfo, ExtractedCadQuantity, TradeCategory } from "../types";
 
@@ -746,6 +747,11 @@ export function analyzeParsedDxfObject(parsed: any, options: AnalyzeOptions = {}
   const textNotes: string[] = [];
   const detectedDimensions: { text?: string; measurement?: number; layer?: string }[] = [];
   const closedAreas: { layer: string; area: number; perimeter: number }[] = [];
+  const segsByLayer: Record<string, Seg[]> = {};
+  const pushSeg = (layer: string, x1: number, y1: number, x2: number, y2: number) => {
+    const arr = (segsByLayer[layer] ||= []);
+    if (arr.length < 2500 && [x1, y1, x2, y2].every(Number.isFinite)) arr.push([x1, y1, x2, y2]);
+  };
 
   // Register layers from tables
   if (parsed.tables && parsed.tables.layer && parsed.tables.layer.layers) {
@@ -844,6 +850,7 @@ export function analyzeParsedDxfObject(parsed: any, options: AnalyzeOptions = {}
       const segLength = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
       if (isFinite(segLength)) {
         layersMap[layerName].lineLength = (layersMap[layerName].lineLength || 0) + segLength;
+        pushSeg(layerName, x1, y1, x2, y2);
       }
     }
 
@@ -880,6 +887,7 @@ export function analyzeParsedDxfObject(parsed: any, options: AnalyzeOptions = {}
       // Closed outlines are area boundaries, not independent linear work items.
       if (isFinite(polyLength) && !isClosed) {
         layersMap[layerName].lineLength = (layersMap[layerName].lineLength || 0) + polyLength;
+        for (let k = 0; k + 1 < cleanVertices.length; k++) pushSeg(layerName, cleanVertices[k].x, cleanVertices[k].y, cleanVertices[k + 1].x, cleanVertices[k + 1].y);
       }
     }
 
@@ -1054,6 +1062,14 @@ export function analyzeParsedDxfObject(parsed: any, options: AnalyzeOptions = {}
     }
   }
 
+  // Double-line walls: how much of each layer's line length has a parallel partner 6–60 cm away.
+  const toM = resolvedUnitInfo.toMeters || 1;
+  for (const [ln, segs] of Object.entries(segsByLayer)) {
+    if (!layersMap[ln] || segs.length < 4) continue;
+    const f = pairedLineFraction(segs, 0.06 / toM, 0.6 / toM);
+    if (f > 0) layersMap[ln].pairedLineFraction = Number(f.toFixed(3));
+  }
+
   const blockExpansion = expandBlockInstanceCounts(topLevelInserts, parsed.blocks);
   const detectedBlocks = Object.entries(blockExpansion.counts).map(([name, count]) => ({
     name,
@@ -1205,7 +1221,7 @@ export function extractEngineeringQuantitiesFromDxf(
     defaultBlindingThickness = 0,
     unitScaleFactor,
     layerRules,
-    wallLineDivisor = 1,
+    wallLineDivisor,
     includeClosedPerimeter = false,
   } = options;
 
@@ -1528,7 +1544,9 @@ export function extractEngineeringQuantitiesFromDxf(
       desc = `أطوال مواسير ومسارات التمديدات الكهربائية (${layer.name})`;
     }
 
-    const divisor = isWall && wallLineDivisor === 2 ? 2 : 1;
+    // An explicit choice wins; otherwise detect walls drawn as two parallel lines from the geometry itself.
+    const autoDouble = isWall && wallLineDivisor === undefined && (layer.pairedLineFraction || 0) >= 0.8;
+    const divisor = isWall && (wallLineDivisor === 2 || autoDouble) ? 2 : 1;
     const openLen = (layer.lineLength || 0) * effectiveScale;
     const closedLen =
       (includeClosedPerimeter && (acceptsClosedPerimeter || rule)) ||
@@ -1538,7 +1556,7 @@ export function extractEngineeringQuantitiesFromDxf(
     const rawLen = (openLen + closedLen) / divisor;
     if (rawLen <= 1.0) return;
 
-    const divisorNote = divisor === 2 ? " ÷ 2 (جدران بخطين متوازيين)" : "";
+    const divisorNote = divisor === 2 ? (autoDouble ? " ÷ 2 (اكتُشف أن الجدران مرسومة بخطين متوازيين)" : " ÷ 2 (جدران بخطين متوازيين)") : "";
     const closedNote = closedLen > 0 ? ` (شاملة محيط الأشكال المغلقة ${closedLen.toFixed(2)} م)` : "";
 
     if (isWall) {

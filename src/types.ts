@@ -143,6 +143,8 @@ export interface DxfLayerInfo {
   areaSum?: number;
   closedPolylinesCount?: number;
   closedPerimeterSum?: number;
+  /** Share (0..1) of this layer's line length that has a parallel partner a wall-thickness away (double-line walls). */
+  pairedLineFraction?: number;
 }
 
 /** Compact result of reading a PDF page's vector drawing (no raw paths, safe to persist). */

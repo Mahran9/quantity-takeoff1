@@ -1,0 +1,10 @@
+{
+ "footings": 12,
+ "footing_area": 23.76,
+ "columns": 12,
+ "wall_len": 66.0,
+ "slab_area": 128.96,
+ "beam_len": 56.0,
+ "doors": 6,
+ "windows": 8
+}

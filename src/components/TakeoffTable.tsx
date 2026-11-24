@@ -39,6 +39,8 @@ interface TakeoffTableProps {
   onInspectItemOnSheet?: (item: TakeoffItem) => void;
   onImportExcelItems?: (items: TakeoffItem[]) => void;
   onUpdateStatus?: (item: TakeoffItem, status: ReviewStatus, reason?: string) => void;
+  /** One table for every sheet of the project: no "linked to sheet" badge; rows show their sheet code. */
+  combined?: boolean;
 }
 
 export const TakeoffTable: React.FC<TakeoffTableProps> = ({
@@ -54,6 +56,7 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
   onInspectItemOnSheet,
   onImportExcelItems,
   onUpdateStatus,
+  combined = false,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -262,18 +265,22 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
                 {sheet.code}
               </span>
               <h2 className="text-base sm:text-lg font-bold text-slate-800">
-                دفتر حصر كميات: {sheet.title}
+                {combined ? `جدول الكميات: ${sheet.title}` : `دفتر حصر كميات: ${sheet.title}`}
               </h2>
             </div>
-            <p className="text-xs text-slate-500 mt-1 hidden sm:flex items-center gap-2 flex-wrap">
-              <span>التخصص: {sheet.discipline}</span>
-              <span>•</span>
-              <span>الملف: {sheet.fileName}</span>
-              <span>•</span>
-              <span className="text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                حصر منعزل ومربوط باللوحة {sheet.code}
-              </span>
-            </p>
+            {combined ? (
+              <p className="text-xs text-slate-500 mt-1 hidden sm:block">كل لوحات المشروع في جدول واحد ({sheet.fileName}). رمز اللوحة بجانب كل بند.</p>
+            ) : (
+              <p className="text-xs text-slate-500 mt-1 hidden sm:flex items-center gap-2 flex-wrap">
+                <span>التخصص: {sheet.discipline}</span>
+                <span>•</span>
+                <span>الملف: {sheet.fileName}</span>
+                <span>•</span>
+                <span className="text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                  حصر منعزل ومربوط باللوحة {sheet.code}
+                </span>
+              </p>
+            )}
           </div>
 
           <div className="sm:hidden relative flex items-center gap-2 w-full">
@@ -741,6 +748,7 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
                               <div className={`text-[13px] font-semibold leading-5 text-slate-900 ${open ? "" : "line-clamp-2"} ${rejected ? "line-through" : ""}`}>{item.description || "بند بلا وصف"}</div>
                               <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px] text-slate-500">
                                 <span className="font-mono">#{index + 1}</span>
+                                {combined && item.sheetCode && <span className="font-mono font-bold text-slate-600">{item.sheetCode}</span>}
                                 {item.location && <span>{item.location}</span>}
                                 {st === "needs_review" && <span className={`px-1.5 rounded border text-[10px] font-bold ${STATUS_META[st].cls}`}>{STATUS_META[st].label}</span>}
                               </div>
@@ -918,6 +926,7 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
                     </td>
 
                     <td className="py-2.5 px-3 text-slate-600">
+                      {combined && item.sheetCode && <div className="px-1.5 font-mono text-[11px] font-bold text-slate-500">{item.sheetCode}</div>}
                       <input
                         type="text"
                         value={item.location}

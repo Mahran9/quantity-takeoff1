@@ -105,7 +105,10 @@ export function readPdf(sheet: BlueprintSheet): Candidate[] {
       if (!(q > 0)) return;
       out.push({
         id: `pdf-${g.id}-${i}${idSuffix}`,
-        description: trusted ? `${g.label} — ${hint}` : `خطوط غير مسمّاة (${g.label}) — مجموع كل الخطوط بهذا اللون والسمك`,
+        // What the item is comes first; a colour/thickness label means nothing to the reader, so it goes last.
+        description: !trusted
+          ? `خطوط غير مسمّاة (${g.label}) — مجموع كل الخطوط بهذا اللون والسمك`
+          : named ? `${g.label} — ${hint}` : `${hint} — ${g.label}`,
         category: "أعمال متنوعة أخرى",
         dim: mode === "count" ? "count" : mode === "area" ? "area" : "linear",
         unit: mode === "count" ? "عدد" : mode === "area" ? "م²" : "م.ط",
@@ -127,7 +130,7 @@ export function readPdf(sheet: BlueprintSheet): Candidate[] {
       const k = ptToMetres(1, den, v.userUnit || 1);
       g.sizeClusters.slice(0, 5).forEach((c, ci) => {
         if (c.count < 1) return;
-        push(c.count, "count", `${c.count} عنصراً بمقاس ${(c.wPt * k).toFixed(2)}×${(c.hPt * k).toFixed(2)} م (أعمدة/قواعد)`, `-c${ci}`, c.count);
+        push(c.count, "count", `أعمدة/قواعد بمقاس ${(c.wPt * k).toFixed(2)}×${(c.hPt * k).toFixed(2)} م (${c.count} عنصراً)`, `-c${ci}`, c.count);
       });
       return;
     }

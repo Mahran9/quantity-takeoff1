@@ -54,7 +54,7 @@ import {
   markBackupDone,
 } from "./utils/projectStorage";
 
-export const APP_VERSION = "8.13.1";
+export const APP_VERSION = "8.14.0";
 
 // Persistent high-capacity storage powered by IndexedDB (src/utils/projectStorage.ts)
 
@@ -163,6 +163,10 @@ export default function App() {
   const [isProjectsOpen, setIsProjectsOpen] = useState(false);
   const [isSteelCalcOpen, setIsSteelCalcOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  /** Quantities screen: one table for every sheet (default) or a single sheet the person picked. */
+  const [itemsAllSheets, setItemsAllSheets] = useState(true);
+  /** Result of the automatic read after an upload, shown above the quantities table. */
+  const [readMsg, setReadMsg] = useState("");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isQuotationOpen, setIsQuotationOpen] = useState(false);
 
@@ -476,7 +480,7 @@ export default function App() {
   };
 
   /** Read CAD geometry, vector hints, marked quantities, and printed quantity labels. */
-  const autoTakeoffAll = async (onlySheetId?: string): Promise<string> => {
+  const autoTakeoffAll = async (onlySheetId?: string, sheetList: BlueprintSheet[] = sheets): Promise<string> => {
     const fresh: TakeoffItem[] = [];
     const replaced = new Set<string>();
     const base = takeoffItems.length;
@@ -484,7 +488,7 @@ export default function App() {
     let toReview = 0;
     let ocrLabels = 0;
     let ocrFailures = 0;
-    const scope = onlySheetId ? sheets.filter((x) => x.id === onlySheetId) : sheets;
+    const scope = onlySheetId ? sheetList.filter((x) => x.id === onlySheetId) : sheetList;
     for (const sh of scope) {
       let cands: ReturnType<typeof readMarks> = [];
       try {
@@ -506,9 +510,10 @@ export default function App() {
         }
       } catch { cands = []; }
       const all = reconcile(cands).filter((c) => c.quantity > 0);
-      // One tap adds only what is certain: CAD geometry, written marks, and PDF groups the drawing itself named.
-      // Unnamed colour/thickness buckets wait for the person in "حلّل اللوحة".
-      const chosen = all.filter((c) => c.selected && !(c.sources.length === 1 && c.sources[0] === "pdf" && !c.named));
+      // One tap adds only what the readers marked certain (selected): CAD geometry, written marks, PDF layers the drawing
+      // named, and repeated identical shapes at a verified scale. Unnamed colour/thickness lengths and areas are never
+      // selected by readPdf, so they wait for the person in «راجع».
+      const chosen = all.filter((c) => c.selected);
       toReview += all.length - chosen.length;
       if (!chosen.length) continue;
       readSheets++;
@@ -516,8 +521,8 @@ export default function App() {
       fresh.push(...candidatesToTakeoff(chosen, sh, base + fresh.length));
     }
     if (!fresh.length) return toReview
-      ? `وجدت ${toReview} قراءة هندسية تحتاج اختياراً. افتح «تحليل اللوحة» لمراجعتها.${ocrFailures ? ` تعذرت قراءة النص آلياً في ${ocrFailures} لوحة.` : ""}`
-      : `لم أجد كميات قابلة للإضافة. ${ocrLabels ? `قُرئ ${ocrLabels} رقم، لكن لم ينتج بنداً صالحاً.` : "جرّب «تحليل اللوحة» أو عاير المقياس واستخدم أدوات القياس."}${ocrFailures ? ` تعذرت قراءة النص آلياً في ${ocrFailures} لوحة.` : ""}`;
+      ? `لم أجد كمية مؤكدة أضيفها وحدي، ووجدت ${toReview} قراءة تحتاج اختيارك: اضغط «راجع» واختر منها ما تعتمده.${ocrFailures ? ` تعذرت قراءة النص آلياً في ${ocrFailures} لوحة.` : ""}`
+      : `لم أجد كميات يمكن قراءتها آلياً في هذا الملف (غالباً صورة أو بلا أبعاد مكتوبة). ${ocrLabels ? `قُرئ ${ocrLabels} رقم، لكن لم ينتج بنداً صالحاً. ` : ""}يمكنك إضافة بند يدوياً، أو فتح اللوحة من «اللوحات» والقياس عليها.${ocrFailures ? ` تعذرت قراءة النص آلياً في ${ocrFailures} لوحة.` : ""}`;
     pushUndoSnapshot();
     const now = new Date().toISOString();
     const stamped = fresh.map((it, i) => ({ ...it, id: `${it.id}-${i}`, reviewStatus: "extracted" as ReviewStatus,
@@ -532,7 +537,7 @@ export default function App() {
         ))),
       ],
     }));
-    return `أُضيف ${fresh.length} بنداً من ${readSheets} لوحة. ${ocrLabels ? `تم التقاط ${ocrLabels} رقم مطبوع.` : ""}${toReview ? ` بقيت ${toReview} قراءة هندسية للمراجعة.` : ""}${ocrFailures ? ` تعذرت قراءة النص في ${ocrFailures} لوحة.` : ""} راجع البنود ثم صدّر Excel.`;
+    return `أُضيف ${fresh.length} بنداً من ${readSheets} لوحة. ${ocrLabels ? `تم التقاط ${ocrLabels} رقم مطبوع.` : ""}${toReview ? ` وبقيت ${toReview} قراءة غير مؤكدة: اضغط «راجع» لاختيار ما تعتمده منها.` : ""}${ocrFailures ? ` تعذرت قراءة النص في ${ocrFailures} لوحة.` : ""} راجع البنود ثم صدّر Excel.`;
   };
 
   // Reverse Link: Inspect a takeoff item on its blueprint
@@ -560,14 +565,28 @@ export default function App() {
   };
 
   // Sheet handlers
+  /**
+   * After an upload the person wants quantities, not a drawing and a tool bar: read the new sheets at once and land on
+   * the quantities table (all sheets together). The drawing stays one tap away from any row.
+   */
+  const readNewSheetsIntoTable = async (newSheets: BlueprintSheet[]) => {
+    setActiveSheetId(newSheets[0].id);
+    setItemsAllSheets(true);
+    setDrawingOpen(false);
+    setTab("items");
+    setNotice(newSheets.length > 1 ? `جارٍ قراءة ${newSheets.length} لوحات وحصر الكميات…` : "جارٍ قراءة المخطط وحصر الكميات…");
+    setReadMsg("");
+    let msg: string;
+    try { msg = await autoTakeoffAll(undefined, newSheets); }
+    catch { msg = "تعذرت قراءة المخطط آلياً. اضغط «راجع» لاختيار الكميات بنفسك."; }
+    setNotice(null);
+    setReadMsg(msg); // stays above the table until the next read
+  };
+
   const handleSheetCreated = (newSheet: BlueprintSheet) => {
     pushUndoSnapshot();
     updateActiveProject((p) => ({ ...p, sheets: [...p.sheets, newSheet] }));
-    setActiveSheetId(newSheet.id);
-    setTab("sheets");
-    setDrawingOpen(true);
-    // Go straight to counting: DXF/DWG open the extraction center right after the file is added.
-    if (newSheet.fileType === "dxf") setIsAnalyzeOpen(true);
+    void readNewSheetsIntoTable([newSheet]);
   };
 
   /** ETABS / SAFE model: adds the model sheet and its concrete quantities in one step, then shows the table. */
@@ -580,6 +599,7 @@ export default function App() {
     });
     updateActiveProject((p) => ({ ...p, sheets: [...p.sheets, newSheet], takeoffItems: [...stamped, ...p.takeoffItems] }));
     setActiveSheetId(newSheet.id);
+    setItemsAllSheets(true);
     setDrawingOpen(false);
     setTab("items");
     setNotice(message);
@@ -590,9 +610,7 @@ export default function App() {
     if (newSheets.length === 0) return;
     pushUndoSnapshot();
     updateActiveProject((p) => ({ ...p, sheets: [...p.sheets, ...newSheets] }));
-    setActiveSheetId(newSheets[0].id);
-    setTab("sheets");
-    setDrawingOpen(true);
+    void readNewSheetsIntoTable(newSheets);
   };
 
   const handleDeleteSheet = (sheetId: string) => {
@@ -778,16 +796,20 @@ export default function App() {
             <ItemsScreen
               sheets={sheets}
               items={takeoffItems}
-              activeSheetId={currentSheet?.id || ""}
-              onSelectSheet={setActiveSheetId}
+              activeSheetId={itemsAllSheets ? "" : currentSheet?.id || ""}
+              onSelectSheet={(id) => { if (id) { setActiveSheetId(id); setItemsAllSheets(false); } else setItemsAllSheets(true); }}
               onAnalyze={openAnalyze}
-              onAuto={() => autoTakeoffAll(currentSheet?.id)}
+              onAuto={() => autoTakeoffAll(itemsAllSheets ? undefined : currentSheet?.id)}
               onGoSheets={() => setTab("sheets")}
+              readMsg={readMsg}
             >
               {currentSheet && (
                 <TakeoffTable
-                  sheet={currentSheet}
-                  items={currentSheetItems}
+                  sheet={itemsAllSheets && sheets.length > 1
+                    ? { ...currentSheet, code: "الكل", title: metadata.projectName || "كل اللوحات", fileName: `${sheets.length} لوحة` }
+                    : currentSheet}
+                  combined={itemsAllSheets && sheets.length > 1}
+                  items={itemsAllSheets ? takeoffItems : currentSheetItems}
                   onAddItem={handleAddItem}
                   onUpdateItem={handleUpdateItem}
                   onDeleteItem={handleDeleteItem}

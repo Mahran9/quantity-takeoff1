@@ -20,6 +20,7 @@ import {
   AlertTriangle,
   XCircle,
   History,
+  Undo2,
 } from "lucide-react";
 import {
   BlueprintSheet,
@@ -32,6 +33,7 @@ import {
 import { sampleDrawingsSvg } from "../data/sampleBlueprints";
 import { renderDxfToCanvas, ParsedDxfResult } from "../utils/dxfParser";
 import { onPaperColor } from "../utils/paperColor";
+import { ptToMetres } from "../utils/pdfPlan";
 
 interface BlueprintViewerProps {
   sheet: BlueprintSheet;
@@ -54,6 +56,29 @@ type ToolMode = "select" | "calibrate" | "count" | "length" | "area";
 
 const STAGE_W = 1000;
 const STAGE_H = 700;
+
+/** Quick names for a measurement, with the BOQ section each one belongs to. */
+const QUICK: Record<"length" | "area" | "count", { name: string; category: string }[]> = {
+  length: [
+    { name: "جدار بلوك", category: "أعمال المباني والبلوك" },
+    { name: "ميدة خرسانية", category: "أعمال خرسانية مسلحة وعادية" },
+    { name: "أنبوب صرف", category: "أعمال التغذية والصرف الصحي" },
+    { name: "تمديد كهرباء", category: "أعمال التمديدات الكهربائية والإنارة" },
+  ],
+  area: [
+    { name: "أرضية", category: "أعمال الأرضيات والرخام والبورسلين" },
+    { name: "لياسة", category: "أعمال البياض والتشطيبات الداخلية" },
+    { name: "دهان", category: "أعمال الدهانات والديكورات" },
+    { name: "بلاطة سقف", category: "أعمال خرسانية مسلحة وعادية" },
+  ],
+  count: [
+    { name: "باب", category: "أعمال الأبواب والشبابيك والألمنيوم" },
+    { name: "نافذة", category: "أعمال الأبواب والشبابيك والألمنيوم" },
+    { name: "نقطة إنارة", category: "أعمال التمديدات الكهربائية والإنارة" },
+    { name: "عمود", category: "أعمال خرسانية مسلحة وعادية" },
+  ],
+};
+const TYPE_LABEL = { length: "مسافة", area: "مساحة", count: "عدّ" } as const;
 
 export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
   sheet,
@@ -81,6 +106,11 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
   const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
   const [activePoints, setActivePoints] = useState<{ x: number; y: number }[]>([]);
+  const [size, setSize] = useState({ w: STAGE_W, h: STAGE_H });
+  const [draft, setDraft] = useState<{ type: "length" | "area" | "count"; value: number; unit: string; points: { x: number; y: number }[] } | null>(null);
+  const [draftName, setDraftName] = useState("");
+  const [draftCat, setDraftCat] = useState("");
+  const [selectedPinId, setSelectedPinId] = useState<string | null>(null);
   const [showLayersDropdown, setShowLayersDropdown] = useState<boolean>(false);
   const [dxfLayerState, setDxfLayerState] = useState<Record<string, boolean>>({});
 
@@ -101,6 +131,8 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
     }
     setActivePoints([]);
     setPendingCalibPts(null);
+    setDraft(null);
+    setSelectedPinId(null);
   }, [sheet.id]);
 
   // Save current zoom & pan whenever changed
@@ -120,7 +152,31 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
     }
   }, [sheet, dxfLayerState, focusedItem]);
 
-  const metersPerPixel = sheet.calibration?.metersPerPixel ?? 0.02; // default 20m / 1000px if uncalibrated
+  // Stage pixel -> metres. A person's own calibration wins; otherwise the scale the PDF reader verified from the drawing's
+  // own dimension numbers is used (stage = page fitted into 1000x700, so one stage pixel is a fixed number of PDF points).
+  const autoMpp = (() => {
+    const v = sheet.pdfVector;
+    if (!v || !v.detectedDenominator || v.scaleConfidence === "low" || !v.pageWidthPt || !v.pageHeightPt) return 0;
+    const usedW = Math.min(STAGE_W, (STAGE_H * v.pageWidthPt) / v.pageHeightPt);
+    const stagePxPerPt = usedW / v.pageWidthPt;
+    return ptToMetres(1, v.detectedDenominator, v.userUnit || 1) / stagePxPerPt;
+  })();
+  const metersPerPixel = sheet.calibration?.metersPerPixel ?? (autoMpp || 0.02);
+  const scaleState: "manual" | "auto" | "none" = sheet.calibration ? "manual" : autoMpp ? "auto" : "none";
+
+  // The stage is centred in the viewport; overlays live in a stage-sized layer at this offset.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const read = () => { const r = el.getBoundingClientRect(); if (r.width && r.height) setSize({ w: r.width, h: r.height }); };
+    read();
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(read);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [sheet.id]);
+  const stageOx = (size.w - STAGE_W) / 2;
+  const stageOy = (size.h - STAGE_H) / 2;
 
   const toggleLayer = (layerName: string) => {
     setDxfLayerState((prev) => ({
@@ -229,32 +285,49 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
     return () => el.removeEventListener("wheel", onWheel);
   }, [sheet.id]);
 
-  const finishPolygonArea = (pts: { x: number; y: number }[]) => {
-    if (pts.length < 3) return;
-    // Shoelace formula in stage pixels -> convert to m²
-    let areaPx2 = 0;
+  const polyLengthM = (pts: { x: number; y: number }[]) => {
+    let px = 0;
+    for (let i = 1; i < pts.length; i++) px += Math.hypot((pts[i].x - pts[i - 1].x) * STAGE_W, (pts[i].y - pts[i - 1].y) * STAGE_H);
+    return px * metersPerPixel;
+  };
+  const polyAreaM2 = (pts: { x: number; y: number }[]) => {
+    let a2 = 0;
     for (let i = 0; i < pts.length; i++) {
       const j = (i + 1) % pts.length;
-      const xi = pts[i].x * STAGE_W;
-      const yi = pts[i].y * STAGE_H;
-      const xj = pts[j].x * STAGE_W;
-      const yj = pts[j].y * STAGE_H;
-      areaPx2 += xi * yj - xj * yi;
+      a2 += pts[i].x * STAGE_W * pts[j].y * STAGE_H - pts[j].x * STAGE_W * pts[i].y * STAGE_H;
     }
-    areaPx2 = Math.abs(areaPx2) / 2;
-    const areaM2 = areaPx2 * metersPerPixel * metersPerPixel;
+    return (Math.abs(a2) / 2) * metersPerPixel * metersPerPixel;
+  };
+  /** Live value of the measurement being drawn. */
+  const liveValue = () =>
+    toolMode === "length" ? polyLengthM(activePoints) : toolMode === "area" ? polyAreaM2(activePoints) : activePoints.length;
+  const minPoints = toolMode === "area" ? 3 : toolMode === "length" ? 2 : 1;
 
-    const newPin: MeasurementPin = {
+  const finishMeasure = () => {
+    if ((toolMode !== "length" && toolMode !== "area" && toolMode !== "count") || activePoints.length < minPoints) return;
+    const v = liveValue();
+    setDraft({ type: toolMode, value: Number(v.toFixed(2)), unit: toolMode === "length" ? "م.ط" : toolMode === "area" ? "م²" : "عدد", points: activePoints });
+    setDraftName("");
+    setDraftCat("");
+  };
+
+  const saveDraft = () => {
+    if (!draft) return;
+    const name = draftName.trim() || `${TYPE_LABEL[draft.type]} مقاسة`;
+    const pin: MeasurementPin = {
       id: `pin-${Date.now()}`,
       sheetId: sheet.id,
-      type: "area",
-      label: `مساحة مضلع (${areaM2.toFixed(2)} م²)`,
-      color: "#10b981",
-      points: pts,
-      calculatedValue: Number(areaM2.toFixed(2)),
-      unit: "م²",
+      type: draft.type,
+      label: name,
+      color: draft.type === "length" ? "#0d9488" : draft.type === "area" ? "#0f766e" : "#d97706",
+      points: draft.points,
+      calculatedValue: draft.value,
+      unit: draft.unit,
+      category: draftCat || undefined,
     };
-    onAddMeasurementPin(newPin);
+    onAddMeasurementPin(pin);
+    onConvertPinToItem(pin);
+    setDraft(null);
     setActivePoints([]);
   };
 
@@ -285,11 +358,13 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
 
+    if (draft) return;
     const rawX = (e.clientX - rect.left - pan.x) / zoom;
     const rawY = (e.clientY - rect.top - pan.y) / zoom;
 
-    const normX = Math.max(0, Math.min(1, rawX / rect.width));
-    const normY = Math.max(0, Math.min(1, rawY / rect.height));
+    // viewport -> stage (the stage is centred in the viewport) -> 0..1 of the stage
+    const normX = Math.max(0, Math.min(1, (rawX - stageOx) / STAGE_W));
+    const normY = Math.max(0, Math.min(1, (rawY - stageOy) / STAGE_H));
 
     if (toolMode === "calibrate") {
       const nextPoints = [...activePoints, { x: normX, y: normY }];
@@ -302,41 +377,8 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
       return;
     }
 
-    if (toolMode === "count") {
-      const newPin: MeasurementPin = {
-        id: `pin-${Date.now()}`,
-        sheetId: sheet.id,
-        type: "count",
-        label: `نقطة عد #${(sheet.measurementPins?.length || 0) + 1}`,
-        color: "#f59e0b",
-        points: [{ x: normX, y: normY }],
-        calculatedValue: 1,
-        unit: "عدد",
-      };
-      onAddMeasurementPin(newPin);
-    } else if (toolMode === "length") {
-      const nextPoints = [...activePoints, { x: normX, y: normY }];
-      if (nextPoints.length === 2) {
-        const dxPx = (nextPoints[1].x - nextPoints[0].x) * STAGE_W;
-        const dyPx = (nextPoints[1].y - nextPoints[0].y) * STAGE_H;
-        const lengthMeters = Math.hypot(dxPx, dyPx) * metersPerPixel;
-
-        const newPin: MeasurementPin = {
-          id: `pin-${Date.now()}`,
-          sheetId: sheet.id,
-          type: "length",
-          label: `مسافة مقاسة (${lengthMeters.toFixed(2)} م)`,
-          color: "#38bdf8",
-          points: nextPoints,
-          calculatedValue: Number(lengthMeters.toFixed(2)),
-          unit: "م.ط",
-        };
-        onAddMeasurementPin(newPin);
-        setActivePoints([]);
-      } else {
-        setActivePoints(nextPoints);
-      }
-    } else if (toolMode === "area") {
+    if (toolMode === "count" || toolMode === "length" || toolMode === "area") {
+      setSelectedPinId(null);
       setActivePoints((prev) => [...prev, { x: normX, y: normY }]);
     }
   };
@@ -351,68 +393,14 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
     <div className="flex flex-col h-full w-full overflow-hidden relative" style={{ background: "var(--surface)" }}>
       {/* Toolbar: same paper as the page, a hairline under it */}
       <div className="px-2 sm:px-3 py-1.5 border-b border-slate-200 flex items-center justify-between gap-2 z-10" dir="rtl">
-        <div className="flex items-center gap-0.5">
-          <button
-            onClick={() => {
-              setToolMode("select");
-              setActivePoints([]);
-            }}
-            className={toolBtn(toolMode === "select")}
-            title="تحريك وتصفح المخطط"
-            aria-label="تصفح"
-          >
-            <MousePointer className="w-[18px] h-[18px]" />
-            <span className="hidden sm:inline text-xs font-bold">تصفح</span>
-          </button>
-          <button
-            onClick={() => {
-              setToolMode("calibrate");
-              setActivePoints([]);
-            }}
-            className={toolBtn(toolMode === "calibrate") + (sheet.calibration && toolMode !== "calibrate" ? " !text-amber-700" : "")}
-            title="معايرة مقياس الرسم بنقطتين معلومتي المسافة بالمتر"
-            aria-label="معايرة المقياس"
-          >
-            <SlidersHorizontal className="w-[18px] h-[18px]" />
-            <span className="hidden sm:inline text-xs font-bold">{sheet.calibration ? "معاير ✓" : "معايرة"}</span>
-          </button>
-          <button
-            onClick={() => {
-              setToolMode("count");
-              setActivePoints([]);
-            }}
-            className={toolBtn(toolMode === "count")}
-            title="عد"
-            aria-label="عد"
-          >
-            <Hash className="w-[18px] h-[18px]" />
-            <span className="hidden sm:inline text-xs font-bold">عد</span>
-          </button>
-          <button
-            onClick={() => {
-              setToolMode("length");
-              setActivePoints([]);
-            }}
-            className={toolBtn(toolMode === "length")}
-            title="مسافة"
-            aria-label="مسافة"
-          >
-            <Ruler className="w-[18px] h-[18px]" />
-            <span className="hidden sm:inline text-xs font-bold">مسافة</span>
-          </button>
-          <button
-            onClick={() => {
-              setToolMode("area");
-              setActivePoints([]);
-            }}
-            className={toolBtn(toolMode === "area")}
-            title="مساحة"
-            aria-label="مساحة"
-          >
-            <Square className="w-[18px] h-[18px]" />
-            <span className="hidden sm:inline text-xs font-bold">مساحة</span>
-          </button>
-        </div>
+        <button
+          onClick={() => { setToolMode("calibrate"); setActivePoints([]); setDraft(null); }}
+          className={`flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-bold ${scaleState === "none" ? "border-amber-500 text-amber-800" : "border-slate-300 text-slate-700"}`}
+          title="معايرة مقياس الرسم بنقطتين معلومتي المسافة"
+        >
+          <SlidersHorizontal className="w-4 h-4" />
+          {scaleState === "manual" ? "المقياس: معاير ✓" : scaleState === "auto" ? `المقياس 1:${sheet.pdfVector?.detectedDenominator} (من الرسم)` : "المقياس غير معاير"}
+        </button>
 
         <div className="flex items-center gap-1.5 text-xs text-slate-500">
           {sheet.dxfLayers && sheet.dxfLayers.length > 0 && (
@@ -519,6 +507,7 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
             />
           )}
 
+          <div className="absolute pointer-events-none" style={{ left: stageOx, top: stageOy, width: STAGE_W, height: STAGE_H }}>
           {/* Visual Search Highlight Boxes */}
           {highlightedTokens.map((tok) => (
             <div
@@ -533,170 +522,45 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
             />
           ))}
 
-          {/* In-progress polygon/line points */}
+
+          {/* Measurements: saved ones and the one being drawn */}
+          <svg className="absolute inset-0 z-10 pointer-events-none" width={STAGE_W} height={STAGE_H} viewBox={`0 0 ${STAGE_W} ${STAGE_H}`}>
+            {sheet.measurementPins?.map((pin) => {
+              if (pin.points.length < 2 || pin.type === "count") return null;
+              const pts = pin.points.map((q) => `${q.x * STAGE_W},${q.y * STAGE_H}`).join(" ");
+              const on = pin.id === selectedPinId;
+              return pin.type === "area"
+                ? <polygon key={pin.id} points={pts} fill={pin.color} fillOpacity={on ? 0.35 : 0.2} stroke={pin.color} strokeWidth={on ? 4 : 2.5} vectorEffect="non-scaling-stroke" />
+                : <polyline key={pin.id} points={pts} fill="none" stroke={pin.color} strokeWidth={on ? 5 : 3.5} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />;
+            })}
+            {activePoints.length >= 2 && (toolMode === "area"
+              ? <polygon points={activePoints.map((q) => `${q.x * STAGE_W},${q.y * STAGE_H}`).join(" ")} fill="#14b8a6" fillOpacity={0.18} stroke="#0d9488" strokeWidth={3} strokeDasharray="8 5" vectorEffect="non-scaling-stroke" />
+              : toolMode === "length"
+                ? <polyline points={activePoints.map((q) => `${q.x * STAGE_W},${q.y * STAGE_H}`).join(" ")} fill="none" stroke="#0d9488" strokeWidth={3.5} strokeDasharray="8 5" vectorEffect="non-scaling-stroke" />
+                : null)}
+          </svg>
+
           {activePoints.map((pt, idx) => (
-            <div
-              key={idx}
-              className="absolute z-20 w-3 h-3 rounded-full bg-amber-400 ring-2 ring-white pointer-events-none"
-              style={{
-                left: `${pt.x * STAGE_W}px`,
-                top: `${pt.y * STAGE_H}px`,
-                transform: "translate(-50%, -50%)",
-              }}
-            />
+            <div key={`a${idx}`} className="absolute z-20 w-3.5 h-3.5 rounded-full bg-teal-500 ring-2 ring-white pointer-events-none" style={{ left: pt.x * STAGE_W, top: pt.y * STAGE_H, transform: "translate(-50%, -50%)" }} />
           ))}
 
-          {/* Measurement Pins */}
           {sheet.measurementPins?.map((pin) => {
-            if (!pin.points || pin.points.length === 0) return null;
-            const primaryPoint = pin.points[0];
-            return (
-              <div
-                key={pin.id}
-                className="absolute z-20 group"
-                style={{
-                  left: `${primaryPoint.x * STAGE_W}px`,
-                  top: `${primaryPoint.y * STAGE_H}px`,
-                  transform: "translate(-50%, -50%)",
-                }}
+            if (!pin.points?.length) return null;
+            const pts = pin.type === "count" ? pin.points : [pin.points[0]];
+            return pts.map((q, i) => (
+              <button
+                key={`${pin.id}-${i}`}
+                onClick={(e) => { e.stopPropagation(); setToolMode("select"); setActivePoints([]); setSelectedPinId(pin.id === selectedPinId ? null : pin.id); }}
+                className={`absolute z-20 grid place-items-center rounded-full text-white shadow-lg ring-2 pointer-events-auto ${pin.id === selectedPinId ? "ring-teal-300 w-7 h-7" : "ring-white/80 w-5 h-5"}`}
+                style={{ left: q.x * STAGE_W, top: q.y * STAGE_H, transform: "translate(-50%, -50%)", backgroundColor: pin.color || "#0d9488", minHeight: 0 }}
+                aria-label={pin.label}
               >
-                <div
-                  className="w-5 h-5 rounded-full flex items-center justify-center text-white font-bold text-[10px] shadow-lg ring-2 ring-white/70 cursor-pointer"
-                  style={{ backgroundColor: pin.color || "#f59e0b" }}
-                >
-                  <MapPin className="w-3 h-3" />
-                </div>
-
-                <div className="hidden group-hover:flex absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-3 py-2 border border-slate-400 text-slate-900 rounded-xl text-[11px] font-sans whitespace-nowrap flex-col items-center gap-1 z-30 shadow-lg" style={{ background: "var(--surface)" }}>
-                  <span className="font-bold text-amber-300">{pin.label}</span>
-                  <span className="font-mono text-emerald-400 font-bold">
-                    {pin.calculatedValue} {pin.unit}
-                  </span>
-                  <div className="flex items-center gap-2 mt-1">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onConvertPinToItem(pin);
-                      }}
-                      className="flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-[10px]"
-                    >
-                      <PlusCircle className="w-3 h-3" />
-                      <span>تحويل لبند حصر</span>
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onRemoveMeasurementPin(pin.id);
-                      }}
-                      className="text-rose-400 text-[10px] hover:underline"
-                    >
-                      حذف
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
+                <MapPin className="w-3 h-3" />
+              </button>
+            ));
           })}
-        </div>
-
-
-        {/* Review-on-Blueprint Overlay Card (مراجعة الحصر على اللوحة) */}
-        {focusedItem && (
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{ background: "var(--surface)" }}
-            className="absolute top-3 right-3 z-30 w-80 max-w-[92%] border border-slate-300 rounded-2xl p-4 text-right text-slate-900 space-y-2.5 shadow-xl"
-          >
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <div className="text-[11px] font-bold text-amber-700">
-                  مراجعة الحصر على اللوحة ({sheet.code})
-                </div>
-                <h4 className="text-sm font-extrabold text-slate-900 mt-0.5 leading-snug">
-                  {focusedItem.description}
-                </h4>
-              </div>
-              {onCloseFocusedItem && (
-                <button
-                  onClick={onCloseFocusedItem}
-                  className="p-1 rounded-lg hover:bg-slate-200 text-slate-500"
-                  title="إغلاق بطاقة المراجعة"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 text-[11px] rounded-lg p-2.5 border border-slate-300">
-              <div>
-                <span className="text-slate-500 block">الكمية الصافية:</span>
-                <span className="font-mono font-black text-amber-700 text-sm">
-                  {focusedItem.quantity} {focusedItem.unit}
-                </span>
-              </div>
-              <div>
-                <span className="text-slate-500 block">التصنيف:</span>
-                <span className="text-slate-800 font-semibold truncate block">{focusedItem.category}</span>
-              </div>
-              {focusedItem.formula && (
-                <div className="col-span-2 border-t border-slate-200 pt-1.5">
-                  <span className="text-slate-500 block">المعادلة:</span>
-                  <span className="font-mono text-slate-700 text-[11px] break-all">{focusedItem.formula}</span>
-                </div>
-              )}
-              {(focusedItem.sourceEvidence || focusedItem.sourceDetails?.layer) && (
-                <div className="col-span-2 border-t border-slate-200 pt-1.5">
-                  <span className="text-slate-500 block">المصدر / الطبقة:</span>
-                  <span className="text-slate-700 text-[11px]">
-                    {focusedItem.sourceDetails?.layer ? `طبقة: ${focusedItem.sourceDetails.layer} — ` : ""}
-                    {focusedItem.sourceEvidence || "حصر من اللوحة"}
-                  </span>
-                  {sheet.dxfRawSummary?.unitInfo && (
-                    <span className="block text-[10px] text-amber-700 font-mono mt-0.5">
-                      وحدة CAD: {sheet.dxfRawSummary.unitInfo.name} (معامل التحويل: ×{sheet.dxfRawSummary.unitInfo.toMeters})
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {focusedItem.auditLog && focusedItem.auditLog.length > 0 && (
-              <div className="text-[10px] text-slate-500 flex items-center gap-1.5">
-                <History className="w-3.5 h-3.5 text-slate-500" />
-                <span>
-                  سجل التعديلات: {focusedItem.auditLog.length} حركة — آخر تحديث:{" "}
-                  {new Date(focusedItem.auditLog[focusedItem.auditLog.length - 1].timestamp).toLocaleString("ar-SA")}
-                </span>
-              </div>
-            )}
-
-            {onUpdateFocusedItemStatus && (
-              <div className="flex items-center gap-1.5 pt-1">
-                <button
-                  onClick={() => onUpdateFocusedItemStatus(focusedItem, "approved", "اعتماد بعد المراجعة على اللوحة")}
-                  className="flex-1 flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg bg-slate-900 text-white text-[11px] font-bold"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>اعتماد</span>
-                </button>
-                <button
-                  onClick={() => onUpdateFocusedItemStatus(focusedItem, "needs_review", "تم تأشير البند للمراجعة")}
-                  className="flex-1 flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg qto-cta text-[11px] font-bold"
-                >
-                  <AlertTriangle className="w-3.5 h-3.5" />
-                  <span>مراجعة</span>
-                </button>
-                <button
-                  onClick={() => onUpdateFocusedItemStatus(focusedItem, "rejected", "مرفوض بعد المطابقة")}
-                  className="flex items-center justify-center gap-1 py-1.5 px-2.5 rounded-lg border border-rose-300 text-rose-700 text-[11px] font-bold"
-                  title="رفض البند"
-                >
-                  <XCircle className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            )}
           </div>
-        )}
+        </div>
 
         {/* Calibration Modal Overlay */}
         {pendingCalibPts && (
@@ -741,34 +605,95 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
           </div>
         )}
 
-        {/* Active Tool Guidance & Finish Polygon Button */}
-        {toolMode !== "select" && (
-          <div className="absolute bottom-3 left-3 right-3 sm:right-auto z-20 px-3.5 py-2 rounded-xl border border-slate-300 text-slate-800 text-xs font-semibold flex items-center gap-3 shadow-lg">
-            <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
-            <span>
-              {toolMode === "calibrate" &&
-                (activePoints.length === 0
-                  ? "انقر على النقطة الأولى لمسافة معلومة على المخطط"
-                  : "انقر على النقطة الثانية لإدخال المسافة الحقيقية بالمتر")}
-              {toolMode === "count" && "انقر على المخطط لوضع نقطة عد (ثم مرر عليها لتحويلها لبند حصر)"}
-              {toolMode === "length" &&
-                (activePoints.length === 0 ? "انقر لتحديد بداية المسافة" : "انقر لتحديد نهاية المسافة")}
-              {toolMode === "area" && `انقر لتحديد زوايا المضلع (${activePoints.length} نقاط)`}
-            </span>
-            {toolMode === "area" && activePoints.length >= 3 && (
+        {/* Bottom dock: what to do next, then the tools (always labelled, phone first) */}
+        <div className="absolute inset-x-0 bottom-0 z-30 flex flex-col gap-2 p-2.5 pointer-events-none" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
+          {(() => {
+            const card = "pointer-events-auto rounded-2xl border border-slate-200 p-3.5 shadow-xl text-right";
+            const pin = sheet.measurementPins?.find((q) => q.id === selectedPinId);
+            if (draft) {
+              const quick = QUICK[draft.type];
+              return (
+                <div className={card} style={{ background: "var(--surface)" }}>
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="text-[13px] font-bold text-slate-500">{TYPE_LABEL[draft.type]}{draft.type !== "count" && scaleState === "none" ? " (المقياس غير معاير: تقريبي)" : ""}</span>
+                    <span className="font-mono text-2xl font-extrabold text-slate-900">{draft.value.toLocaleString("en-US")} <span className="text-sm text-slate-500">{draft.unit}</span></span>
+                  </div>
+                  <div className="mt-2.5 flex flex-wrap gap-1.5">
+                    {quick.map((q) => (
+                      <button key={q.name} onClick={() => { setDraftName(q.name); setDraftCat(q.category); }}
+                        className={`rounded-full border px-3 py-1.5 text-[13px] font-bold ${draftName === q.name ? "border-teal-600 bg-teal-50 text-teal-900" : "border-slate-300 text-slate-700"}`}>{q.name}</button>
+                    ))}
+                  </div>
+                  <input value={draftName} onChange={(e) => { setDraftName(e.target.value); setDraftCat(""); }} placeholder="أو اكتب اسم البند"
+                    className="mt-2.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-[15px]" style={{ background: "var(--surface)" }} />
+                  <div className="mt-2.5 grid grid-cols-[1fr_auto] gap-2">
+                    <button onClick={saveDraft} className="qto-cta h-12 rounded-xl text-[15px] flex items-center justify-center gap-2"><PlusCircle className="w-5 h-5" /> إضافة للجدول</button>
+                    <button onClick={() => setDraft(null)} className="h-12 rounded-xl border border-slate-300 px-4 text-sm font-bold text-slate-700">رجوع</button>
+                  </div>
+                </div>
+              );
+            }
+            if (pin && toolMode === "select") {
+              return (
+                <div className={card} style={{ background: "var(--surface)" }}>
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="font-extrabold text-slate-900 truncate">{pin.label}</span>
+                    <span className="font-mono text-lg font-extrabold text-slate-900">{pin.calculatedValue} <span className="text-sm text-slate-500">{pin.unit}</span></span>
+                  </div>
+                  <div className="mt-2.5 grid grid-cols-3 gap-2">
+                    <button onClick={() => { onConvertPinToItem(pin); setSelectedPinId(null); }} className="qto-cta h-11 rounded-xl text-sm col-span-2">إضافة للجدول</button>
+                    <button onClick={() => { onRemoveMeasurementPin(pin.id); setSelectedPinId(null); }} className="h-11 rounded-xl border border-rose-300 text-sm font-bold text-rose-700">حذف</button>
+                  </div>
+                </div>
+              );
+            }
+            if (toolMode === "calibrate") {
+              return (
+                <div className={`${card} flex items-center gap-3`} style={{ background: "var(--surface)" }}>
+                  <span className="flex-1 text-[13.5px] font-bold text-slate-800 leading-6">{activePoints.length === 0 ? "عاير المقياس: اضغط طرفي بُعد مكتوب على اللوحة (مثلاً 28.00 م)" : "الآن اضغط الطرف الثاني"}</span>
+                  <button onClick={() => { setToolMode("select"); setActivePoints([]); }} className="h-10 rounded-xl border border-slate-300 px-3.5 text-sm font-bold text-slate-700">إلغاء</button>
+                </div>
+              );
+            }
+            if (toolMode === "select") return null;
+            const n = activePoints.length;
+            return (
+              <div className={`${card} flex items-center gap-2`} style={{ background: "var(--surface)" }}>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[13px] font-bold text-slate-600 leading-5">
+                    {n === 0
+                      ? toolMode === "length" ? "اضغط نقاط الخط على اللوحة (يمكن أن ينعطف)" : toolMode === "area" ? "اضغط زوايا المساحة بالترتيب" : "اضغط على كل عنصر لتعدّه"
+                      : toolMode === "count" ? `${n} عنصر` : `${n} نقطة`}
+                  </div>
+                  {n >= minPoints && <div className="font-mono text-lg font-extrabold text-slate-900">{liveValue().toLocaleString("en-US", { maximumFractionDigits: 2 })} <span className="text-xs text-slate-500">{toolMode === "length" ? "م.ط" : toolMode === "area" ? "م²" : "عدد"}</span></div>}
+                  {toolMode !== "count" && scaleState === "none" && (
+                    <button onClick={() => { setToolMode("calibrate"); setActivePoints([]); }} className="text-[12px] font-bold text-amber-800 underline">المقياس غير معاير: عايره أولاً</button>
+                  )}
+                </div>
+                {n > 0 && <button onClick={() => setActivePoints((p) => p.slice(0, -1))} aria-label="تراجع" className="grid h-11 w-11 place-items-center rounded-xl border border-slate-300 text-slate-700"><Undo2 className="w-5 h-5" /></button>}
+                <button disabled={n < minPoints} onClick={finishMeasure} className="qto-cta h-11 rounded-xl px-4 text-sm disabled:opacity-40">إنهاء</button>
+              </div>
+            );
+          })()}
+
+          <div className="pointer-events-auto grid grid-cols-4 gap-1 rounded-2xl border border-slate-200 p-1 shadow-xl" style={{ background: "var(--surface)" }}>
+            {([
+              ["select", "تصفح", MousePointer],
+              ["length", "مسافة", Ruler],
+              ["area", "مساحة", Square],
+              ["count", "عدّ", Hash],
+            ] as const).map(([mode, label, Icon]) => (
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  finishPolygonArea(activePoints);
-                }}
-                className="px-2.5 py-1 rounded-lg qto-cta text-xs flex items-center gap-1"
+                key={mode}
+                onClick={() => { setToolMode(mode); setActivePoints([]); setDraft(null); setSelectedPinId(null); }}
+                className={`flex h-12 flex-col items-center justify-center gap-0.5 rounded-xl text-[12px] font-bold ${toolMode === mode ? "bg-teal-500 text-slate-900" : "text-slate-600"}`}
               >
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>إنهاء وحساب المساحة</span>
+                <Icon className="w-[18px] h-[18px]" />
+                {label}
               </button>
-            )}
+            ))}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

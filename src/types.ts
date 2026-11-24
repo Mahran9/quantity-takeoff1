@@ -124,6 +124,8 @@ export interface MeasurementPin {
   calculatedValue: number;
   unit: string;
   linkedItemId?: string;
+  /** BOQ section chosen when the measurement was named. */
+  category?: string;
 }
 
 export interface SheetCalibration {

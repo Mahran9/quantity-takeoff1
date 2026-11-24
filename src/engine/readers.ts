@@ -17,16 +17,22 @@ export function readCad(sheet: BlueprintSheet, a: CadAssumptions = {}): Candidat
     defaultSlabThickness: a.slabThickness || 0,
     defaultFloorSlabThickness: a.floorSlabThickness || 0,
     includeClosedPerimeter: true,
-  }).map((q: any) => ({
+  }).map((q: any) => {
+    // The caveat after "؛" ("thickness not given", "size comes from the schedule"…) belongs in the evidence line,
+    // not in the BOQ description that ends up in the quotation.
+    const m = /^(.*?)\s*؛\s*(.*(?:غير محدد|يؤخذ|يحتاج|غير مستنتج).*)$/.exec(String(q.description || ""));
+    const description = m ? m[1] : q.description;
+    const caveat = m ? m[2] : "";
+    return {
     id: `cad-${q.id}`,
-    description: q.description,
+    description,
     category: q.suggestedCategory,
     dim: q.type,
     unit: q.unit,
     quantity: q.value,
     sources: ["cad"],
     confidence: q.selected === false ? "low" : "medium",
-    evidence: `هندسة الملف — الطبقة ${q.layer}${q.formula ? `: ${q.formula}` : ""}`,
+    evidence: `هندسة الملف — الطبقة ${q.layer}${q.formula ? `: ${q.formula}` : ""}${caveat ? ` — ${caveat}` : ""}`,
     checks: [],
     selected: q.selected !== false,
     layer: q.layer,
@@ -35,7 +41,8 @@ export function readCad(sheet: BlueprintSheet, a: CadAssumptions = {}): Candidat
     length: q.length,
     width: q.width,
     height: q.height,
-  }));
+  };
+  });
 }
 
 /** Printed numbers (area labels, summary tables) read by OCR. */

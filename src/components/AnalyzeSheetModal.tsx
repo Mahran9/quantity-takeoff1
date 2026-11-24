@@ -162,15 +162,16 @@ export const AnalyzeSheetModal: React.FC<Props> = ({ isOpen, onClose, sheet, exi
                 </div>
                 <div className="space-y-2">
                   {rows.map((c) => (
-                    <label key={c.id} className={`flex items-start gap-3 rounded-xl border p-3 cursor-pointer ${g.tone} ${picked[c.id] ? "ring-2 ring-amber-400" : ""}`}>
-                      <input type="checkbox" className="mt-1.5 w-4 h-4" checked={Boolean(picked[c.id])} onChange={(e) => setPicked((p) => ({ ...p, [c.id]: e.target.checked }))} />
+                    <label key={c.id} className={`flex items-start gap-3 rounded-xl border p-3 cursor-pointer ${g.tone} ${picked[c.id] ? "ring-1 ring-amber-500" : "opacity-75"}`}>
+                      <input type="checkbox" className="mt-1.5 w-5 h-5 accent-teal-600" checked={Boolean(picked[c.id])} onChange={(e) => setPicked((p) => ({ ...p, [c.id]: e.target.checked }))} />
                       <div className="min-w-0 flex-1">
                         <div className="text-sm font-bold text-slate-900 leading-snug">{c.description}</div>
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          {c.sources.map((s) => <span key={s} className="rounded-md bg-slate-900/90 text-white text-[10px] font-bold px-1.5 py-0.5">{SOURCE_LABEL[s]}</span>)}
-                          <span className="text-[10px] text-slate-500 self-center">{c.category}</span>
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                          {/* a source tag only says something when several readers agree or it is not the plain file geometry */}
+                          {(c.sources.length > 1 || !c.sources.includes("cad")) && c.sources.map((s) => <span key={s} className="rounded-md bg-slate-100 text-slate-700 text-[10px] font-bold px-1.5 py-0.5">{SOURCE_LABEL[s]}</span>)}
+                          <span className="text-[10px] text-slate-500">{c.category}</span>
                         </div>
-                        <div className="mt-1 text-[11px] text-slate-600 leading-relaxed break-words">{c.evidence}</div>
+                        <div className="mt-1 text-[11px] text-slate-500 leading-relaxed break-words line-clamp-2">{c.evidence}</div>
                         {c.checks.map((t, i) => <div key={i} className="mt-0.5 text-[11px] font-bold text-slate-800">• {t}</div>)}
                       </div>
                       <div className="text-left shrink-0">

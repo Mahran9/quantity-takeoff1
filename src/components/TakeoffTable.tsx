@@ -17,6 +17,7 @@ import {
   Ruler,
   Hash,
   Layers,
+  ChevronDown,
   Eye,
   FileUp,
   History,
@@ -59,6 +60,10 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
   const [selectedStatus, setSelectedStatus] = useState<"all" | ReviewStatus>("all");
   const [isAddingNew, setIsAddingNew] = useState(false);
   const excelInputRef = useRef<HTMLInputElement>(null);
+  // Phone list: which row is open for editing, and which sections are folded.
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [catClosed, setCatClosed] = useState<Record<string, boolean>>({});
+  const money2 = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const STATUS_META: Record<ReviewStatus, { label: string; cls: string }> = {
     draft: { label: "مسودة", cls: "bg-slate-100 text-slate-700 border-slate-300" },
@@ -129,6 +134,19 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
     const matchesStatus = selectedStatus === "all" || getEffectiveStatus(item) === selectedStatus;
     return matchesSearch && matchesCategory && matchesDimensionType && matchesStatus;
   });
+
+  // Phone list: sections in first-appearance order, numbering matches the desktop table.
+  const phoneGroups = (() => {
+    const map = new Map<string, { title: string; rows: { item: TakeoffItem; index: number }[] }>();
+    filteredItems.forEach((item, index) => {
+      const title = item.category || "بدون تصنيف";
+      if (!map.has(title)) map.set(title, { title, rows: [] });
+      map.get(title)!.rows.push({ item, index });
+    });
+    return [...map.values()];
+  })();
+  // Long lists start folded (so 300 lines do not bury the rest); short ones start open.
+  const isCatClosed = (title: string) => (title in catClosed ? catClosed[title] : filteredItems.length > 30);
 
   // Sheet Summary Metrics
   const volumeTotal = items
@@ -263,7 +281,7 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
                   onClick={() => {
                     if (window.confirm(`سيُحذف ${drafts.length} بنداً غير معتمد من هذه اللوحة، وتبقى البنود المعتمدة. يمكنك التراجع بزر الرجوع الأحمر في الأعلى.`)) onDeleteMany(drafts.map((i) => i.id));
                   }}
-                  className="col-span-2 sm:col-span-1 flex items-center justify-center gap-1.5 px-3 py-2.5 sm:py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition-all"
+                  className="col-span-2 sm:col-span-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 rounded-xl text-xs font-semibold transition-all"
                   title="يحذف كل البنود التي لم تعتمدها بعد"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -400,11 +418,11 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
         </div>
 
         {/* Dimension Type Quick Filters */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-xs text-slate-500 ml-1">نوع القياس:</span>
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar sm:flex-wrap sm:overflow-visible [&>*]:shrink-0 [&>button]:whitespace-nowrap -mx-1 px-1 sm:mx-0 sm:px-0">
+          <span className="text-xs text-slate-500 ml-1 whitespace-nowrap">نوع القياس:</span>
           <button
             onClick={() => setSelectedDimensionType("all")}
-            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
+            className={`shrink-0 whitespace-nowrap px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
               selectedDimensionType === "all"
                 ? "bg-slate-800 text-white"
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200"
@@ -414,7 +432,7 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
           </button>
           <button
             onClick={() => setSelectedDimensionType("volume")}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
+            className={`flex items-center gap-1 shrink-0 whitespace-nowrap px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
               selectedDimensionType === "volume"
                 ? "bg-purple-600 text-white"
                 : "bg-purple-50 text-purple-700 hover:bg-purple-100"
@@ -425,7 +443,7 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
           </button>
           <button
             onClick={() => setSelectedDimensionType("area")}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
+            className={`flex items-center gap-1 shrink-0 whitespace-nowrap px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
               selectedDimensionType === "area"
                 ? "bg-blue-600 text-white"
                 : "bg-blue-50 text-blue-700 hover:bg-blue-100"
@@ -436,7 +454,7 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
           </button>
           <button
             onClick={() => setSelectedDimensionType("linear")}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
+            className={`flex items-center gap-1 shrink-0 whitespace-nowrap px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
               selectedDimensionType === "linear"
                 ? "bg-emerald-600 text-white"
                 : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
@@ -447,7 +465,7 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
           </button>
           <button
             onClick={() => setSelectedDimensionType("count")}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
+            className={`flex items-center gap-1 shrink-0 whitespace-nowrap px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
               selectedDimensionType === "count"
                 ? "bg-amber-600 text-white"
                 : "bg-amber-50 text-amber-700 hover:bg-amber-100"
@@ -625,86 +643,130 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
       )}
 
       {/* Takeoff Items Table */}
-      {/* Phone: one card per item */}
-      <div className="sm:hidden divide-y divide-slate-100 qto-stagger">
+      {/* Phone: compact rows grouped by section; tap a row to edit everything */}
+      <div className="sm:hidden">
         {filteredItems.length === 0 ? (
           <div className="py-10 px-4 text-center text-slate-400">
             <Calculator className="w-8 h-8 mx-auto text-slate-300 mb-2" />
             <p className="font-semibold text-slate-600 text-sm">لا توجد بنود في هذا المخطط بعد</p>
-            <p className="text-xs mt-1">اضغط «حصر الكميات من الملف» أو أضف بنداً يدوياً.</p>
+            <p className="text-xs mt-1">اضغط «حلّل اللوحة» أو أضف بنداً يدوياً.</p>
           </div>
         ) : (
-          filteredItems.map((item, index) => {
-            const st = getEffectiveStatus(item);
-            const total = item.quantity * (item.unitPrice || 0);
-            const fld = "w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-sm font-mono text-center focus:bg-white focus:border-amber-500 focus:outline-none";
+          phoneGroups.map((grp) => {
+            const closed = isCatClosed(grp.title);
+            const subtotal = grp.rows.reduce((sum, r) => sum + (getEffectiveStatus(r.item) === "rejected" ? 0 : r.item.quantity * (r.item.unitPrice || 0)), 0);
             return (
-              <article key={item.id} className="p-3.5 space-y-2.5 qto-rise-in">
-                <div className="flex items-start gap-2">
-                  <span className="mt-0.5 shrink-0 w-6 h-6 rounded-full bg-slate-100 text-slate-500 text-[11px] font-mono flex items-center justify-center">{index + 1}</span>
-                  <div className="min-w-0 flex-1">
-                    <textarea
-                      rows={2}
-                      value={item.description}
-                      onChange={(e) => onUpdateItem({ ...item, description: e.target.value })}
-                      className="w-full resize-none bg-transparent text-sm font-semibold text-slate-900 leading-6 focus:bg-slate-50 rounded-lg px-1"
-                    />
-                    <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-500">
-                      <span className="px-1.5 py-0.5 rounded bg-slate-100">{item.category}</span>
-                      {item.location && <span className="px-1.5 py-0.5 rounded bg-slate-50 border border-slate-100">{item.location}</span>}
-                    </div>
-                  </div>
-                  <select
-                    value={st}
-                    onChange={(e) => {
-                      const nextSt = e.target.value as ReviewStatus;
-                      if (onUpdateStatus) onUpdateStatus(item, nextSt, "تغيير الحالة من الجدول");
-                      else onUpdateItem({ ...item, reviewStatus: nextSt, isVerified: nextSt === "approved" });
-                    }}
-                    className={`shrink-0 text-[11px] font-bold px-2 py-1 rounded-lg border ${STATUS_META[st].cls}`}
-                  >
-                    <option value="draft">مسودة</option>
-                    <option value="extracted">مستخرج</option>
-                    <option value="needs_review">يحتاج مراجعة</option>
-                    <option value="reviewed">تمت مراجعته</option>
-                    <option value="approved">معتمد ✓</option>
-                    <option value="rejected">مرفوض</option>
-                  </select>
-                </div>
+              <section key={grp.title} className="border-b border-slate-200">
+                <button
+                  onClick={() => setCatClosed((m) => ({ ...m, [grp.title]: !closed }))}
+                  aria-expanded={!closed}
+                  className="w-full flex items-center gap-2 bg-slate-100 px-3 py-2.5 text-right"
+                >
+                  <ChevronDown className={`w-4 h-4 shrink-0 text-slate-500 transition-transform ${closed ? "-rotate-90" : ""}`} />
+                  <span className="flex-1 min-w-0 truncate text-xs font-bold text-slate-800">{grp.title}</span>
+                  <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[11px] font-mono text-slate-600 border border-slate-200">{grp.rows.length}</span>
+                  <span className="shrink-0 font-mono text-[11px] font-bold text-amber-800">{money2(subtotal)}</span>
+                </button>
+                {!closed && (
+                  <div className="divide-y divide-slate-100">
+                    {grp.rows.map(({ item, index }) => {
+                      const st = getEffectiveStatus(item);
+                      const total = item.quantity * (item.unitPrice || 0);
+                      const open = openId === item.id;
+                      const rejected = st === "rejected";
+                      const fld = "w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-sm font-mono text-center focus:bg-white focus:border-amber-500 focus:outline-none";
+                      const setStatus = (next: ReviewStatus) => {
+                        if (onUpdateStatus) onUpdateStatus(item, next, "تغيير الحالة من الجدول");
+                        else onUpdateItem({ ...item, reviewStatus: next, isVerified: next === "approved" });
+                      };
+                      return (
+                        <article key={item.id} className={`px-3 py-2.5 ${rejected ? "opacity-50" : ""}`}>
+                          <div className="flex items-start gap-2.5">
+                            <button
+                              onClick={() => setStatus(st === "approved" ? "reviewed" : "approved")}
+                              aria-label={st === "approved" ? "إلغاء الاعتماد" : "اعتماد البند"}
+                              aria-pressed={st === "approved"}
+                              className={`mt-0.5 shrink-0 w-8 h-8 rounded-full border-2 flex items-center justify-center transition ${st === "approved" ? "bg-emerald-500 border-emerald-500 text-white" : "border-slate-300 text-transparent hover:border-emerald-400"}`}
+                            >
+                              <Check className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => setOpenId(open ? null : item.id)} className="min-w-0 flex-1 text-right" aria-expanded={open}>
+                              <div className={`text-[13px] font-semibold leading-5 text-slate-900 ${open ? "" : "line-clamp-2"} ${rejected ? "line-through" : ""}`}>{item.description || "بند بلا وصف"}</div>
+                              <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px] text-slate-500">
+                                <span className="font-mono">#{index + 1}</span>
+                                {item.location && <span>{item.location}</span>}
+                                {st !== "approved" && st !== "rejected" && <span className={`px-1.5 rounded border text-[10px] font-bold ${STATUS_META[st].cls}`}>{STATUS_META[st].label}</span>}
+                              </div>
+                            </button>
+                            <button onClick={() => setOpenId(open ? null : item.id)} aria-label={open ? "إغلاق التعديل" : "تعديل البند"} className="shrink-0 p-1.5 rounded-lg text-slate-500 hover:bg-slate-100">
+                              <ChevronDown className={`w-4 h-4 transition-transform ${open ? "rotate-180" : ""}`} />
+                            </button>
+                          </div>
 
-                <div className="grid grid-cols-3 gap-2">
-                  <label className="text-[10px] text-slate-500 space-y-1">الكمية
-                    <input type="number" step="0.01" value={item.quantity} className={`${fld} font-bold`}
-                      onChange={(e) => onUpdateItem({ ...item, quantity: Number(e.target.value), totalPrice: Number(e.target.value) * (item.unitPrice || 0) })} />
-                  </label>
-                  <label className="text-[10px] text-slate-500 space-y-1">الوحدة
-                    <select value={item.unit} className={fld} onChange={(e) => onUpdateItem({ ...item, unit: e.target.value })}>
-                      {["م³", "م²", "م.ط", "عدد", "طن", "كجم", "نقطة", "مقطوعية"].map((u) => <option key={u} value={u}>{u}</option>)}
-                    </select>
-                  </label>
-                  <label className="text-[10px] text-slate-500 space-y-1">سعر الوحدة
-                    <input type="number" value={item.unitPrice || 0} className={fld}
-                      onChange={(e) => onUpdateItem({ ...item, unitPrice: Number(e.target.value), totalPrice: item.quantity * Number(e.target.value) })} />
-                  </label>
-                </div>
+                          <div className="mt-2 flex items-center gap-2">
+                            <span className="min-w-[88px] font-mono text-sm font-bold text-slate-900 whitespace-nowrap">
+                              {item.quantity.toLocaleString("en-US", { maximumFractionDigits: 2 })}
+                              <span className="mr-1 font-sans text-[11px] font-normal text-slate-500">{item.unit}</span>
+                            </span>
+                            <span className="text-slate-300">×</span>
+                            <input
+                              type="number" min={0} step="any" inputMode="decimal" aria-label="سعر الوحدة"
+                              value={item.unitPrice || ""} placeholder="السعر"
+                              onChange={(e) => { const price = Math.max(0, Number(e.target.value) || 0); onUpdateItem({ ...item, unitPrice: price, totalPrice: Number((item.quantity * price).toFixed(2)) }); }}
+                              className={`w-[84px] rounded-lg border px-2 py-1.5 text-center font-mono text-sm focus:outline-none focus:border-amber-500 ${item.unitPrice > 0 ? "border-slate-300 bg-white" : "border-amber-400 bg-amber-50"}`}
+                            />
+                            <span className="mr-auto font-mono text-sm font-bold text-amber-800 whitespace-nowrap">
+                              {money2(total)}
+                            </span>
+                          </div>
 
-                <div className="flex items-center justify-between">
-                  <div className="text-sm">
-                    <span className="text-[11px] text-slate-500">الإجمالي </span>
-                    <b className="font-mono text-amber-800">{total.toLocaleString("en-US", { maximumFractionDigits: 1 })}</b>
-                    <span className="text-[11px] text-slate-500"> {currencySymbol}</span>
+                          {open && (
+                            <div className="mt-3 space-y-2.5 rounded-xl bg-slate-50 border border-slate-200 p-3">
+                              <label className="block text-[11px] font-semibold text-slate-600">الوصف
+                                <textarea rows={2} value={item.description} onChange={(e) => onUpdateItem({ ...item, description: e.target.value })}
+                                  className="mt-1 w-full resize-none rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-sm leading-6 focus:border-amber-500 focus:outline-none" />
+                              </label>
+                              <div className="grid grid-cols-3 gap-2">
+                                <label className="text-[11px] font-semibold text-slate-600">الكمية
+                                  <input type="number" step="0.01" inputMode="decimal" value={item.quantity} className={`mt-1 ${fld} font-bold`}
+                                    onChange={(e) => onUpdateItem({ ...item, quantity: Number(e.target.value), totalPrice: Number((Number(e.target.value) * (item.unitPrice || 0)).toFixed(2)) })} />
+                                </label>
+                                <label className="text-[11px] font-semibold text-slate-600">الوحدة
+                                  <select value={item.unit} className={`mt-1 ${fld}`} onChange={(e) => onUpdateItem({ ...item, unit: e.target.value })}>
+                                    {["م³", "م²", "م.ط", "عدد", "طن", "كجم", "نقطة", "مقطوعية"].map((u) => <option key={u} value={u}>{u}</option>)}
+                                  </select>
+                                </label>
+                                <label className="text-[11px] font-semibold text-slate-600">الحالة
+                                  <select value={st} className={`mt-1 ${fld} font-sans`} onChange={(e) => setStatus(e.target.value as ReviewStatus)}>
+                                    <option value="draft">مسودة</option>
+                                    <option value="extracted">مستخرج</option>
+                                    <option value="needs_review">يحتاج مراجعة</option>
+                                    <option value="reviewed">تمت مراجعته</option>
+                                    <option value="approved">معتمد</option>
+                                    <option value="rejected">مرفوض</option>
+                                  </select>
+                                </label>
+                              </div>
+                              {(item.formula || item.sourceEvidence) && (
+                                <p className="text-[11px] leading-5 text-slate-500">{item.formula || item.sourceEvidence}</p>
+                              )}
+                              <div className="flex items-center justify-end gap-1.5">
+                                {onInspectItemOnSheet && (
+                                  <button onClick={() => onInspectItemOnSheet(item)} className="flex items-center gap-1 rounded-lg bg-cyan-50 px-3 py-2 text-xs font-bold text-cyan-800"><Eye className="w-4 h-4" />على المخطط</button>
+                                )}
+                                <button onClick={() => handleDuplicate(item)} className="flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700"><Copy className="w-4 h-4" />تكرار</button>
+                                <button
+                                  onClick={() => { if (window.confirm(`هل أنت متأكد من حذف البند "${item.description}"؟`)) onDeleteItem(item.id); }}
+                                  className="flex items-center gap-1 rounded-lg bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700"><Trash2 className="w-4 h-4" />حذف</button>
+                              </div>
+                            </div>
+                          )}
+                        </article>
+                      );
+                    })}
                   </div>
-                  <div className="flex items-center gap-1">
-                    {onInspectItemOnSheet && (
-                      <button onClick={() => onInspectItemOnSheet(item)} aria-label="عرض على المخطط" className="p-2 rounded-lg text-cyan-700 bg-cyan-50"><Eye className="w-4 h-4" /></button>
-                    )}
-                    <button onClick={() => handleDuplicate(item)} aria-label="تكرار" className="p-2 rounded-lg text-slate-600 bg-slate-100"><Copy className="w-4 h-4" /></button>
-                    <button
-                      onClick={() => { if (window.confirm(`هل أنت متأكد من حذف البند "${item.description}"؟`)) onDeleteItem(item.id); }}
-                      aria-label="حذف" className="p-2 rounded-lg text-rose-600 bg-rose-50"><Trash2 className="w-4 h-4" /></button>
-                  </div>
-                </div>
-              </article>
+                )}
+              </section>
             );
           })
         )}

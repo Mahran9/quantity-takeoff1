@@ -246,9 +246,53 @@ export function calibrateScale(
   const allCands = cands;
   cands.splice(0, cands.length, ...[...byRatio.values()].sort((a, b) => b.matches / b.total - a.matches / a.total || b.matches - a.matches));
 
+  // Non-standard scale (sheet shrunk to fit the paper, e.g. 1:157): when no common scale is convincing,
+  // search a free pt-per-metre ratio proposed by (dimension value, long edge) pairs and keep it only if
+  // it explains most of the dimension numbers (metres only).
+  const convincing =
+    !!cands[0] &&
+    cands[0].matches >= 3 &&
+    cands[0].matches / cands[0].total >= 0.5 &&
+    !cands.slice(1).some((c) => c.matches * 1.5 > cands[0].matches);
+  if (!convincing && !textScale) {
+    const vals = usable.filter((v) => v >= 1 && v <= 200).slice(0, 60);
+    const longEdges = [...new Set(edgeKeys.filter((k) => k >= 600).map((k) => Math.round(k / 2) / 5))].slice(-200);
+    const seen = new Set<number>();
+    let top: { r: number; matches: number; total: number } | undefined;
+    for (const v of vals) {
+      for (const L of longEdges) {
+        const r = L / v; // pt per metre
+        const den = 1000 / (PT_TO_MM * r);
+        if (den < 20 || den > 1000) continue;
+        const rk = Math.round(r * 20) / 20;
+        if (seen.has(rk)) continue;
+        seen.add(rk);
+        let m = 0;
+        let t = 0;
+        for (const w of vals) {
+          const l = w * rk;
+          if (l < 20 || l > maxSide) continue;
+          t++;
+          if (has(l)) m++;
+        }
+        if (t >= 6 && (!top || m > top.matches || (m === top.matches && t < top.total))) top = { r: rk, matches: m, total: t };
+      }
+    }
+    if (top && top.matches >= 6 && top.matches / top.total >= 0.6) {
+      const den = Math.round((1000 / (PT_TO_MM * top.r)) * 10) / 10;
+      const free: ScaleCandidate = { denominator: den, unit: "m", matches: top.matches, total: top.total };
+      return {
+        best: free,
+        candidates: [free, ...cands.slice(0, 4)],
+        confidence: "medium",
+        message: `مقياس غير قياسي ≈1:${Math.round(den)} من مطابقة ${top.matches} من ${top.total} بُعداً مع الرسم (اللوحة مصغّرة على الورقة). تحقق بقياس بُعد معروف.`,
+      };
+    }
+  }
+
   const best = cands[0];
   const second = cands.find((c) => c.denominator !== best?.denominator);
-  const dimsAgree = !!best && best.matches >= 3 && (best.matches / best.total >= 0.3) && (!second || best.matches >= second.matches * 1.5);
+  const dimsAgree =!!best && best.matches >= 3 && (best.matches / best.total >= 0.3) && (!second || best.matches >= second.matches * 1.5);
   const textMatches = textScale ? allCands.find((c) => c.denominator === textScale) : undefined;
 
   if (textScale && textMatches && textMatches.matches >= 3) {

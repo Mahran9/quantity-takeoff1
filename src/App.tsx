@@ -474,13 +474,14 @@ export default function App() {
   };
 
   /** One tap: read every sheet (CAD geometry, scaled PDF lines, written marks/bolts) and fill the takeoff table. */
-  const autoTakeoffAll = (): string => {
+  const autoTakeoffAll = (onlySheetId?: string): string => {
     const fresh: TakeoffItem[] = [];
     const replaced = new Set<string>();
     const base = takeoffItems.length;
     let readSheets = 0;
     let toReview = 0;
-    for (const sh of sheets) {
+    const scope = onlySheetId ? sheets.filter((x) => x.id === onlySheetId) : sheets;
+    for (const sh of scope) {
       let cands: ReturnType<typeof readMarks> = [];
       try {
         if (sh.dxfData) cands = readCad(sh, {});
@@ -498,7 +499,7 @@ export default function App() {
     }
     if (!fresh.length) return toReview
       ? `لم أضف شيئاً تلقائياً لأن القراءات (${toReview}) غير مؤكَّدة. افتح «الكميات» واضغط «حلّل اللوحة» لتختار منها ما تعتمده.`
-      : "لم أجد كميات مكتوبة أو مقاسة في أي لوحة. افتح اللوحة وعاير المقياس بقياس بُعد معروف ثم قِس بالأدوات.";
+      : "هذه اللوحة لا تحوي أبعاداً أو علامات يمكن قراءتها آلياً (غالباً صورة أو بلا مقياس). اضغط على زر المقياس أعلى اللوحة وعايره بقياس بُعد معروف، ثم قِس بأدوات «مسافة» و«مساحة» و«عدّ» وأضف كل قياس للجدول.";
     pushUndoSnapshot();
     const now = new Date().toISOString();
     const stamped = fresh.map((it, i) => ({ ...it, id: `${it.id}-${i}`, reviewStatus: "extracted" as ReviewStatus,
@@ -510,7 +511,7 @@ export default function App() {
         ...p.takeoffItems.filter((it) => !(replaced.has(it.sheetId) && (it.extractionSource === "cad_geometry" || it.extractionSource === "pdf_vector"))),
       ],
     }));
-    return `تم حصر ${fresh.length} بنداً من ${readSheets} لوحة من أصل ${sheets.length}.${toReview ? ` وهناك ${toReview} قراءة أخرى تنتظر اختيارك في «حلّل اللوحة».` : ""} راجع ثم صدّر Excel.`;
+    return `تم حصر ${fresh.length} بنداً من ${readSheets} لوحة من أصل ${scope.length}.${toReview ? ` وهناك ${toReview} قراءة أخرى تنتظر اختيارك في «حلّل اللوحة».` : ""} راجع ثم صدّر Excel.`;
   };
 
   // Reverse Link: Inspect a takeoff item on its blueprint
@@ -743,6 +744,7 @@ export default function App() {
               activeSheetId={currentSheet?.id || ""}
               onSelectSheet={setActiveSheetId}
               onAnalyze={openAnalyze}
+              onAuto={() => autoTakeoffAll(currentSheet?.id)}
               onGoSheets={() => setTab("sheets")}
             >
               {currentSheet && (
@@ -799,6 +801,7 @@ export default function App() {
           onBack={() => setDrawingOpen(false)}
           onSelectSheet={setActiveSheetId}
           onAnalyze={() => setIsAnalyzeOpen(true)}
+          onAuto={() => autoTakeoffAll(currentSheet.id)}
           onOpenItems={() => {
             setDrawingOpen(false);
             setTab("items");

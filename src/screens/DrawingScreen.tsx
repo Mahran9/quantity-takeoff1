@@ -9,13 +9,15 @@ interface Props {
   onBack: () => void;
   onSelectSheet: (id: string) => void;
   onAnalyze: () => void;
+  onAuto: () => string;
   onOpenItems: () => void;
   children: React.ReactNode;
 }
 
 /** Full-screen drawing workspace: a slim bar on top, the drawing taking everything else. */
-export const DrawingScreen: React.FC<Props> = ({ sheet, sheets, itemCount, onBack, onSelectSheet, onAnalyze, onOpenItems, children }) => {
+export const DrawingScreen: React.FC<Props> = ({ sheet, sheets, itemCount, onBack, onSelectSheet, onAnalyze, onAuto, onOpenItems, children }) => {
   const [pick, setPick] = useState(false);
+  const [msg, setMsg] = useState("");
   return (
     <div className="fixed inset-0 z-40 flex flex-col bg-white qto-fade-in" dir="rtl">
       <div className="h-14 shrink-0 flex items-center gap-2 px-2.5 border-b border-slate-200 bg-white relative">
@@ -31,9 +33,12 @@ export const DrawingScreen: React.FC<Props> = ({ sheet, sheets, itemCount, onBac
           <ListChecks className="w-[18px] h-[18px]" />
           <span className="font-mono">{itemCount}</span>
         </button>
-        <button onClick={onAnalyze} className="qto-cta flex h-10 items-center gap-1.5 rounded-xl px-3.5 text-[13px]">
+        <button onClick={() => setMsg(onAuto())} className="qto-cta flex h-10 items-center gap-1.5 rounded-xl px-3.5 text-[13px]">
           <ScanLine className="w-[18px] h-[18px]" />
-          حلّل
+          اقرأ واحصر
+        </button>
+        <button onClick={onAnalyze} className="flex h-10 items-center rounded-xl border border-slate-300 px-3 text-[13px] font-bold text-slate-800">
+          راجع
         </button>
 
         {pick && (
@@ -58,7 +63,13 @@ export const DrawingScreen: React.FC<Props> = ({ sheet, sheets, itemCount, onBac
           </>
         )}
       </div>
-      <div className="flex-1 min-h-0">{children}</div>
+      <div className="flex-1 min-h-0">{msg && (
+        <div className="shrink-0 flex items-start gap-2 bg-teal-50 px-3 py-2 text-[13px] font-bold leading-6 text-teal-900">
+          <span className="flex-1">{msg}</span>
+          <button onClick={() => setMsg("")} aria-label="إغلاق" className="px-2 text-teal-800">×</button>
+        </div>
+      )}
+      {children}</div>
     </div>
   );
 };

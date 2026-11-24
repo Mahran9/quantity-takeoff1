@@ -9,12 +9,14 @@ interface Props {
   activeSheetId: string;
   onSelectSheet: (id: string) => void;
   onAnalyze: () => void;
+  onAuto: () => string;
   onGoSheets: () => void;
   children: React.ReactNode; // the table for the active sheet
 }
 
 /** Quantities: pick a drawing, review its lines. */
-export const ItemsScreen: React.FC<Props> = ({ sheets, items, activeSheetId, onSelectSheet, onAnalyze, onGoSheets, children }) => {
+export const ItemsScreen: React.FC<Props> = ({ sheets, items, activeSheetId, onSelectSheet, onAnalyze, onAuto, onGoSheets, children }) => {
+  const [msg, setMsg] = React.useState("");
   if (sheets.length === 0) {
     return (
       <div className="flex flex-col gap-5">
@@ -32,11 +34,17 @@ export const ItemsScreen: React.FC<Props> = ({ sheets, items, activeSheetId, onS
         title="الكميات"
         sub={`${items.filter((i) => i.reviewStatus !== "rejected").length} بند في المشروع`}
         action={
-          <button onClick={onAnalyze} className="qto-cta flex h-10 items-center gap-1.5 rounded-xl px-4 text-sm">
-            <ScanLine className="w-[18px] h-[18px]" /> حلّل اللوحة
-          </button>
+          <div className="flex gap-2">
+            <button onClick={() => setMsg(onAuto())} className="qto-cta flex h-10 items-center gap-1.5 rounded-xl px-4 text-sm">
+              <ScanLine className="w-[18px] h-[18px]" /> اقرأ واحصر
+            </button>
+            <button onClick={onAnalyze} className="flex h-10 items-center rounded-xl border border-slate-300 px-3 text-sm font-bold text-slate-800">
+              راجع
+            </button>
+          </div>
         }
       />
+      {msg && <p className="rounded-lg bg-teal-50 px-3 py-2 text-[13px] font-bold leading-6 text-teal-900">{msg}</p>}
       {sheets.length > 1 && (
         <div className="-mx-4 px-4 sm:mx-0 sm:px-0 flex gap-2 overflow-x-auto no-scrollbar">
           {sheets.map((s) => {

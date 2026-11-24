@@ -167,8 +167,8 @@ export const HomeScreen: React.FC<Props> = ({ metadata, setMetadata, sheets, ite
 
       {sheets.length > 0 && (
         <section className="card p-4">
-          <button onClick={() => setAutoMsg(onAutoAll())} className="qto-cta w-full h-12 rounded-xl text-[15px] flex items-center justify-center gap-2">
-            <ListChecks className="w-5 h-5" /> حصر كل اللوحات تلقائياً
+          <button onClick={() => setAutoMsg(onAutoAll())} className="qto-cta w-full h-14 rounded-xl text-[15px] flex items-center justify-center gap-2">
+            <ListChecks className="w-5 h-5" /> اقرأ المخطط واحصر الكميات
           </button>
           <p className="mt-2 text-[12.5px] leading-6 text-slate-500 font-semibold">
             يقرأ كل لوحة: الأبعاد المقاسة والعلامات المكتوبة (أعمدة، كمرات، براغي…) ويملأ جدول الكميات. بعدها صدّر Excel من الأعلى.

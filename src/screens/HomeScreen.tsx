@@ -135,6 +135,16 @@ export const HomeScreen: React.FC<Props> = ({ metadata, setMetadata, sheets, ite
         </div>
       </section>
 
+      {sheets.length === 0 && (
+        <section className="card p-5 text-center">
+          <h2 className="text-lg font-extrabold text-slate-900">ابدأ برفع المخطط</h2>
+          <p className="mt-1 text-[13px] leading-6 text-slate-500 font-semibold">PDF أو DXF أو DWG أو صورة. القراءة على جهازك.</p>
+          <button onClick={onUpload} className="qto-cta mt-4 w-full h-14 rounded-xl text-base flex items-center justify-center gap-2">
+            <Plus className="w-5 h-5" /> رفع مخطط
+          </button>
+        </section>
+      )}
+
       {sheets.length > 0 && (
         <section className="card p-4">
           <button onClick={() => setAutoMsg(onAutoAll())} className="qto-cta w-full h-12 rounded-xl text-[15px] flex items-center justify-center gap-2">

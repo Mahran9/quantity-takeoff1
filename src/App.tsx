@@ -642,6 +642,8 @@ export default function App() {
     setActiveProjectId(prj.id);
     setActiveSheetId(prj.sheets[0]?.id || "");
     setHistoryStack([]);
+    setDrawingOpen(false);
+    setTab(prj.sheets.length ? "home" : "sheets");
   };
 
   const handleDuplicateProject = (prjId: string) => {
@@ -698,7 +700,7 @@ export default function App() {
             <HomeScreen
               metadata={metadata}
               setMetadata={setMetadata}
-              sheets={sheets}
+              sheets={sheets.filter((x) => x.fileName !== "لم يتم رفع ملف بعد")}
               items={takeoffItems}
               onTab={setTab}
               onUpload={() => setIsUploadOpen(true)}
@@ -714,7 +716,7 @@ export default function App() {
 
           {tab === "sheets" && (
             <SheetsScreen
-              sheets={sheets}
+              sheets={sheets.filter((x) => x.fileName !== "لم يتم رفع ملف بعد")}
               items={takeoffItems}
               currencySymbol={metadata.currencySymbol}
               onOpen={(id) => {

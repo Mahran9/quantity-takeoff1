@@ -11,7 +11,14 @@ const FAMILY: Record<string, string> = {
   BR: "تكتيف (Bracing)", GT: "كمرات جانبية", EG: "كمرات حافة", ST: "ستيفنرات", P: "بلاطات / صفائح", PL: "صفائح",
 };
 
+export interface LabelCount { label: string; n: number }
 export interface MarkStats {
+  /** Section designations written on design drawings: "SHS 100x4", "Z200x50x16.5x1.8", "W200-300*5 / F150*6". */
+  sections: LabelCount[];
+  /** Beam marks written with a dot or space: "S.B 2", "M.B3". */
+  beams: { prefix: string; total: number; marks: LabelCount[] }[];
+  /** Bracing rods: "ROD 24 mm". */
+  rods: LabelCount[];
   families: { prefix: string; total: number; marks: { mark: string; n: number }[] }[];
   bolts: { dia: number; len: number; n: number; notes: number }[];
   tokens: number;
@@ -45,7 +52,25 @@ export function readMarkStats(texts: string[]): MarkStats {
     // a prefix with one or two stray hits is a grid label / note, not a piece family
     .filter((f) => f.total >= 3)
     .sort((a, b) => b.total - a.total);
-  return { families, bolts: [...bolts.values()].sort((a, b) => b.n - a.n), tokens: texts.length };
+  const tally = (re: RegExp, norm: (m: RegExpMatchArray) => string) => {
+    const m = new Map<string, number>();
+    for (const x of joined.matchAll(re)) { const k = norm(x); m.set(k, (m.get(k) || 0) + 1); }
+    return [...m].map(([label, n]) => ({ label, n })).sort((a, b) => b.n - a.n);
+  };
+  const sections = [
+    ...tally(/\b(SHS|RHS|CHS)\s?(\d{2,3})\s?[xX*]\s?(\d{1,3}(?:\.\d+)?)\b/g, (m) => `${m[1]} ${m[2]}x${m[3]}`),
+    ...tally(/\bZ\s?(\d{2,3})\s?x\s?(\d{2,3})\s?x\s?([\d.]+)\s?x\s?([\d.]+)\b/gi, (m) => `Z${m[1]}x${m[2]}x${m[3]}x${m[4]}`),
+    ...tally(/\bW\s?(\d{2,3}-?\d{0,3})\s?[x*]\s?(\d{1,2})\s?\/\s?F\s?(\d{2,3})\s?[x*]\s?(\d{1,2})\b/gi, (m) => `W${m[1]}*${m[2]} / F${m[3]}*${m[4]}`),
+  ];
+  const beamMap = new Map<string, Map<string, number>>();
+  for (const x of joined.matchAll(/\b(S\.B|M\.B|ST\.B)\s?(\d{1,2})\b/g)) {
+    const mk = `${x[1]} ${x[2]}`;
+    const g = beamMap.get(x[1]) || beamMap.set(x[1], new Map()).get(x[1])!;
+    g.set(mk, (g.get(mk) || 0) + 1);
+  }
+  const beams = [...beamMap].map(([prefix, g]) => ({ prefix, total: [...g.values()].reduce((a, b) => a + b, 0), marks: [...g].map(([label, n]) => ({ label, n })).sort((a, b) => b.n - a.n) }));
+  const rods = tally(/\bROD\s?(\d{2})\s?mm/gi, (m) => `قضيب ${m[1]} مم`);
+  return { families, bolts: [...bolts.values()].sort((a, b) => b.n - a.n), tokens: texts.length, sections, beams, rods };
 }
 
 export function readMarks(sheet: BlueprintSheet): Candidate[] {
@@ -81,5 +106,16 @@ export function readMarks(sheet: BlueprintSheet): Candidate[] {
       layer: "براغي",
     });
   }
+  const lab = (id: string, description: string, n: number, evidence: string) =>
+    out.push({
+      id, description: `${description} (${sheet.code})`, category: "أعمال الهياكل المعدنية والهناجر",
+      dim: "count", unit: "عدد", quantity: n, count: n, sources: ["mark"], confidence: "low", selected: false,
+      evidence: `${where}: ${evidence}`,
+      checks: ["رسم تصميمي: العدد = مرات كتابة التسمية، وليس بالضرورة عدد القطع (قد تُكتب مرة لعدة قطع). القياس الفعلي يحتاج المقياس أو قائمة المواد"],
+      layer: "تسميات المقاطع",
+    });
+  for (const x of s.sections) lab(`mrk-sec-${x.label}`, `مقطع ${x.label}`, x.n, `التسمية «${x.label}» مكتوبة ${x.n} مرة`);
+  for (const g of s.beams) lab(`mrk-beam-${g.prefix}`, `كمرات ${g.prefix}`, g.total, `${g.marks.map((m) => `${m.label}×${m.n}`).join("، ")}`);
+  for (const x of s.rods) lab(`mrk-rod-${x.label}`, `تكتيف ${x.label}`, x.n, `«${x.label}» مكتوب ${x.n} مرة`);
   return out;
 }

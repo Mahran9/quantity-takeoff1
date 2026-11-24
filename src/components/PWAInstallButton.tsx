@@ -41,7 +41,7 @@ export const PWAInstallButton: React.FC<{ className?: string }> = ({ className =
           onClick={() => setHelp(false)}
         >
           <div
-            className="qto-slide-up w-full max-w-sm rounded-2xl border border-slate-300 p-5 text-right text-slate-900 keep-paper" style={{ background: "var(--paper)" }} data-k=""
+            className="qto-slide-up w-full max-w-sm rounded-2xl border border-slate-300 p-5 text-right text-slate-900 keep-paper" style={{ background: "var(--surface)" }} data-k=""
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">

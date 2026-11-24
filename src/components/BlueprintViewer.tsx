@@ -348,9 +348,9 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
   const svgContent = sampleDrawingsSvg[sheet.id] || "";
 
   return (
-    <div className="flex flex-col h-[56dvh] min-h-[340px] max-h-[600px] lg:h-[640px] lg:max-h-none rounded-xl border border-slate-300 overflow-hidden relative" style={{ background: "var(--paper)" }}>
+    <div className="flex flex-col h-full w-full overflow-hidden relative" style={{ background: "var(--surface)" }}>
       {/* Toolbar: same paper as the page, a hairline under it */}
-      <div className="px-2 sm:px-3 py-1.5 border-b border-slate-300 flex items-center justify-between gap-2 z-10" dir="rtl">
+      <div className="px-2 sm:px-3 py-1.5 border-b border-slate-200 flex items-center justify-between gap-2 z-10" dir="rtl">
         <div className="flex items-center gap-0.5">
           <button
             onClick={() => {
@@ -426,7 +426,7 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
               </button>
 
               {showLayersDropdown && (
-                <div className="absolute left-0 top-full mt-1.5 w-56 border border-slate-300 rounded-xl p-1.5 z-50 text-xs max-h-60 overflow-y-auto" style={{ background: "var(--paper)" }}>
+                <div className="absolute left-0 top-full mt-1.5 w-56 border border-slate-300 rounded-xl p-1.5 z-50 text-xs max-h-60 overflow-y-auto shadow-lg" style={{ background: "var(--surface)" }}>
                   <div className="font-bold text-slate-800 px-2 py-1 mb-1 border-b border-slate-200">طبقات ملف CAD</div>
                   {sheet.dxfLayers.map((l) => (
                     <div
@@ -510,7 +510,7 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
               ref={dxfCanvasRef}
               width={STAGE_W}
               height={STAGE_H}
-              style={{ background: "var(--paper)" }}
+              style={{ background: "var(--surface)" }}
             />
           ) : (
             <div
@@ -567,7 +567,7 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
                   <MapPin className="w-3 h-3" />
                 </div>
 
-                <div className="hidden group-hover:flex absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-3 py-2 border border-slate-400 text-slate-900 keep-paper rounded-xl text-[11px] font-sans whitespace-nowrap flex-col items-center gap-1 z-30" style={{ background: "var(--paper)" }}>
+                <div className="hidden group-hover:flex absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-3 py-2 border border-slate-400 text-slate-900 rounded-xl text-[11px] font-sans whitespace-nowrap flex-col items-center gap-1 z-30 shadow-lg" style={{ background: "var(--surface)" }}>
                   <span className="font-bold text-amber-300">{pin.label}</span>
                   <span className="font-mono text-emerald-400 font-bold">
                     {pin.calculatedValue} {pin.unit}
@@ -604,8 +604,8 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
         {focusedItem && (
           <div
             onClick={(e) => e.stopPropagation()}
-            style={{ background: "var(--paper)" }}
-            className="absolute top-3 right-3 z-30 w-80 max-w-[92%] border border-slate-400 rounded-xl p-4 text-right text-slate-900 space-y-2.5"
+            style={{ background: "var(--surface)" }}
+            className="absolute top-3 right-3 z-30 w-80 max-w-[92%] border border-slate-300 rounded-2xl p-4 text-right text-slate-900 space-y-2.5 shadow-xl"
           >
             <div className="flex items-start justify-between gap-2">
               <div>
@@ -704,7 +704,7 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
             onClick={(e) => e.stopPropagation()}
             className="absolute inset-0 z-30 bg-slate-900/30 flex items-center justify-center p-4"
           >
-            <div className="keep-paper rounded-xl p-5 max-w-sm w-full border border-slate-400 text-right space-y-3" style={{ background: "var(--paper)" }}>
+            <div className="rounded-xl p-5 max-w-sm w-full border border-slate-300 text-right space-y-3 shadow-xl" style={{ background: "var(--surface)" }}>
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                 <SlidersHorizontal className="w-4 h-4 text-amber-700" />
                 <span>أدخل المسافة الحقيقية بين النقطتين</span>
@@ -743,7 +743,7 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
 
         {/* Active Tool Guidance & Finish Polygon Button */}
         {toolMode !== "select" && (
-          <div className="absolute bottom-3 left-3 right-3 sm:right-auto z-20 px-3.5 py-2 rounded-xl border border-slate-400 text-slate-800 text-xs font-semibold flex items-center gap-3">
+          <div className="absolute bottom-3 left-3 right-3 sm:right-auto z-20 px-3.5 py-2 rounded-xl border border-slate-300 text-slate-800 text-xs font-semibold flex items-center gap-3 shadow-lg">
             <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
             <span>
               {toolMode === "calibrate" &&

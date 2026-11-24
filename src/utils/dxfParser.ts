@@ -1830,7 +1830,7 @@ export function renderDxfToCanvas(
   const height = canvas.height;
 
   // Clear canvas
-  ctx.fillStyle = "#f3f6f5"; // the app paper; line colours are darkened to read on it
+  ctx.fillStyle = "#ffffff"; // the app paper; line colours are darkened to read on it
   ctx.fillRect(0, 0, width, height);
 
   const { minX, minY, maxX, maxY } = parsedDxf.bounds;

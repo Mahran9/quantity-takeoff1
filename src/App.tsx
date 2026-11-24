@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Navbar } from "./components/Navbar";
-import { BlueprintTabs } from "./components/BlueprintTabs";
 import { BlueprintViewer } from "./components/BlueprintViewer";
 import { TakeoffTable } from "./components/TakeoffTable";
 import { BOQView } from "./components/BOQView";
+import { BottomNav, SideNav, Tab } from "./components/Nav";
+import { HomeScreen } from "./screens/HomeScreen";
+import { SheetsScreen } from "./screens/SheetsScreen";
+import { DrawingScreen } from "./screens/DrawingScreen";
+import { ItemsScreen } from "./screens/ItemsScreen";
 import { UploadModal } from "./components/UploadModal";
 import { VisualSearchModal } from "./components/VisualSearchModal";
 import { QuantityExtractionModal } from "./components/QuantityExtractionModal";
@@ -30,9 +33,7 @@ import {
   PROJECT_SCHEMA_VERSION,
 } from "./types";
 import { initialProjectMetadata, LEGACY_DEMO_SHEET_IDS } from "./data/sampleBlueprints";
-import { EmptyWorkspace } from "./components/EmptyWorkspace";
 import { exportBoqToExcel } from "./utils/boqExporter";
-import { SheetSummary } from "./components/SheetSummary";
 import { getSheetVisualTokens, searchSheetTokens } from "./utils/visualSearchEngine";
 import {
   loadProjectsFromStorage,
@@ -141,7 +142,8 @@ export default function App() {
   const { metadata, sheets, takeoffItems } = activeProject;
 
   const [activeSheetId, setActiveSheetId] = useState<string>(() => sheets[0]?.id || "");
-  const [activeView, setActiveView] = useState<"workspace" | "boq">("workspace");
+  const [tab, setTab] = useState<Tab>("home");
+  const [drawingOpen, setDrawingOpen] = useState(false);
 
   // Undo history stack (up to 20 snapshots for current session)
   const [historyStack, setHistoryStack] = useState<HistorySnapshot[]>([]);
@@ -488,7 +490,7 @@ export default function App() {
       }
     }
 
-    viewerSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setDrawingOpen(true);
   };
 
   // Sheet handlers
@@ -496,6 +498,8 @@ export default function App() {
     pushUndoSnapshot();
     updateActiveProject((p) => ({ ...p, sheets: [...p.sheets, newSheet] }));
     setActiveSheetId(newSheet.id);
+    setTab("sheets");
+    setDrawingOpen(true);
     // Go straight to counting: DXF/DWG open the extraction center right after the file is added.
     if (newSheet.fileType === "dxf") setIsAnalyzeOpen(true);
   };
@@ -505,6 +509,8 @@ export default function App() {
     pushUndoSnapshot();
     updateActiveProject((p) => ({ ...p, sheets: [...p.sheets, ...newSheets] }));
     setActiveSheetId(newSheets[0].id);
+    setTab("sheets");
+    setDrawingOpen(true);
   };
 
   const handleDeleteSheet = (sheetId: string) => {
@@ -638,104 +644,140 @@ export default function App() {
 
   return (
     <div className="app-shell min-h-screen text-slate-900 flex flex-col font-sans" dir="rtl">
-      <Navbar
-        metadata={metadata}
-        setMetadata={setMetadata}
-        activeView={activeView}
-        setActiveView={setActiveView}
-        sheets={sheets}
-        takeoffItems={takeoffItems}
-        onOpenUpload={() => setIsUploadOpen(true)}
-        onOpenVisualSearch={openVisualSearch}
-        onAnalyze={openAnalyze}
-        onOpenAdvanced={openExtraction}
-        onOpenProjectsModal={() => setIsProjectsOpen(true)}
-        onOpenSteelCalc={openSteelCalc}
-        onOpenSettings={() => setIsSettingsOpen(true)}
-        onOpenQuotation={() => setIsQuotationOpen(true)}
-        canUndo={historyStack.length > 0}
-        onUndo={handleUndo}
+      <SideNav
+        tab={tab}
+        onTab={(t) => {
+          setDrawingOpen(false);
+          setTab(t);
+        }}
+        counts={{ sheets: sheets.length, items: takeoffItems.filter((i) => i.reviewStatus !== "rejected").length }}
+        projectName={metadata.projectName}
+        onProjects={() => setIsProjectsOpen(true)}
       />
 
-      <main key={activeView} className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 flex flex-col gap-3 sm:gap-5 qto-view-in pb-28 sm:pb-6">
-        {activeView === "workspace" && sheets.length === 0 ? (
-          <EmptyWorkspace onOpenUpload={() => setIsUploadOpen(true)} onOpenProjects={() => setIsProjectsOpen(true)} />
-        ) : activeView === "workspace" ? (
-          <>
-            <BlueprintTabs
+      <main key={tab} className="flex-1 w-full md:pr-64 pt-4 pb-28 md:pb-10 qto-view-in print:p-0">
+        <div className={`mx-auto w-full px-4 md:px-8 md:pt-4 ${tab === "home" || tab === "sheets" ? "max-w-3xl" : "max-w-3xl md:max-w-6xl"}`}>
+          {tab === "home" && (
+            <HomeScreen
+              metadata={metadata}
+              setMetadata={setMetadata}
               sheets={sheets}
-              activeSheetId={activeSheetId}
-              onSelectSheet={(id) => setActiveSheetId(id)}
-              takeoffItems={takeoffItems}
-              onOpenUpload={() => setIsUploadOpen(true)}
-              onDeleteSheet={handleDeleteSheet}
+              items={takeoffItems}
+              onTab={setTab}
+              onUpload={() => setIsUploadOpen(true)}
+              onQuotation={() => setIsQuotationOpen(true)}
+              onExcel={() => exportBoqToExcel(metadata, sheets, takeoffItems, company)}
+              onProjects={() => setIsProjectsOpen(true)}
+              onVisualSearch={openVisualSearch}
+              onSteelCalc={openSteelCalc}
+              onSettings={() => setIsSettingsOpen(true)}
             />
+          )}
 
-            {currentSheet && (
-              <SheetSummary
-                sheet={currentSheet}
-                items={currentSheetItems}
-                currencySymbol={metadata.currencySymbol}
-                onAnalyze={() => setIsAnalyzeOpen(true)}
-                onOpenBoq={() => setActiveView("boq")}
-                onExportExcel={() => exportBoqToExcel(metadata, sheets, takeoffItems, company)}
-              />
-            )}
+          {tab === "sheets" && (
+            <SheetsScreen
+              sheets={sheets}
+              items={takeoffItems}
+              currencySymbol={metadata.currencySymbol}
+              onOpen={(id) => {
+                setActiveSheetId(id);
+                setDrawingOpen(true);
+              }}
+              onDelete={handleDeleteSheet}
+              onUpload={() => setIsUploadOpen(true)}
+              onProjects={() => setIsProjectsOpen(true)}
+            />
+          )}
 
-            <div ref={viewerSectionRef}>
+          {tab === "items" && (
+            <ItemsScreen
+              sheets={sheets}
+              items={takeoffItems}
+              activeSheetId={currentSheet?.id || ""}
+              onSelectSheet={setActiveSheetId}
+              onAnalyze={openAnalyze}
+              onGoSheets={() => setTab("sheets")}
+            >
               {currentSheet && (
-                <BlueprintViewer
+                <TakeoffTable
                   sheet={currentSheet}
-                  onAddMeasurementPin={handleAddMeasurementPin}
-                  onRemoveMeasurementPin={handleRemoveMeasurementPin}
-                  onConvertPinToItem={handleConvertPinToItem}
-                  onCalibrateSheet={handleCalibrateSheet}
+                  items={currentSheetItems}
+                  onAddItem={handleAddItem}
+                  onUpdateItem={handleUpdateItem}
+                  onDeleteItem={handleDeleteItem}
+                  onDeleteMany={handleDeleteMany}
+                  currencySymbol={metadata.currencySymbol}
                   onOpenVisualSearch={openVisualSearch}
                   onOpenExtractionModal={openExtraction}
-                  onOpenSteelCalc={openSteelCalc}
-                  highlightedTokens={highlightedTokens}
-                  highlightLabel={highlightLabel}
-                  onClearHighlights={() => {
-                    setHighlightedTokens([]);
-                    setHighlightLabel("");
-                  }}
-                  focusedItem={focusedItem}
-                  onCloseFocusedItem={() => setFocusedItem(null)}
-                  onUpdateFocusedItemStatus={handleUpdateItemStatus}
+                  onInspectItemOnSheet={handleInspectItemOnSheet}
+                  onImportExcelItems={handleApplyExtractedItems}
+                  onUpdateStatus={handleUpdateItemStatus}
                 />
               )}
-            </div>
+            </ItemsScreen>
+          )}
 
-            {currentSheet && (
-              <TakeoffTable
-                sheet={currentSheet}
-                items={currentSheetItems}
-                onAddItem={handleAddItem}
+          {tab === "price" && (
+            <div className="flex flex-col gap-4">
+              <header className="pt-1">
+                <h1 className="text-[26px] leading-tight font-extrabold text-slate-900">التسعير</h1>
+                <p className="mt-0.5 text-[13px] text-slate-500 font-semibold">أسعار الوحدات والإجماليات وعرض السعر</p>
+              </header>
+              <BOQView
+                metadata={metadata}
+                setMetadata={setMetadata}
+                sheets={sheets}
+                takeoffItems={takeoffItems}
                 onUpdateItem={handleUpdateItem}
-                onDeleteItem={handleDeleteItem}
-                onDeleteMany={handleDeleteMany}
-                currencySymbol={metadata.currencySymbol}
-                onOpenVisualSearch={openVisualSearch}
-                onOpenExtractionModal={openExtraction}
-                onInspectItemOnSheet={handleInspectItemOnSheet}
-                onImportExcelItems={handleApplyExtractedItems}
-                onUpdateStatus={handleUpdateItemStatus}
+                company={company}
+                onOpenQuotation={() => setIsQuotationOpen(true)}
+                onOpenSettings={() => setIsSettingsOpen(true)}
               />
-            )}
-          </>
-        ) : (
-          <BOQView
-            metadata={metadata}
-            setMetadata={setMetadata}
-            sheets={sheets}
-            takeoffItems={takeoffItems}
-            onUpdateItem={handleUpdateItem}
-            company={company}
-            onOpenQuotation={() => setIsQuotationOpen(true)}
-            onOpenSettings={() => setIsSettingsOpen(true)}
-          />
-        )}
+            </div>
+          )}
+        </div>
       </main>
+
+      <BottomNav
+        tab={tab}
+        onTab={setTab}
+        counts={{ sheets: sheets.length, items: takeoffItems.filter((i) => i.reviewStatus !== "rejected").length }}
+      />
+
+      {drawingOpen && currentSheet && (
+        <DrawingScreen
+          sheet={currentSheet}
+          sheets={sheets}
+          itemCount={currentSheetItems.length}
+          onBack={() => setDrawingOpen(false)}
+          onSelectSheet={setActiveSheetId}
+          onAnalyze={() => setIsAnalyzeOpen(true)}
+          onOpenItems={() => {
+            setDrawingOpen(false);
+            setTab("items");
+          }}
+        >
+          <BlueprintViewer
+            sheet={currentSheet}
+            onAddMeasurementPin={handleAddMeasurementPin}
+            onRemoveMeasurementPin={handleRemoveMeasurementPin}
+            onConvertPinToItem={handleConvertPinToItem}
+            onCalibrateSheet={handleCalibrateSheet}
+            onOpenVisualSearch={openVisualSearch}
+            onOpenExtractionModal={openExtraction}
+            onOpenSteelCalc={openSteelCalc}
+            highlightedTokens={highlightedTokens}
+            highlightLabel={highlightLabel}
+            onClearHighlights={() => {
+              setHighlightedTokens([]);
+              setHighlightLabel("");
+            }}
+            focusedItem={focusedItem}
+            onCloseFocusedItem={() => setFocusedItem(null)}
+            onUpdateFocusedItemStatus={handleUpdateItemStatus}
+          />
+        </DrawingScreen>
+      )}
 
       <UploadModal
         isOpen={isUploadOpen}
@@ -847,7 +889,7 @@ export default function App() {
           setIsSettingsOpen(true);
         }}
       />
-      <SaveStatusBar
+      {!drawingOpen && <SaveStatusBar
         notice={storageNotice && `${storageNotice.kind}` !== noticeDismissed ? storageNotice : null}
         onBackup={handleBackupActive}
         onDismiss={() => {
@@ -855,7 +897,7 @@ export default function App() {
           setNoticeDismissed(storageNotice.kind);
           try { localStorage.setItem(`qto-snooze-${storageNotice.kind}`, String(Date.now() + 3 * 24 * 3600 * 1000)); } catch { /* ignore */ }
         }}
-      />
+      />}
       <OfflineIndicator />
     </div>
   );

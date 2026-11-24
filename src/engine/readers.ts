@@ -5,10 +5,17 @@ import { AiItem } from "../utils/aiTakeoff";
 import { Candidate } from "./candidate";
 
 /** CAD geometry reader: layers, closed shapes, blocks (already parsed when the file was uploaded). */
-export function readCad(sheet: BlueprintSheet): Candidate[] {
+export interface CadAssumptions { wallHeight?: number; footingDepth?: number; slabThickness?: number; floorSlabThickness?: number }
+
+export function readCad(sheet: BlueprintSheet, a: CadAssumptions = {}): Candidate[] {
   const dxf = sheet.dxfData;
   if (!dxf) return [];
-  return extractEngineeringQuantitiesFromDxf(dxf, {}).map((q: any) => ({
+  return extractEngineeringQuantitiesFromDxf(dxf, {
+    defaultWallHeight: a.wallHeight || 0,
+    defaultFootingDepth: a.footingDepth || 0,
+    defaultSlabThickness: a.slabThickness || 0,
+    defaultFloorSlabThickness: a.floorSlabThickness || 0,
+  }).map((q: any) => ({
     id: `cad-${q.id}`,
     description: q.description,
     category: q.suggestedCategory,

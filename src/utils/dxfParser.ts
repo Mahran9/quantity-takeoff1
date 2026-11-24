@@ -1377,6 +1377,16 @@ export function extractEngineeringQuantitiesFromDxf(
         desc = `أرضيات وتشطيبات مسطحات الغرف (${layer.name})`;
       }
 
+      // Nothing recognised this layer. Don't call it "floors" (that put wall/column outlines into the
+      // marble section): skip plan areas of wall/column layers (they are counted by length / number
+      // elsewhere) and leave any other unknown layer unticked under "other" for the user to decide.
+      const DEFAULT_CAT = "أعمال الأرضيات والرخام والبورسلين";
+      const unrecognised = !rule && category === DEFAULT_CAT && desc.startsWith("مسطح ومساحة طبقة");
+      if (unrecognised) {
+        if (has("WALL*", "COL*", "جدار", "جدران", "حائط", "عمود", "اعمدة", "أعمدة", "عمدان")) return;
+        category = "أعمال متنوعة أخرى";
+      }
+
       // If it's a structural element with thickness, generate both Volume and Area
       if (rule?.kind !== "area" && isVolumeCandidate && depth > 0) {
         const volume = area * depth;
@@ -1394,7 +1404,7 @@ export function extractEngineeringQuantitiesFromDxf(
           width: Number(Math.sqrt(area).toFixed(2)),
           suggestedCategory: category,
           entityCount: layer.entityCount,
-          description: desc.replace(/؛ السمك غير محدد، لا يمكن حساب حجم الخرسانة/, "؛ السمك مأخوذ من ملاحظة صريحة في اللوحة"),
+          description: desc.replace(/؛ (السمك|العمق) غير محدد، لا يمكن حساب حجم الخرسانة/, (_m, w) => `؛ ${w} ${depth} م (من إدخالك أو من ملاحظة اللوحة)`),
           selected: true,
         });
       } else {
@@ -1412,7 +1422,7 @@ export function extractEngineeringQuantitiesFromDxf(
           suggestedCategory: category,
           entityCount: layer.entityCount,
           description: desc,
-          selected: true,
+          selected: !unrecognised,
         });
       }
     }

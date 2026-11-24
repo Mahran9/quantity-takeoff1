@@ -3,7 +3,7 @@ import { X, Loader2, Sparkles, CheckCircle2, AlertTriangle, SlidersHorizontal } 
 import { BlueprintSheet, TakeoffItem } from "../types";
 import { Candidate, SOURCE_LABEL, candidatesToTakeoff } from "../engine/candidate";
 import { reconcile, rank } from "../engine/reconcile";
-import { fromAi, fromOcr, readCad } from "../engine/readers";
+import { fromAi, fromOcr, readCad, CadAssumptions } from "../engine/readers";
 import { readPrintedLabels } from "../utils/ocrLabels";
 import { buildPrompt, loadAiKey, prepareImages, runAiTakeoff } from "../utils/aiTakeoff";
 import { importWithRecovery } from "../utils/lazyImport";
@@ -33,6 +33,11 @@ export const AnalyzeSheetModal: React.FC<Props> = ({ isOpen, onClose, sheet, exi
   const [picked, setPicked] = useState<Record<string, boolean>>({});
   const [replacePrev, setReplacePrev] = useState(true);
   const [hasAiKey] = useState(Boolean(loadAiKey()));
+  const [assume, setAssume] = useState<Record<string, string>>(() => {
+    try { return JSON.parse(localStorage.getItem("qto-assume") || "{}"); } catch { return {}; }
+  });
+  const num = (k: string) => { const n = parseFloat(String(assume[k] ?? "").replace(",", ".")); return n > 0 ? n : 0; };
+  const assumptions = (): CadAssumptions => ({ wallHeight: num("wall"), footingDepth: num("foot"), slabThickness: num("slab"), floorSlabThickness: num("sog") });
   const raw = useRef<{ cad: Candidate[]; ocr: Candidate[]; ai: Candidate[] }>({ cad: [], ocr: [], ai: [] });
   const started = useRef(false);
 
@@ -52,7 +57,7 @@ export const AnalyzeSheetModal: React.FC<Props> = ({ isOpen, onClose, sheet, exi
     started.current = true;
     (async () => {
       try {
-        if (sheet.dxfData) { raw.current.cad = readCad(sheet); apply(); }
+        if (sheet.dxfData) { raw.current.cad = readCad(sheet, assumptions()); apply(); }
         if (sheet.imageUrl) {
           setBusy("قراءة الأرقام المدوّنة على اللوحة…");
           const r = await readPrintedLabels(sheet.imageUrl, () => importWithRecovery(() => import("tesseract.js")), (m, p) => { setBusy(m); setPct(p); });
@@ -65,6 +70,19 @@ export const AnalyzeSheetModal: React.FC<Props> = ({ isOpen, onClose, sheet, exi
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
+
+  const setA = (k: string, v: string) => {
+    const next = { ...assume, [k]: v };
+    setAssume(next);
+    try { localStorage.setItem("qto-assume", JSON.stringify(next)); } catch { /* ignore */ }
+  };
+  // Re-read the CAD geometry whenever an assumption changes (volumes / wall areas appear).
+  useEffect(() => {
+    if (!isOpen || !sheet.dxfData || !started.current) return;
+    raw.current.cad = readCad(sheet, assumptions());
+    apply();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assume]);
 
   const runAi = async () => {
     setError("");
@@ -108,6 +126,22 @@ export const AnalyzeSheetModal: React.FC<Props> = ({ isOpen, onClose, sheet, exi
             </div>
           )}
           {error && <p className="rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900">{error}</p>}
+
+          {sheet.dxfData && (
+            <details open className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <summary className="cursor-pointer text-sm font-bold text-slate-800">أرقام لا يحتويها الرسم (بالمتر) — اتركها فارغة إن لم تعرفها</summary>
+              <p className="mt-1 text-[11px] text-slate-500 leading-5">لا أخمّن هذه الأرقام. أدخل ما تعرفه من المواصفات فتظهر الأحجام ومساحات الجدران فوراً.</p>
+              <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {([["wall", "ارتفاع الجدار"], ["foot", "عمق القواعد"], ["slab", "سمك بلاطة السقف"], ["sog", "سمك الأرضية"]] as const).map(([k, label]) => (
+                  <label key={k} className="text-[11px] font-semibold text-slate-600">
+                    {label}
+                    <input inputMode="decimal" value={assume[k] ?? ""} onChange={(e) => setA(k, e.target.value)} placeholder="مثال 0.60"
+                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-center font-mono text-sm focus:border-amber-500 focus:outline-none" />
+                  </label>
+                ))}
+              </div>
+            </details>
+          )}
 
           {!busy && cands.length === 0 && (
             <div className="rounded-xl border border-dashed border-slate-300 p-5 text-sm text-slate-600 leading-7">

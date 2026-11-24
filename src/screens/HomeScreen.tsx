@@ -28,6 +28,7 @@ interface Props {
   onUpload: () => void;
   onQuotation: () => void;
   onExcel: () => void;
+  onAutoAll: () => string;
   onProjects: () => void;
   onVisualSearch: () => void;
   onSteelCalc: () => void;
@@ -46,7 +47,7 @@ const CURRENCIES: [string, string][] = [
 
 const money = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 2 });
 
-export const HomeScreen: React.FC<Props> = ({ metadata, setMetadata, sheets, items, onTab, onUpload, onQuotation, onExcel, onProjects, onVisualSearch, onSteelCalc, onSettings }) => {
+export const HomeScreen: React.FC<Props> = ({ metadata, setMetadata, sheets, items, onTab, onUpload, onQuotation, onExcel, onAutoAll, onProjects, onVisualSearch, onSteelCalc, onSettings }) => {
   const q = buildQuotation(items, metadata.taxRate);
   const live = items.filter((i) => i.reviewStatus !== "rejected");
   const approved = live.filter((i) => i.reviewStatus === "approved" || i.isVerified).length;
@@ -98,6 +99,7 @@ export const HomeScreen: React.FC<Props> = ({ metadata, setMetadata, sheets, ite
       cta: "تسعير",
     },
   ];
+  const [autoMsg, setAutoMsg] = useState("");
   const next = steps.find((s) => !s.done);
 
   const tool = "w-full flex items-center gap-3.5 px-4 py-3.5 text-right text-sm font-bold text-slate-800 border-b border-slate-100 last:border-b-0";
@@ -132,6 +134,18 @@ export const HomeScreen: React.FC<Props> = ({ metadata, setMetadata, sheets, ite
           </button>
         </div>
       </section>
+
+      {sheets.length > 0 && (
+        <section className="card p-4">
+          <button onClick={() => setAutoMsg(onAutoAll())} className="qto-cta w-full h-12 rounded-xl text-[15px] flex items-center justify-center gap-2">
+            <ListChecks className="w-5 h-5" /> حصر كل اللوحات تلقائياً
+          </button>
+          <p className="mt-2 text-[12.5px] leading-6 text-slate-500 font-semibold">
+            يقرأ كل لوحة: الأبعاد المقاسة والعلامات المكتوبة (أعمدة، كمرات، براغي…) ويملأ جدول الكميات. بعدها صدّر Excel من الأعلى.
+          </p>
+          {autoMsg && <p className="mt-2 rounded-lg bg-teal-50 px-3 py-2 text-[13px] font-bold text-teal-900">{autoMsg}</p>}
+        </section>
+      )}
 
       {/* Workflow: what is done, what is next */}
       <section>

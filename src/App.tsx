@@ -34,6 +34,10 @@ import {
 } from "./types";
 import { initialProjectMetadata, LEGACY_DEMO_SHEET_IDS } from "./data/sampleBlueprints";
 import { exportBoqToExcel } from "./utils/boqExporter";
+import { readCad, readPdf } from "./engine/readers";
+import { readMarks } from "./engine/marks";
+import { reconcile } from "./engine/reconcile";
+import { candidatesToTakeoff } from "./engine/candidate";
 import { getSheetVisualTokens, searchSheetTokens } from "./utils/visualSearchEngine";
 import {
   loadProjectsFromStorage,
@@ -469,6 +473,39 @@ export default function App() {
     }));
   };
 
+  /** One tap: read every sheet (CAD geometry, scaled PDF lines, written marks/bolts) and fill the takeoff table. */
+  const autoTakeoffAll = (): string => {
+    const fresh: TakeoffItem[] = [];
+    const replaced = new Set<string>();
+    const base = takeoffItems.length;
+    let readSheets = 0;
+    for (const sh of sheets) {
+      let cands: ReturnType<typeof readMarks> = [];
+      try {
+        if (sh.dxfData) cands = readCad(sh, {});
+        else cands = [...(sh.pdfVector ? readPdf(sh) : []), ...readMarks(sh)];
+      } catch { cands = []; }
+      const chosen = reconcile(cands).filter((c) => c.selected && c.quantity > 0);
+      if (!chosen.length) continue;
+      readSheets++;
+      replaced.add(sh.id);
+      fresh.push(...candidatesToTakeoff(chosen, sh, base + fresh.length));
+    }
+    if (!fresh.length) return "لم أجد كميات مكتوبة أو مقاسة تلقائياً في أي لوحة. جرّب لوحة ممسوحة؟ افتحها وعاير المقياس يدوياً.";
+    pushUndoSnapshot();
+    const now = new Date().toISOString();
+    const stamped = fresh.map((it, i) => ({ ...it, id: `${it.id}-${i}`, reviewStatus: "extracted" as ReviewStatus,
+      auditLog: [{ timestamp: now, action: "حصر تلقائي لكل اللوحات", newQty: it.quantity, status: "extracted" as ReviewStatus }] }));
+    updateActiveProject((p) => ({
+      ...p,
+      takeoffItems: [
+        ...stamped,
+        ...p.takeoffItems.filter((it) => !(replaced.has(it.sheetId) && (it.extractionSource === "cad_geometry" || it.extractionSource === "pdf_vector"))),
+      ],
+    }));
+    return `تم حصر ${fresh.length} بنداً من ${readSheets} لوحة من أصل ${sheets.length}. راجعها ثم صدّر Excel.`;
+  };
+
   // Reverse Link: Inspect a takeoff item on its blueprint
   const handleInspectItemOnSheet = (item: TakeoffItem) => {
     const targetSheet = sheets.find((s) => s.id === item.sheetId) || currentSheet;
@@ -667,6 +704,7 @@ export default function App() {
               onUpload={() => setIsUploadOpen(true)}
               onQuotation={() => setIsQuotationOpen(true)}
               onExcel={() => exportBoqToExcel(metadata, sheets, takeoffItems, company)}
+              onAutoAll={autoTakeoffAll}
               onProjects={() => setIsProjectsOpen(true)}
               onVisualSearch={openVisualSearch}
               onSteelCalc={openSteelCalc}

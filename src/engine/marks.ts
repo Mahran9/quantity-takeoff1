@@ -60,7 +60,7 @@ export function readMarks(sheet: BlueprintSheet): Candidate[] {
     const name = FAMILY[f.prefix] || `علامات ${f.prefix}`;
     out.push({
       id: `mrk-${f.prefix}`,
-      description: `${name} — ${f.marks.length} علامة مختلفة`,
+      description: `${name} (${sheet.code}) — ${f.marks.length} علامة مختلفة`,
       category: "أعمال الهياكل المعدنية والهناجر",
       dim: "count", unit: "عدد", quantity: f.total, count: f.total,
       sources: ["mark"], confidence: "medium", selected: true,
@@ -72,7 +72,7 @@ export function readMarks(sheet: BlueprintSheet): Candidate[] {
   for (const b of s.bolts) {
     out.push({
       id: `mrk-bolt-${b.dia}x${b.len}`,
-      description: `براغي/أنكر M${b.dia}×${b.len} مم`,
+      description: `براغي/أنكر M${b.dia}×${b.len} مم (${sheet.code})`,
       category: "أعمال الهياكل المعدنية والهناجر",
       dim: "count", unit: "عدد", quantity: b.n, count: b.n,
       sources: ["mark"], confidence: "medium", selected: true,

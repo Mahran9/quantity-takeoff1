@@ -99,7 +99,7 @@ export function getSheetVisualTokens(sheet: BlueprintSheet): VisualSearchToken[]
   if (sheet.fileType === "dxf" && (sheet.dxfRawSummary || sheet.dxfData)) {
     const dxf = sheet.dxfRawSummary || sheet.dxfData;
     const tokens: VisualSearchToken[] = [];
-    const bounds = dxf.bounds || { minX: 0, maxX: 100, minY: 0, maxY: 100 };
+    const bounds = dxf.viewBounds || dxf.bounds || { minX: 0, maxX: 100, minY: 0, maxY: 100 };
     const spanX = Math.max(0.001, (bounds.maxX ?? 100) - (bounds.minX ?? 0));
     const spanY = Math.max(0.001, (bounds.maxY ?? 100) - (bounds.minY ?? 0));
 

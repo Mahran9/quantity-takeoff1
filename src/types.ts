@@ -83,7 +83,7 @@ export interface TakeoffItem {
   reviewedAt?: string;
   lastModifiedReason?: string;
   auditLog?: AuditEntry[];
-  extractionSource?: "cad_geometry" | "pdf_vector" | "visual_search" | "manual_pin" | "manual_input" | "excel_import" | "ai_vision";
+  extractionSource?: "cad_geometry" | "pdf_vector" | "visual_search" | "manual_pin" | "manual_input" | "excel_import" | "ai_vision" | "structural_model";
   sourceEvidence?: string;
   restoredDeduplicatedId?: string;
   reviewFlags?: string[];

@@ -637,6 +637,49 @@ export function detectDxfUnits(parsed: any): DxfUnitInfo {
   }
 }
 
+/**
+ * Bounds of the main body of a drawing. Each entity contributes one anchor point; entities whose anchor is more than
+ * 4× the 90th-percentile distance from the median anchor (and at least 1% of the full extent away) are treated as strays.
+ * Returns the full bounds unchanged when nothing is far away.
+ */
+export function mainClusterBounds(
+  entities: any[],
+  full: { minX: number; minY: number; maxX: number; maxY: number }
+): { bounds: { minX: number; minY: number; maxX: number; maxY: number }; stray: number } {
+  const anchors: { x: number; y: number; e: any }[] = [];
+  for (const e of entities || []) {
+    if (e?.inPaperSpace === true) continue;
+    const v = e?.vertices?.[0] || e?.position || e?.center || e?.startPoint || (typeof e?.x === "number" ? { x: e.x, y: e.y } : null);
+    if (v && Number.isFinite(v.x) && Number.isFinite(v.y)) anchors.push({ x: v.x, y: v.y, e });
+  }
+  if (anchors.length < 20) return { bounds: full, stray: 0 };
+  const med = (a: number[]) => { const s = [...a].sort((p, q) => p - q); return s[Math.floor(s.length / 2)]; };
+  const mx = med(anchors.map((a) => a.x)), my = med(anchors.map((a) => a.y));
+  const dist = anchors.map((a) => Math.hypot(a.x - mx, a.y - my));
+  const sorted = [...dist].sort((p, q) => p - q);
+  const p90 = sorted[Math.floor(0.9 * (sorted.length - 1))];
+  const fullSpan = Math.max(full.maxX - full.minX, full.maxY - full.minY);
+  const limit = Math.max(4 * p90, 0.01 * fullSpan, 1e-9);
+  const keep = anchors.filter((_, i) => dist[i] <= limit);
+  const stray = anchors.length - keep.length;
+  if (!stray) return { bounds: full, stray: 0 };
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  const take = (x?: number, y?: number) => {
+    if (typeof x === "number" && Number.isFinite(x)) { if (x < minX) minX = x; if (x > maxX) maxX = x; }
+    if (typeof y === "number" && Number.isFinite(y)) { if (y < minY) minY = y; if (y > maxY) maxY = y; }
+  };
+  for (const { e } of keep) {
+    if (Array.isArray(e.vertices)) for (const v of e.vertices) take(v?.x, v?.y);
+    else {
+      take(e.x, e.y); take(e.x1, e.y1); take(e.x2, e.y2);
+      if (e.position) take(e.position.x, e.position.y);
+      if (e.center) { const r = e.radius || 0; take(e.center.x - r, e.center.y - r); take(e.center.x + r, e.center.y + r); }
+    }
+  }
+  if (!(maxX > minX) || !(maxY > minY)) return { bounds: full, stray: 0 };
+  return { bounds: { minX, minY, maxX, maxY }, stray };
+}
+
 export interface ParsedDxfResult {
   unitInfo?: DxfUnitInfo;
   skippedPaperSpaceCount?: number;
@@ -646,6 +689,10 @@ export interface ParsedDxfResult {
   entityCounts: Record<string, number>;
   totalEntities: number;
   bounds: { minX: number; minY: number; maxX: number; maxY: number };
+  /** Extent of the main body of the drawing (stray far-away objects left out); used for display and span checks. */
+  viewBounds?: { minX: number; minY: number; maxX: number; maxY: number };
+  /** Objects left out of viewBounds because they sit far away from the rest of the drawing. */
+  strayEntityCount?: number;
   parsedData: any;
   summaryText: string;
   detectedBlocks: { name: string; count: number }[];
@@ -1051,10 +1098,15 @@ export function analyzeParsedDxfObject(parsed: any, options: AnalyzeOptions = {}
     maxY = 1000;
   }
 
+  // Where the drawing actually is: stray objects far from it (often left at the origin) must not shrink the view to a dot
+  // or fake a 100 km span. Quantities still include everything; only framing, span and unit guessing use the main cluster.
+  const main = mainClusterBounds(entities, { minX, minY, maxX, maxY });
+  const viewBounds = main.bounds;
+
   // Smart unit inference when $INSUNITS is 0 (Unitless) based on drawing span
   let resolvedUnitInfo = unitInfo;
   if (unitInfo.code === 0) {
-    const maxSpan = Math.max(Math.abs(maxX - minX), Math.abs(maxY - minY));
+    const maxSpan = Math.max(Math.abs(viewBounds.maxX - viewBounds.minX), Math.abs(viewBounds.maxY - viewBounds.minY));
     if (maxSpan >= 5000) {
       resolvedUnitInfo = { code: 4, name: "مليمتر (مستنتج من أبعاد اللوحة)", toMeters: 0.001, guessed: true };
     } else if (maxSpan >= 500) {
@@ -1080,8 +1132,11 @@ export function analyzeParsedDxfObject(parsed: any, options: AnalyzeOptions = {}
 
   // ---- Warnings (Arabic) shown to the user before importing quantities ----
   const warnings: string[] = [];
+  if (main.stray > 0) {
+    warnings.push(`${main.stray} عنصر بعيد جداً عن بقية الرسم (غالباً بقايا عند نقطة الأصل) — أُخفي من العرض. إن كانت تحمل كميات فراجع طبقاتها.`);
+  }
   const overlaps: { layer: string; nested: number; duplicates: number }[] = [];
-  const drawingSpan = Math.max(Math.abs(maxX - minX), Math.abs(maxY - minY));
+  const drawingSpan = Math.max(Math.abs(viewBounds.maxX - viewBounds.minX), Math.abs(viewBounds.maxY - viewBounds.minY));
   if (resolvedUnitInfo.guessed) {
     warnings.push(
       `وحدة الرسم غير محددة داخل الملف وتم تخمينها: ${resolvedUnitInfo.name} (أكبر بُعد في الرسم ≈ ${Math.round(drawingSpan).toLocaleString("en-US")} وحدة). تأكد من الوحدة الصحيحة قبل الاستخراج وإلا ستكون الكميات خاطئة بعشرة أضعاف أو أكثر.`
@@ -1174,6 +1229,8 @@ export function analyzeParsedDxfObject(parsed: any, options: AnalyzeOptions = {}
     entityCounts,
     totalEntities: entities.length,
     bounds: { minX, minY, maxX, maxY },
+    viewBounds,
+    strayEntityCount: main.stray,
     parsedData: parsed,
     summaryText,
     detectedBlocks,
@@ -1685,7 +1742,15 @@ export function auditExtraction(
     add("insunits_missing", "info", "الملف لا يحدد وحدة الرسم ($INSUNITS غير موجود).");
   }
   const spanM = span * scale;
-  if (!(spanM >= 1) || spanM > 2000) {
+  const explicitUnit = !parsed.unitInfo?.guessed && !parsed.insunitsMissing;
+  if (explicitUnit && spanM > 2000 && spanM <= 20000) {
+    // A unit written in the file plus a few-km extent is usually many sheets laid side by side, not a wrong unit.
+    add(
+      "implausible_span",
+      "warn",
+      `الرسم يمتد ≈ ${spanM.toFixed(0)} م — غالباً عدة لوحات متجاورة في ملف واحد. الكميات تجمع كل اللوحات معاً؛ راجع كل طبقة قبل الاعتماد.`
+    );
+  } else if (!(spanM >= 1) || spanM > 2000) {
     add(
       "implausible_span",
       "error",
@@ -1828,7 +1893,7 @@ export function dxfMetersPerCanvasPixel(parsedDxf: ParsedDxfResult | undefined, 
   if (!parsedDxf?.bounds || !parsedDxf.unitInfo || parsedDxf.unitInfo.code === 0) return 0;
   const toM = parsedDxf.unitInfo.toMeters;
   if (!(toM > 0)) return 0;
-  const { minX, minY, maxX, maxY } = parsedDxf.bounds;
+  const { minX, minY, maxX, maxY } = parsedDxf.viewBounds || parsedDxf.bounds;
   const dxfWidth = maxX - minX || 1;
   const dxfHeight = maxY - minY || 1;
   const scale = Math.min((width - DXF_CANVAS_PADDING * 2) / dxfWidth, (height - DXF_CANVAS_PADDING * 2) / dxfHeight);
@@ -1852,7 +1917,7 @@ export function renderDxfToCanvas(
   ctx.fillStyle = "#ffffff"; // the app paper; line colours are darkened to read on it
   ctx.fillRect(0, 0, width, height);
 
-  const { minX, minY, maxX, maxY } = parsedDxf.bounds;
+  const { minX, minY, maxX, maxY } = parsedDxf.viewBounds || parsedDxf.bounds;
   const dxfWidth = maxX - minX || 1;
   const dxfHeight = maxY - minY || 1;
 

@@ -9,7 +9,7 @@ import {
   AlertCircle,
   Layers,
 } from "lucide-react";
-import { BlueprintSheet, DisciplineType } from "../types";
+import { BlueprintSheet, DisciplineType, TakeoffItem } from "../types";
 import { parseDxfContent } from "../utils/dxfParser";
 import { renderPdfPage, getPdfPageCount } from "../utils/pdfProcessor";
 import { decodeDxfBuffer, explainUnreadableDxf } from "../utils/dxfDecode";
@@ -19,16 +19,24 @@ interface UploadModalProps {
   onClose: () => void;
   onSheetCreated: (sheet: BlueprintSheet) => void;
   onMultipleSheetsCreated?: (sheets: BlueprintSheet[]) => void;
+  /** ETABS/SAFE model read: sheet + concrete quantity rows + a one-line Arabic summary. */
+  onModelImported?: (sheet: BlueprintSheet, items: TakeoffItem[], message: string) => void;
+  existingItemCount?: number;
 }
+
+/** ETABS .e2k, SAFE .$sf / .f2k: text exports of structural models. */
+const isModelFile = (name: string) => /\.(e2k|\$sf|f2k)$/i.test(name);
 
 export const UploadModal: React.FC<UploadModalProps> = ({
   isOpen,
   onClose,
   onSheetCreated,
   onMultipleSheetsCreated,
+  onModelImported,
+  existingItemCount = 0,
 }) => {
   const [file, setFile] = useState<File | null>(null);
-  const [fileType, setFileType] = useState<"pdf" | "dxf" | "image">("pdf");
+  const [fileType, setFileType] = useState<"pdf" | "dxf" | "image" | "model">("pdf");
   const [sheetCode, setSheetCode] = useState("S-01");
   const [sheetTitle, setSheetTitle] = useState("");
   const [discipline, setDiscipline] = useState<DisciplineType>("إنشائي");
@@ -55,7 +63,12 @@ export const UploadModal: React.FC<UploadModalProps> = ({
     const cleanName = selected.name.replace(/\.[^/.]+$/, "");
     if (!sheetTitle) setSheetTitle(cleanName);
 
-    if (ext === "dxf" || ext === "dwg") {
+    if (isModelFile(selected.name)) {
+      setFileType("model");
+      setSheetCode(ext === "e2k" ? "ETABS-01" : "SAFE-01");
+      setDiscipline("إنشائي");
+      setScale("—");
+    } else if (ext === "dxf" || ext === "dwg") {
       setFileType("dxf");
       setSheetCode("CAD-01");
     } else if (ext === "pdf") {
@@ -86,6 +99,37 @@ export const UploadModal: React.FC<UploadModalProps> = ({
     setError(null);
 
     try {
+      if (fileType === "model") {
+        const { readStructuralModel, modelToTakeoffItems, modelPlanSvg } = await import("../utils/csiModel");
+        const model = readStructuralModel(await file.text());
+        const title = sheetTitle || file.name;
+        const sheet: BlueprintSheet = {
+          id: `sheet-${Date.now()}`,
+          code: sheetCode || (model.program === "ETABS" ? "ETABS-01" : "SAFE-01"),
+          title,
+          discipline: "إنشائي",
+          fileType: "image",
+          fileName: file.name,
+          fileSize: `${(file.size / 1024).toFixed(0)} KB`,
+          scale: "—",
+          imageUrl: modelPlanSvg(model, `${model.program} — ${title}`),
+          status: "completed",
+          summary: model.warnings.join("\n"),
+          measurementPins: [],
+          createdAt: new Date().toISOString(),
+        };
+        const { items, skipped } = modelToTakeoffItems(model, sheet, existingItemCount);
+        if (!items.length) throw new Error(["لم أجد عناصر خرسانية في النموذج.", ...model.warnings].join(" "));
+        if (skipped.length) sheet.summary = [sheet.summary, "لم يُضف للجدول:", ...skipped].filter(Boolean).join("\n");
+        const total = items.reduce((s, i) => s + i.quantity, 0);
+        const n = items.length === 1 ? "بند واحد" : items.length === 2 ? "بندان" : `${items.length} بنداً`;
+        const msg = `قُرئ نموذج ${model.program}: ${n}، إجمالي ${total.toLocaleString("en-US", { maximumFractionDigits: 1 })} م³ خرسانة.${skipped.length ? ` تُرك ${skipped.length} من عناصر النمذجة خارج الجدول للمراجعة.` : ""}`;
+        if (onModelImported) onModelImported(sheet, items, msg);
+        else onSheetCreated(sheet);
+        onClose();
+        return;
+      }
+
       if (fileType === "pdf" && pdfArrayBuffer && importAllPages && pdfTotalPages > 1) {
         const start = Math.max(1, Math.min(selectedPage, pdfTotalPages));
         const end = Math.max(start, Math.min(pageRangeEnd, pdfTotalPages));
@@ -175,7 +219,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
         code: sheetCode || "PLN-01",
         title: sheetTitle || file.name,
         discipline,
-        fileType,
+        fileType: fileType as BlueprintSheet["fileType"],
         fileName: file.name,
         fileSize: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
         scale: scale || "1:100",
@@ -214,7 +258,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
             <div>
               <h2 className="text-base font-bold">إضافة مخطط هندسي جديد</h2>
               <p className="text-xs text-slate-400">
-                يدعم PDF (صفحة أو عدة صفحات دفعة واحدة)، أوتوكاد DXF، والصور
+                PDF، أوتوكاد DXF/DWG، الصور، ونماذج ETABS/SAFE
               </p>
             </div>
           </div>
@@ -225,7 +269,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
 
         <div className="p-4 sm:p-6 space-y-4">
           <label className="block border-2 border-dashed border-slate-300 hover:border-amber-400 rounded-2xl p-6 text-center cursor-pointer bg-slate-50 transition-all">
-            <input type="file" accept=".pdf,.dxf,.dwg,.png,.jpg,.jpeg,.webp,application/pdf,image/*,application/dxf,application/acad,image/vnd.dwg,image/vnd.dxf,application/octet-stream" onChange={handleFileChange} className="hidden" />
+            <input type="file" accept=".pdf,.dxf,.dwg,.e2k,.$sf,.f2k,.png,.jpg,.jpeg,.webp,application/pdf,image/*,application/dxf,application/acad,image/vnd.dwg,image/vnd.dxf,application/octet-stream" onChange={handleFileChange} className="hidden" />
             <div className="flex justify-center gap-3 mb-2 text-slate-400">
               <FileText className="w-6 h-6 text-slate-400" />
               <FileCode2 className="w-6 h-6 text-slate-400" />
@@ -235,9 +279,15 @@ export const UploadModal: React.FC<UploadModalProps> = ({
               {file ? file.name : "اختر ملف المخطط"}
             </div>
             <div className="text-xs text-slate-500 mt-1">
-              PDF · DXF · DWG · صورة — تتم القراءة على جهازك بدون إنترنت
+              PDF · DXF · DWG · صورة · نموذج ETABS / SAFE — تتم القراءة على جهازك بدون إنترنت
             </div>
           </label>
+
+          {fileType === "model" && file && (
+            <div className="p-3 rounded-xl bg-teal-50 border border-teal-200 text-xs text-teal-900 leading-6">
+              نموذج إنشائي: تُحسب خرسانة الأعمدة والكمرات والبلاطات والجدران (ETABS) والقواعد (SAFE) من أبعاد النموذج نفسه، دوراً دوراً، وتُضاف للجدول مباشرة.
+            </div>
+          )}
 
           {file && /\.dwg$/i.test(file.name) && (
             <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 leading-6">

@@ -1,7 +1,7 @@
 {
   "name": "quantity-takeoff",
   "private": true,
-  "version": "8.10.1",
+  "version": "8.11.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host",
@@ -12,6 +12,8 @@
     "test:all": "node scripts/run-tests.mjs",
     "verify:dxf": "tsx scripts/verify-dxf.ts",
     "verify:pdf": "tsx scripts/verify-pdf.ts",
+    "verify:dwg": "tsx scripts/verify-dwg.ts",
+    "verify:model": "tsx scripts/verify-model.ts",
     "android:sync": "npm run build && npx cap sync android",
     "android:open": "npx cap open android"
   },

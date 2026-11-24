@@ -549,6 +549,23 @@ export default function App() {
     if (newSheet.fileType === "dxf") setIsAnalyzeOpen(true);
   };
 
+  /** ETABS / SAFE model: adds the model sheet and its concrete quantities in one step, then shows the table. */
+  const handleModelImported = (newSheet: BlueprintSheet, items: TakeoffItem[], message: string) => {
+    pushUndoSnapshot();
+    const now = new Date().toISOString();
+    const stamped = items.map((it) => ({
+      ...it,
+      reviewStatus: "extracted" as ReviewStatus,
+      auditLog: [{ timestamp: now, action: "قراءة نموذج إنشائي", newQty: it.quantity, status: "extracted" as ReviewStatus }],
+    }));
+    updateActiveProject((p) => ({ ...p, sheets: [...p.sheets, newSheet], takeoffItems: [...stamped, ...p.takeoffItems] }));
+    setActiveSheetId(newSheet.id);
+    setDrawingOpen(false);
+    setTab("items");
+    setNotice(message);
+    window.setTimeout(() => setNotice(null), 7000);
+  };
+
   const handleMultipleSheetsCreated = (newSheets: BlueprintSheet[]) => {
     if (newSheets.length === 0) return;
     pushUndoSnapshot();
@@ -834,6 +851,8 @@ export default function App() {
         onClose={() => setIsUploadOpen(false)}
         onSheetCreated={handleSheetCreated}
         onMultipleSheetsCreated={handleMultipleSheetsCreated}
+        onModelImported={handleModelImported}
+        existingItemCount={takeoffItems.length}
       />
 
       {currentSheet && (

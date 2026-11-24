@@ -103,9 +103,9 @@ export const BOQView: React.FC<BOQViewProps> = ({
       {/* Project Financial Summary Card (Screen & Print) */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6 print:border-none print:shadow-none print:p-0">
         {/* Engineering Header (appears cleanly in Print) */}
-        <div className="border-b border-slate-200 pb-5 mb-5 flex flex-wrap items-start justify-between gap-4">
+        <div className="border-b border-slate-200 pb-4 sm:pb-5 mb-4 sm:mb-5 flex flex-wrap items-start justify-between gap-3 sm:gap-4">
           <div>
-            <div className="flex items-center gap-2 text-amber-600 font-bold text-xs">
+            <div className="hidden sm:flex items-center gap-2 text-amber-600 font-bold text-xs">
               <Building2 className="w-4 h-4" />
               <span><span className="sm:hidden">جدول الكميات (BOQ)</span><span className="hidden sm:inline">جدول الكميات والمواصفات المعتمد (Bill of Quantities - BOQ)</span></span>
             </div>
@@ -123,7 +123,7 @@ export const BOQView: React.FC<BOQViewProps> = ({
           <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto print:hidden">
             <button
               onClick={onOpenQuotation}
-              className="flex items-center justify-center gap-2 whitespace-nowrap px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-bold shadow-sm transition-all"
+              className="flex items-center justify-center gap-2 whitespace-nowrap px-4 py-3 sm:py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-sm sm:text-xs font-bold transition-all"
               title="معاينة عرض السعر وطباعته على الورق الرسمي أو حفظه PDF"
             >
               <FileCheck className="w-4 h-4" />
@@ -132,16 +132,16 @@ export const BOQView: React.FC<BOQViewProps> = ({
 
             <button
               onClick={() => exportBoqToExcel(metadata, sheets, takeoffItems, company)}
-              className="flex items-center justify-center gap-2 whitespace-nowrap col-span-2 sm:col-span-1 order-first sm:order-none px-3.5 py-2.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-sm transition-all"
+              className="flex items-center justify-center gap-2 whitespace-nowrap order-first sm:order-none px-3.5 py-3 sm:py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-sm sm:text-xs font-bold transition-all"
               title="تصدير ملف Excel شامل (عرض السعر + الموحد + صفحة لكل مخطط)"
             >
               <Download className="w-4 h-4" />
-              <span>تصدير Excel</span>
+              <span>Excel</span>
             </button>
 
             <button
               onClick={() => exportBoqToCsv(metadata, sheets, takeoffItems)}
-              className="flex items-center justify-center gap-2 whitespace-nowrap px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-all border border-slate-200"
+              className="hidden sm:flex items-center justify-center gap-2 whitespace-nowrap px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-all border border-slate-200"
             >
               <FileSpreadsheet className="w-4 h-4" />
               <span>تصدير CSV</span>
@@ -159,7 +159,17 @@ export const BOQView: React.FC<BOQViewProps> = ({
         </div>
 
         {/* Financial KPI Dashboard Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 qto-stagger">
+        <div className="sm:hidden rounded-xl bg-slate-50 border border-slate-200/80 p-4">
+          <span className="text-xs text-slate-500">الإجمالي شامل الضريبة</span>
+          <div key={grandTotal} className="qto-tick mt-0.5 text-2xl font-black font-mono text-slate-900">
+            {grandTotal.toLocaleString("en-US", { maximumFractionDigits: 1 })}{" "}
+            <span className="text-xs font-normal text-slate-500">{metadata.currencySymbol}</span>
+          </div>
+          <div className="mt-1.5 text-[12px] text-slate-500 font-mono">
+            قبل الضريبة {totalCostBeforeTax.toLocaleString("en-US", { maximumFractionDigits: 1 })} · الضريبة {taxAmount.toLocaleString("en-US", { maximumFractionDigits: 1 })}
+          </div>
+        </div>
+        <div className="hidden sm:grid grid-cols-4 gap-4 qto-stagger">
           <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80">
             <span className="text-xs text-slate-500 block">إجمالي الكميات قبل الضريبة</span>
             <span key={totalCostBeforeTax} className="qto-tick text-lg sm:text-xl font-bold font-mono text-slate-900 mt-1 block">
@@ -212,7 +222,11 @@ export const BOQView: React.FC<BOQViewProps> = ({
 
         {pendingReviewItems.length > 0 && (
           <div className="mt-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex flex-wrap items-center justify-between gap-2">
-            <span>
+            <span className="sm:hidden">
+              <strong>{pendingReviewItems.length}</strong> بند لم يُعتمد بعد · المعتمد حالياً{" "}
+              <strong className="font-mono">{approvedGrandTotal.toLocaleString("en-US", { maximumFractionDigits: 1 })} {metadata.currencySymbol}</strong>
+            </span>
+            <span className="hidden sm:inline">
               تنبيه اعتماد: يوجد <strong>{pendingReviewItems.length}</strong> بند غير معتمد بعد (أو مستعاد للمراجعة) بقيمة تقديرية{" "}
               <strong className="font-mono">{pendingSubtotal.toLocaleString("en-US", { maximumFractionDigits: 1 })} {metadata.currencySymbol}</strong> — الإجمالي المعتمد حالياً:{" "}
               <strong className="font-mono text-emerald-800">{approvedGrandTotal.toLocaleString("en-US", { maximumFractionDigits: 1 })} {metadata.currencySymbol}</strong> شامل الضريبة.
@@ -292,8 +306,8 @@ export const BOQView: React.FC<BOQViewProps> = ({
       {/* Main BOQ Presentation Tables */}
       {displayMode === "quotation" ? (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden print:border-none print:shadow-none qto-fade-in">
-          <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 print:hidden">
-            <div className="text-xs font-bold text-slate-700">
+          <div className="px-4 py-2.5 sm:p-4 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 print:hidden">
+            <div className="hidden sm:block text-xs font-bold text-slate-700">
               عرض السعر — مقسّم إلى أقسام حسب تسلسل التنفيذ بالموقع، وهو نفس ما يُطبع ويُصدَّر
             </div>
             <button

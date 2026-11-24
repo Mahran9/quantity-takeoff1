@@ -45,6 +45,26 @@ const CURRENCIES: [string, string][] = [
   ["KWD", "دينار كويتي"],
 ];
 
+/** Counts up to the new value so a changed total is noticed. */
+const CountUp: React.FC<{ value: number }> = ({ value }) => {
+  const [shown, setShown] = useState(value);
+  const from = React.useRef(value);
+  React.useEffect(() => {
+    const reduce = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (reduce || from.current === value) { from.current = value; setShown(value); return; }
+    const a = from.current, b = value, t0 = performance.now(), D = 800;
+    let raf = 0;
+    const tick = (t: number) => {
+      const k = Math.min(1, (t - t0) / D), e = 1 - Math.pow(1 - k, 3);
+      setShown(a + (b - a) * e);
+      if (k < 1) raf = requestAnimationFrame(tick); else from.current = b;
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [value]);
+  return <>{money(shown)}</>;
+};
+
 const money = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 2 });
 
 export const HomeScreen: React.FC<Props> = ({ metadata, setMetadata, sheets, items, onTab, onUpload, onQuotation, onExcel, onAutoAll, onProjects, onVisualSearch, onSteelCalc, onSettings }) => {
@@ -117,7 +137,7 @@ export const HomeScreen: React.FC<Props> = ({ metadata, setMetadata, sheets, ite
         </button>
         <div className="mt-5 text-[13px] text-slate-300 font-semibold">الإجمالي شامل الضريبة {metadata.taxRate}%</div>
         <div className="mt-1 flex items-baseline gap-2" dir="rtl">
-          <span className="text-[40px] sm:text-5xl leading-none font-extrabold tracking-tight font-mono">{money(q.grandTotal)}</span>
+          <span className="text-[40px] sm:text-5xl leading-none font-extrabold tracking-tight font-mono"><CountUp value={q.grandTotal} /></span>
           <span className="text-base font-bold text-teal-300">{metadata.currencySymbol}</span>
         </div>
         <div className="mt-2 text-[12px] text-slate-400">
@@ -177,7 +197,7 @@ export const HomeScreen: React.FC<Props> = ({ metadata, setMetadata, sheets, ite
                   <span className="block text-[12.5px] text-slate-500 font-semibold">{s.line}</span>
                   {s.pct !== undefined && s.pct > 0 && !s.done && (
                     <span className="mt-2 block h-1.5 rounded-full bg-slate-200 overflow-hidden">
-                      <span className="block h-full rounded-full bg-teal-500" style={{ width: `${Math.round(s.pct * 100)}%` }} />
+                      <span className="block h-full rounded-full bg-teal-500 qto-grow" style={{ width: `${Math.round(s.pct * 100)}%` }} />
                     </span>
                   )}
                 </span>

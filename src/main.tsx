@@ -3,6 +3,9 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import "./index.css";
+import { initTheme } from "./theme";
+
+initTheme();
 
 // A stale cached page asking for a chunk that a newer deployment removed: reload once to pick up the new build.
 window.addEventListener("vite:preloadError", (e) => {

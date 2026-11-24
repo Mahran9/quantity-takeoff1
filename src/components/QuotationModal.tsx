@@ -49,7 +49,7 @@ const PreviewScaler: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   }, []);
   return (
     <div ref={outer} className="w-full flex justify-center" style={{ height: h }}>
-      <div ref={inner} style={{ width: "fit-content", transform: `scale(${scale})`, transformOrigin: "top center" }} className="shadow-xl bg-white">
+      <div ref={inner} style={{ width: "fit-content", transform: `scale(${scale})`, transformOrigin: "top center" }} className="shadow-xl bg-white qt-paper">
         {children}
       </div>
     </div>
@@ -318,7 +318,7 @@ export const QuotationModal: React.FC<Props> = ({ isOpen, onClose, metadata, com
       </div>
 
       {createPortal(
-        <div id="qt-print-root">
+        <div id="qt-print-root" className="qt-paper">
           <QuotationSheet data={data} metadata={metadata} company={company} meta={meta} terms={terms} />
         </div>,
         document.body

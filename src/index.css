@@ -347,3 +347,483 @@ html, body { overflow-x: clip; max-width: 100%; }
 .app-shell .fixed.inset-0 :is(div, header):is(.bg-slate-900, .bg-slate-800, .bg-slate-950):not(.keep-dark) :is(p, span, div, small):is(.text-slate-400, .text-slate-500) { color: var(--muted); }
 .app-shell .fixed.inset-0 :is(div, header):is(.bg-slate-900, .bg-slate-800, .bg-slate-950):not(.keep-dark) button { color: var(--ink); background-color: transparent; border: 1px solid var(--line-strong); }
 input[type="checkbox"], input[type="radio"], input[type="range"] { accent-color: var(--accent-deep); }
+
+/* ------------------------------------------------------------------ */
+/* Night mode: same structure, inverted neutral scale, deep teal-ink    */
+/* ------------------------------------------------------------------ */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #0a1418;
+  --surface: #12222a;
+  --line-soft: #1b3038;
+  --ink: #e8f1f0;
+  --ink-2: #b7c4c5;
+  --muted: #8da0a5;
+  --line: #22393f;
+  --line-strong: #2f4a52;
+  --accent-soft: #123c38;
+  --danger: #f0707d;
+  --color-slate-50: #0b171b;
+  --color-slate-100: #12222a;
+  --color-slate-200: #1d323a;
+  --color-slate-300: #2c464e;
+  --color-slate-400: #6b8088;
+  --color-slate-500: #8da0a5;
+  --color-slate-600: #b7c4c5;
+  --color-slate-700: #d3dcdc;
+  --color-slate-800: #e5ecea;
+  --color-slate-900: #f1f6f5;
+  --color-slate-950: #ffffff;
+  --color-gray-50: #0b171b;
+  --color-gray-100: #12222a;
+  --color-gray-200: #1d323a;
+  --color-gray-300: #2c464e;
+  --color-gray-400: #6b8088;
+  --color-gray-500: #8da0a5;
+  --color-gray-600: #b7c4c5;
+  --color-gray-700: #d3dcdc;
+  --color-gray-800: #e5ecea;
+  --color-gray-900: #f1f6f5;
+  --color-gray-950: #ffffff;
+  --color-zinc-50: #0b171b;
+  --color-zinc-100: #12222a;
+  --color-zinc-200: #1d323a;
+  --color-zinc-300: #2c464e;
+  --color-zinc-400: #6b8088;
+  --color-zinc-500: #8da0a5;
+  --color-zinc-600: #b7c4c5;
+  --color-zinc-700: #d3dcdc;
+  --color-zinc-800: #e5ecea;
+  --color-zinc-900: #f1f6f5;
+  --color-zinc-950: #ffffff;
+  --color-neutral-50: #0b171b;
+  --color-neutral-100: #12222a;
+  --color-neutral-200: #1d323a;
+  --color-neutral-300: #2c464e;
+  --color-neutral-400: #6b8088;
+  --color-neutral-500: #8da0a5;
+  --color-neutral-600: #b7c4c5;
+  --color-neutral-700: #d3dcdc;
+  --color-neutral-800: #e5ecea;
+  --color-neutral-900: #f1f6f5;
+  --color-neutral-950: #ffffff;
+  --color-stone-50: #0b171b;
+  --color-stone-100: #12222a;
+  --color-stone-200: #1d323a;
+  --color-stone-300: #2c464e;
+  --color-stone-400: #6b8088;
+  --color-stone-500: #8da0a5;
+  --color-stone-600: #b7c4c5;
+  --color-stone-700: #d3dcdc;
+  --color-stone-800: #e5ecea;
+  --color-stone-900: #f1f6f5;
+  --color-stone-950: #ffffff;
+  --color-blue-50: #0b171b;
+  --color-blue-100: #12222a;
+  --color-blue-200: #1d323a;
+  --color-blue-300: #2c464e;
+  --color-blue-400: #6b8088;
+  --color-blue-500: #8da0a5;
+  --color-blue-600: #b7c4c5;
+  --color-blue-700: #d3dcdc;
+  --color-blue-800: #e5ecea;
+  --color-blue-900: #f1f6f5;
+  --color-blue-950: #ffffff;
+  --color-indigo-50: #0b171b;
+  --color-indigo-100: #12222a;
+  --color-indigo-200: #1d323a;
+  --color-indigo-300: #2c464e;
+  --color-indigo-400: #6b8088;
+  --color-indigo-500: #8da0a5;
+  --color-indigo-600: #b7c4c5;
+  --color-indigo-700: #d3dcdc;
+  --color-indigo-800: #e5ecea;
+  --color-indigo-900: #f1f6f5;
+  --color-indigo-950: #ffffff;
+  --color-purple-50: #0b171b;
+  --color-purple-100: #12222a;
+  --color-purple-200: #1d323a;
+  --color-purple-300: #2c464e;
+  --color-purple-400: #6b8088;
+  --color-purple-500: #8da0a5;
+  --color-purple-600: #b7c4c5;
+  --color-purple-700: #d3dcdc;
+  --color-purple-800: #e5ecea;
+  --color-purple-900: #f1f6f5;
+  --color-purple-950: #ffffff;
+  --color-violet-50: #0b171b;
+  --color-violet-100: #12222a;
+  --color-violet-200: #1d323a;
+  --color-violet-300: #2c464e;
+  --color-violet-400: #6b8088;
+  --color-violet-500: #8da0a5;
+  --color-violet-600: #b7c4c5;
+  --color-violet-700: #d3dcdc;
+  --color-violet-800: #e5ecea;
+  --color-violet-900: #f1f6f5;
+  --color-violet-950: #ffffff;
+  --color-orange-50: #0b171b;
+  --color-orange-100: #12222a;
+  --color-orange-200: #1d323a;
+  --color-orange-300: #2c464e;
+  --color-orange-400: #6b8088;
+  --color-orange-500: #8da0a5;
+  --color-orange-600: #b7c4c5;
+  --color-orange-700: #d3dcdc;
+  --color-orange-800: #e5ecea;
+  --color-orange-900: #f1f6f5;
+  --color-orange-950: #ffffff;
+  --color-amber-50: #0e2d2a;
+  --color-amber-100: #11403b;
+  --color-amber-200: #165a53;
+  --color-amber-300: #1f8a7c;
+  --color-amber-400: #2dd4bf;
+  --color-amber-500: #14b8a6;
+  --color-amber-600: #2bc9b6;
+  --color-amber-700: #5eead4;
+  --color-amber-800: #99f6e4;
+  --color-amber-900: #ccfbf1;
+  --color-amber-950: #e6fffb;
+  --color-yellow-50: #0e2d2a;
+  --color-yellow-100: #11403b;
+  --color-yellow-200: #165a53;
+  --color-yellow-300: #1f8a7c;
+  --color-yellow-400: #2dd4bf;
+  --color-yellow-500: #14b8a6;
+  --color-yellow-600: #2bc9b6;
+  --color-yellow-700: #5eead4;
+  --color-yellow-800: #99f6e4;
+  --color-yellow-900: #ccfbf1;
+  --color-yellow-950: #e6fffb;
+  --color-cyan-50: #0e2d2a;
+  --color-cyan-100: #11403b;
+  --color-cyan-200: #165a53;
+  --color-cyan-300: #1f8a7c;
+  --color-cyan-400: #2dd4bf;
+  --color-cyan-500: #14b8a6;
+  --color-cyan-600: #2bc9b6;
+  --color-cyan-700: #5eead4;
+  --color-cyan-800: #99f6e4;
+  --color-cyan-900: #ccfbf1;
+  --color-cyan-950: #e6fffb;
+  --color-sky-50: #0e2d2a;
+  --color-sky-100: #11403b;
+  --color-sky-200: #165a53;
+  --color-sky-300: #1f8a7c;
+  --color-sky-400: #2dd4bf;
+  --color-sky-500: #14b8a6;
+  --color-sky-600: #2bc9b6;
+  --color-sky-700: #5eead4;
+  --color-sky-800: #99f6e4;
+  --color-sky-900: #ccfbf1;
+  --color-sky-950: #e6fffb;
+  --color-teal-50: #0e2d2a;
+  --color-teal-100: #11403b;
+  --color-teal-200: #165a53;
+  --color-teal-300: #1f8a7c;
+  --color-teal-400: #2dd4bf;
+  --color-teal-500: #14b8a6;
+  --color-teal-600: #2bc9b6;
+  --color-teal-700: #5eead4;
+  --color-teal-800: #99f6e4;
+  --color-teal-900: #ccfbf1;
+  --color-teal-950: #e6fffb;
+  --color-emerald-50: #0e2d2a;
+  --color-emerald-100: #11403b;
+  --color-emerald-200: #165a53;
+  --color-emerald-300: #1f8a7c;
+  --color-emerald-400: #2dd4bf;
+  --color-emerald-500: #14b8a6;
+  --color-emerald-600: #2bc9b6;
+  --color-emerald-700: #5eead4;
+  --color-emerald-800: #99f6e4;
+  --color-emerald-900: #ccfbf1;
+  --color-emerald-950: #e6fffb;
+  --color-green-50: #0e2d2a;
+  --color-green-100: #11403b;
+  --color-green-200: #165a53;
+  --color-green-300: #1f8a7c;
+  --color-green-400: #2dd4bf;
+  --color-green-500: #14b8a6;
+  --color-green-600: #2bc9b6;
+  --color-green-700: #5eead4;
+  --color-green-800: #99f6e4;
+  --color-green-900: #ccfbf1;
+  --color-green-950: #e6fffb;
+  --color-lime-50: #0e2d2a;
+  --color-lime-100: #11403b;
+  --color-lime-200: #165a53;
+  --color-lime-300: #1f8a7c;
+  --color-lime-400: #2dd4bf;
+  --color-lime-500: #14b8a6;
+  --color-lime-600: #2bc9b6;
+  --color-lime-700: #5eead4;
+  --color-lime-800: #99f6e4;
+  --color-lime-900: #ccfbf1;
+  --color-lime-950: #e6fffb;
+  --color-rose-50: #321a1e;
+  --color-rose-100: #431f24;
+  --color-rose-200: #5e2a31;
+  --color-rose-300: #8a3a44;
+  --color-rose-400: #f0707d;
+  --color-rose-500: #f43f5e;
+  --color-rose-600: #fb7185;
+  --color-rose-700: #fda4af;
+  --color-rose-800: #fecdd3;
+  --color-rose-900: #ffe4e6;
+  --color-rose-950: #fff1f2;
+  --color-red-50: #321a1e;
+  --color-red-100: #431f24;
+  --color-red-200: #5e2a31;
+  --color-red-300: #8a3a44;
+  --color-red-400: #f0707d;
+  --color-red-500: #f43f5e;
+  --color-red-600: #fb7185;
+  --color-red-700: #fda4af;
+  --color-red-800: #fecdd3;
+  --color-red-900: #ffe4e6;
+  --color-red-950: #fff1f2;
+}
+/* the quotation document is paper: it never goes dark */
+:root[data-theme="dark"] .qt-paper {
+  --ink: #0f2229; --muted: #6b8088; --line: #d3dcdc; --surface: #fff;
+  color-scheme: light; color: #0f2229;
+  --color-slate-50: #eef3f2;
+  --color-slate-100: #e5ecea;
+  --color-slate-200: #d3dcdc;
+  --color-slate-300: #b7c4c5;
+  --color-slate-400: #8da0a5;
+  --color-slate-500: #6b8088;
+  --color-slate-600: #3b5159;
+  --color-slate-700: #2a3e45;
+  --color-slate-800: #1b2f37;
+  --color-slate-900: #0f2229;
+  --color-slate-950: #081519;
+  --color-gray-50: #eef3f2;
+  --color-gray-100: #e5ecea;
+  --color-gray-200: #d3dcdc;
+  --color-gray-300: #b7c4c5;
+  --color-gray-400: #8da0a5;
+  --color-gray-500: #6b8088;
+  --color-gray-600: #3b5159;
+  --color-gray-700: #2a3e45;
+  --color-gray-800: #1b2f37;
+  --color-gray-900: #0f2229;
+  --color-gray-950: #081519;
+  --color-zinc-50: #eef3f2;
+  --color-zinc-100: #e5ecea;
+  --color-zinc-200: #d3dcdc;
+  --color-zinc-300: #b7c4c5;
+  --color-zinc-400: #8da0a5;
+  --color-zinc-500: #6b8088;
+  --color-zinc-600: #3b5159;
+  --color-zinc-700: #2a3e45;
+  --color-zinc-800: #1b2f37;
+  --color-zinc-900: #0f2229;
+  --color-zinc-950: #081519;
+  --color-neutral-50: #eef3f2;
+  --color-neutral-100: #e5ecea;
+  --color-neutral-200: #d3dcdc;
+  --color-neutral-300: #b7c4c5;
+  --color-neutral-400: #8da0a5;
+  --color-neutral-500: #6b8088;
+  --color-neutral-600: #3b5159;
+  --color-neutral-700: #2a3e45;
+  --color-neutral-800: #1b2f37;
+  --color-neutral-900: #0f2229;
+  --color-neutral-950: #081519;
+  --color-stone-50: #eef3f2;
+  --color-stone-100: #e5ecea;
+  --color-stone-200: #d3dcdc;
+  --color-stone-300: #b7c4c5;
+  --color-stone-400: #8da0a5;
+  --color-stone-500: #6b8088;
+  --color-stone-600: #3b5159;
+  --color-stone-700: #2a3e45;
+  --color-stone-800: #1b2f37;
+  --color-stone-900: #0f2229;
+  --color-stone-950: #081519;
+  --color-amber-50: #effdf9;
+  --color-amber-100: #d3faf1;
+  --color-amber-200: #a7f3e2;
+  --color-amber-300: #6ee7d0;
+  --color-amber-400: #2dd4bf;
+  --color-amber-500: #14b8a6;
+  --color-amber-600: #0d9488;
+  --color-amber-700: #0f766e;
+  --color-amber-800: #115e59;
+  --color-amber-900: #134e4a;
+  --color-amber-950: #0b3b38;
+  --color-yellow-50: #effdf9;
+  --color-yellow-100: #d3faf1;
+  --color-yellow-200: #a7f3e2;
+  --color-yellow-300: #6ee7d0;
+  --color-yellow-400: #2dd4bf;
+  --color-yellow-500: #14b8a6;
+  --color-yellow-600: #0d9488;
+  --color-yellow-700: #0f766e;
+  --color-yellow-800: #115e59;
+  --color-yellow-900: #134e4a;
+  --color-yellow-950: #0b3b38;
+  --color-cyan-50: #effdf9;
+  --color-cyan-100: #d3faf1;
+  --color-cyan-200: #a7f3e2;
+  --color-cyan-300: #6ee7d0;
+  --color-cyan-400: #2dd4bf;
+  --color-cyan-500: #14b8a6;
+  --color-cyan-600: #0d9488;
+  --color-cyan-700: #0f766e;
+  --color-cyan-800: #115e59;
+  --color-cyan-900: #134e4a;
+  --color-cyan-950: #0b3b38;
+  --color-sky-50: #effdf9;
+  --color-sky-100: #d3faf1;
+  --color-sky-200: #a7f3e2;
+  --color-sky-300: #6ee7d0;
+  --color-sky-400: #2dd4bf;
+  --color-sky-500: #14b8a6;
+  --color-sky-600: #0d9488;
+  --color-sky-700: #0f766e;
+  --color-sky-800: #115e59;
+  --color-sky-900: #134e4a;
+  --color-sky-950: #0b3b38;
+  --color-teal-50: #effdf9;
+  --color-teal-100: #d3faf1;
+  --color-teal-200: #a7f3e2;
+  --color-teal-300: #6ee7d0;
+  --color-teal-400: #2dd4bf;
+  --color-teal-500: #14b8a6;
+  --color-teal-600: #0d9488;
+  --color-teal-700: #0f766e;
+  --color-teal-800: #115e59;
+  --color-teal-900: #134e4a;
+  --color-teal-950: #0b3b38;
+  --color-blue-50: #eef3f2;
+  --color-blue-100: #e5ecea;
+  --color-blue-200: #d3dcdc;
+  --color-blue-300: #b7c4c5;
+  --color-blue-400: #8da0a5;
+  --color-blue-500: #6b8088;
+  --color-blue-600: #3b5159;
+  --color-blue-700: #2a3e45;
+  --color-blue-800: #1b2f37;
+  --color-blue-900: #0f2229;
+  --color-blue-950: #081519;
+  --color-indigo-50: #eef3f2;
+  --color-indigo-100: #e5ecea;
+  --color-indigo-200: #d3dcdc;
+  --color-indigo-300: #b7c4c5;
+  --color-indigo-400: #8da0a5;
+  --color-indigo-500: #6b8088;
+  --color-indigo-600: #3b5159;
+  --color-indigo-700: #2a3e45;
+  --color-indigo-800: #1b2f37;
+  --color-indigo-900: #0f2229;
+  --color-indigo-950: #081519;
+  --color-purple-50: #eef3f2;
+  --color-purple-100: #e5ecea;
+  --color-purple-200: #d3dcdc;
+  --color-purple-300: #b7c4c5;
+  --color-purple-400: #8da0a5;
+  --color-purple-500: #6b8088;
+  --color-purple-600: #3b5159;
+  --color-purple-700: #2a3e45;
+  --color-purple-800: #1b2f37;
+  --color-purple-900: #0f2229;
+  --color-purple-950: #081519;
+  --color-violet-50: #eef3f2;
+  --color-violet-100: #e5ecea;
+  --color-violet-200: #d3dcdc;
+  --color-violet-300: #b7c4c5;
+  --color-violet-400: #8da0a5;
+  --color-violet-500: #6b8088;
+  --color-violet-600: #3b5159;
+  --color-violet-700: #2a3e45;
+  --color-violet-800: #1b2f37;
+  --color-violet-900: #0f2229;
+  --color-violet-950: #081519;
+  --color-orange-50: #eef3f2;
+  --color-orange-100: #e5ecea;
+  --color-orange-200: #d3dcdc;
+  --color-orange-300: #b7c4c5;
+  --color-orange-400: #8da0a5;
+  --color-orange-500: #6b8088;
+  --color-orange-600: #3b5159;
+  --color-orange-700: #2a3e45;
+  --color-orange-800: #1b2f37;
+  --color-orange-900: #0f2229;
+  --color-orange-950: #081519;
+  --color-emerald-50: #effdf9;
+  --color-emerald-100: #d3faf1;
+  --color-emerald-200: #a7f3e2;
+  --color-emerald-300: #6ee7d0;
+  --color-emerald-400: #2dd4bf;
+  --color-emerald-500: #14b8a6;
+  --color-emerald-600: #0d9488;
+  --color-emerald-700: #0f766e;
+  --color-emerald-800: #115e59;
+  --color-emerald-900: #134e4a;
+  --color-emerald-950: #0b3b38;
+  --color-green-50: #effdf9;
+  --color-green-100: #d3faf1;
+  --color-green-200: #a7f3e2;
+  --color-green-300: #6ee7d0;
+  --color-green-400: #2dd4bf;
+  --color-green-500: #14b8a6;
+  --color-green-600: #0d9488;
+  --color-green-700: #0f766e;
+  --color-green-800: #115e59;
+  --color-green-900: #134e4a;
+  --color-green-950: #0b3b38;
+  --color-lime-50: #effdf9;
+  --color-lime-100: #d3faf1;
+  --color-lime-200: #a7f3e2;
+  --color-lime-300: #6ee7d0;
+  --color-lime-400: #2dd4bf;
+  --color-lime-500: #14b8a6;
+  --color-lime-600: #0d9488;
+  --color-lime-700: #0f766e;
+  --color-lime-800: #115e59;
+  --color-lime-900: #134e4a;
+  --color-lime-950: #0b3b38;
+}
+:root[data-theme="dark"] .bg-white { background-color: var(--surface); }
+:root[data-theme="dark"] .qt-paper.bg-white, :root[data-theme="dark"] .qt-paper .bg-white { background-color: #fff; }
+:root[data-theme="dark"] :is(.bg-slate-900, .bg-slate-800, .bg-slate-950):not(.keep-dark) { background-color: #1d323a; color: #f1f6f5; }
+:root[data-theme="dark"] :is(.bg-slate-900, .bg-slate-800, .bg-slate-950) :is(.text-slate-900, .text-slate-800) { color: #f1f6f5; }
+:root[data-theme="dark"] .hero-card { background: radial-gradient(120% 90% at 100% 0%, #1b5a57 0%, transparent 55%), linear-gradient(160deg, #123a3f, #0c242b); box-shadow: inset 0 0 0 1px rgb(94 234 212 / 0.12); }
+:root[data-theme="dark"] .card { box-shadow: 0 1px 0 rgb(255 255 255 / 0.03) inset; }
+:root[data-theme="dark"] .nav-bottom button.is-active .pill { background: #134a45; color: #5eead4; }
+:root[data-theme="dark"] .qto-skeleton { background: linear-gradient(90deg, #12222a 25%, #1b3038 50%, #12222a 75%); background-size: 200% 100%; }
+:root[data-theme="dark"] .qto-marked { background: linear-gradient(transparent 14%, rgb(20 184 166 / 0.4) 14% 90%, transparent 90%); }
+:root[data-theme="dark"] .app-shell tbody tr:hover { background-color: rgb(255 255 255 / 0.04); }
+:root[data-theme="dark"] ::selection { background: rgb(45 212 191 / 0.35); }
+.qto-cta { color: #062b27; }
+.hero-card { position: relative; overflow: hidden; background: linear-gradient(160deg, #123238, #0f2229); }
+.hero-card::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(115deg, transparent 35%, rgb(94 234 212 / 0.16) 50%, transparent 65%); transform: translateX(120%); animation: qto-sweep 1.6s 0.5s var(--qto-ease) 1 forwards; }
+
+/* Theme switch: one soft cross-fade instead of a hard flip */
+html.theme-fade, html.theme-fade * { transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease !important; }
+.theme-toggle { position: relative; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); overflow: hidden; }
+.theme-toggle svg { position: absolute; width: 20px; height: 20px; transition: transform 0.5s var(--qto-ease-spring), opacity 0.3s ease; }
+.theme-toggle .t-sun { transform: rotate(0) scale(1); opacity: 1; color: #d97706; }
+.theme-toggle .t-moon { transform: rotate(-90deg) scale(0.4); opacity: 0; color: #5eead4; }
+:root[data-theme="dark"] .theme-toggle .t-sun { transform: rotate(90deg) scale(0.4); opacity: 0; }
+:root[data-theme="dark"] .theme-toggle .t-moon { transform: rotate(0) scale(1); opacity: 1; }
+
+@keyframes qto-sweep { to { transform: translateX(-120%); } }
+@keyframes qto-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes qto-pill { from { transform: scaleX(0.55); opacity: 0.4; } to { transform: scaleX(1); opacity: 1; } }
+.qto-grow { transform-origin: right center; animation: qto-grow 0.9s 0.2s var(--qto-ease) both; }
+.nav-bottom button.is-active .pill { animation: qto-pill 0.38s var(--qto-ease-spring) both; }
+.qto-view-in { animation: qto-rise 0.34s var(--qto-ease) both; }
+@media (prefers-reduced-motion: reduce) { .hero-card::after { display: none; } .qto-grow { animation: none; } }
+@media print { .hero-card::after { display: none; } }
+/* the total card is a dark block in both themes: its secondary text must stay light */
+.hero-card :is(.text-slate-300, .text-slate-400) { color: #a9bfc2; }
+.hero-card .text-teal-300 { color: #5eead4; }
+
+/* solid accent buttons keep a deep fill with white text in night mode */
+:root[data-theme="dark"] .bg-teal-600, :root[data-theme="dark"] .bg-emerald-600, :root[data-theme="dark"] .bg-green-600, :root[data-theme="dark"] .bg-cyan-600, :root[data-theme="dark"] .bg-sky-600, :root[data-theme="dark"] .bg-amber-600, :root[data-theme="dark"] .bg-yellow-600, :root[data-theme="dark"] .bg-lime-600 { background-color: #0d9488; }
+:root[data-theme="dark"] .bg-teal-700, :root[data-theme="dark"] .bg-emerald-700, :root[data-theme="dark"] .bg-green-700, :root[data-theme="dark"] .bg-cyan-700, :root[data-theme="dark"] .bg-sky-700, :root[data-theme="dark"] .bg-amber-700, :root[data-theme="dark"] .bg-yellow-700, :root[data-theme="dark"] .bg-lime-700 { background-color: #0f766e; }
+:root[data-theme="dark"] .bg-teal-800, :root[data-theme="dark"] .bg-emerald-800, :root[data-theme="dark"] .bg-green-800, :root[data-theme="dark"] .bg-cyan-800, :root[data-theme="dark"] .bg-sky-800, :root[data-theme="dark"] .bg-amber-800, :root[data-theme="dark"] .bg-yellow-800, :root[data-theme="dark"] .bg-lime-800 { background-color: #115e59; }

@@ -1,5 +1,6 @@
 import React from "react";
-import { House, Layers, ListChecks, Receipt, FolderKanban, ChevronDown } from "lucide-react";
+import { House, Layers, ListChecks, Receipt, FolderKanban, ChevronDown, Sun, Moon } from "lucide-react";
+import { toggleTheme, effectiveTheme } from "../theme";
 
 declare const __APP_BUILD__: string;
 export const APP_BUILD = typeof __APP_BUILD__ === "string" ? __APP_BUILD__ : "dev";
@@ -69,9 +70,27 @@ export const SideNav: React.FC<SideProps> = ({ tab, onTab, counts, projectName, 
         </button>
       ))}
     </nav>
-    <div className="mt-auto text-[10px] font-mono text-slate-400 px-1" dir="ltr">{APP_BUILD}</div>
+    <div className="mt-auto flex items-center justify-between px-1">
+      <ThemeToggle />
+      <span className="text-[10px] font-mono text-slate-400" dir="ltr">{APP_BUILD}</span>
+    </div>
   </aside>
 );
+
+/** Day / night switch: sun and moon swap with a turn (the colour change itself cross-fades). */
+export const ThemeToggle: React.FC<{ className?: string }> = ({ className = "" }) => {
+  const [dark, setDark] = React.useState(() => effectiveTheme() === "dark");
+  React.useEffect(() => {
+    const on = () => setDark(effectiveTheme() === "dark");
+    window.addEventListener("qto-theme", on);
+    return () => window.removeEventListener("qto-theme", on);
+  }, []);
+  return (
+    <button onClick={toggleTheme} className={`theme-toggle ${className}`} aria-label={dark ? "الوضع النهاري" : "الوضع الليلي"} title={dark ? "الوضع النهاري" : "الوضع الليلي"}>
+      <Sun className="t-sun" /><Moon className="t-moon" />
+    </button>
+  );
+};
 
 /** Large screen title with an optional action on the opposite side. */
 export const ScreenHeader: React.FC<{ title: string; sub?: string; action?: React.ReactNode }> = ({ title, sub, action }) => (
@@ -80,6 +99,9 @@ export const ScreenHeader: React.FC<{ title: string; sub?: string; action?: Reac
       <h1 className="text-[26px] leading-tight font-extrabold text-slate-900 truncate">{title}</h1>
       {sub && <p className="mt-0.5 text-[13px] text-slate-500 font-semibold">{sub}</p>}
     </div>
-    {action}
+    <div className="flex items-center gap-2 shrink-0">
+      {action}
+      <ThemeToggle />
+    </div>
   </header>
 );

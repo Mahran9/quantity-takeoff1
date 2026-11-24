@@ -85,6 +85,15 @@ export function fromAi(items: AiItem[]): Candidate[] {
  * numbers. Only used when a scale was actually detected; a low-confidence scale yields nothing, because
  * a wrong scale would silently scale every quantity.
  */
+/** Black / grey is how every ordinary drawing is plotted; a colour bucket in black says nothing about what the lines are. */
+function isAchromatic(hex: string | undefined): boolean {
+  const h = String(hex || "").replace("#", "");
+  const f = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  if (!/^[0-9a-f]{6}$/i.test(f)) return true;
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(f.slice(i, i + 2), 16));
+  return Math.max(r, g, b) - Math.min(r, g, b) < 24;
+}
+
 export function readPdf(sheet: BlueprintSheet): Candidate[] {
   const v = sheet.pdfVector;
   const den = v?.detectedDenominator;
@@ -94,11 +103,13 @@ export function readPdf(sheet: BlueprintSheet): Candidate[] {
   const groups = [...v.groups].sort((a, b) => b.lengthPt - a.lengthPt).slice(0, 8);
   groups.forEach((g, i) => {
     const role = suggestRole(g, den);
+    // Trusted without a person pick: a layer the drawing itself named, same-size counted shapes, a coloured category, or a heavy (>= 0.4 mm) line weight.
+    const trusted = !!g.layer || role.mode === "count" || role.mode === "area" || !isAchromatic((g as any).color) || ((g as any).lineWidthMm ?? 0) >= 0.4;
     const push = (q: number, mode: string, hint: string, idSuffix: string, count?: number) => {
       if (!(q > 0)) return;
       out.push({
         id: `pdf-${g.id}-${i}${idSuffix}`,
-        description: g.layer ? `${g.label} — ${hint}` : `خطوط غير مسمّاة (${g.label}) — مجموع كل الخطوط بهذا اللون والسمك`,
+        description: trusted ? `${g.label} — ${hint}` : `خطوط غير مسمّاة (${g.label}) — مجموع كل الخطوط بهذا اللون والسمك`,
         category: "أعمال متنوعة أخرى",
         dim: mode === "count" ? "count" : mode === "area" ? "area" : "linear",
         unit: mode === "count" ? "عدد" : mode === "area" ? "م²" : "م.ط",
@@ -106,11 +117,12 @@ export function readPdf(sheet: BlueprintSheet): Candidate[] {
         sources: ["pdf"],
         // A group named by the drawing's own layer is an element; a bare colour/thickness bucket is every line of that
         // look added together (hatching, text outlines, furniture) and must never reach the BOQ unless the person picks it.
-        confidence: sure && g.layer ? "medium" : "low",
+        confidence: sure && trusted ? "medium" : "low",
         evidence: `رسم PDF متجه بمقياس 1:${den} (${sure ? "مؤكَّد من أرقام الأبعاد" : "تقدير يحتاج تأكيد"}) — ${g.pathCount} عنصر`,
         checks: [],
-        selected: sure && !!g.layer,
+        selected: sure && trusted,
         layer: g.layer || g.label,
+        named: !!g.layer,
         count,
       } as Candidate);
     };

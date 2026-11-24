@@ -21,6 +21,8 @@ export interface Candidate {
   /** Results of cross-checks (agreement between sources, sanity limits). */
   checks: string[];
   selected: boolean;
+  /** The drawing itself named this group (a PDF layer). Bare colour/thickness buckets are not named. */
+  named?: boolean;
   /** Extra data kept for the BOQ line. */
   layer?: string;
   formula?: string;

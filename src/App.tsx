@@ -487,7 +487,9 @@ export default function App() {
         else cands = [...(sh.pdfVector ? readPdf(sh) : []), ...readMarks(sh)];
       } catch { cands = []; }
       const all = reconcile(cands).filter((c) => c.quantity > 0);
-      const chosen = all.filter((c) => c.selected);
+      // One tap adds only what is certain: CAD geometry, written marks, and PDF groups the drawing itself named.
+      // Unnamed colour/thickness buckets wait for the person in "حلّل اللوحة".
+      const chosen = all.filter((c) => c.selected && !(c.sources.length === 1 && c.sources[0] === "pdf" && !c.named));
       toReview += all.length - chosen.length;
       if (!chosen.length) continue;
       readSheets++;

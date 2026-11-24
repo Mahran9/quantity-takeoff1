@@ -1854,6 +1854,7 @@ export function renderDxfToCanvas(
   );
   const hlTarget = highlightedLayer ? highlightedLayer.trim().toUpperCase() : "";
 
+  let textBudget = 1500; // hard cap so a text-heavy sheet can never freeze or blacken the canvas
   const drawEntity = (entity: any, isHighlighted: boolean) => {
     const layer = entity.layer || "0";
     if (layerVisibility[layer] === false) return;
@@ -1933,12 +1934,23 @@ export function renderDxfToCanvas(
       ctx.fill();
       ctx.stroke();
     } else if (type === "TEXT" || type === "MTEXT") {
-      const x = tx(entity.x || entity.position?.x || 0);
-      const y = ty(entity.y || entity.position?.y || 0);
-      const fontSize = Math.max(8, Math.min(24, (entity.textHeight || 12) * scale));
-      ctx.font = `${fontSize}px sans-serif`;
-      ctx.fillStyle = isHighlighted ? "#fbbf24" : getLayerColor(layer, parsedDxf.layers);
-      ctx.fillText(cleanDxfText(String(entity.text || entity.string || "")), x, y);
+      // dxf-parser puts TEXT at startPoint and MTEXT at position; reading x/y left every label stacked at the origin.
+      const pos = entity.startPoint || entity.position || entity.insertionPoint || { x: entity.x || 0, y: entity.y || 0 };
+      const worldH = Number(entity.textHeight ?? entity.height ?? 0);
+      const px = worldH * scale;
+      // Labels smaller than ~5px are unreadable at this zoom and only smear the drawing: draw them once zoomed in.
+      if (px >= 5 || (isHighlighted && px > 0)) {
+        const raw = String(entity.text ?? entity.string ?? "");
+        const label = cleanDxfText(raw).replace(/\s+/g, " ").trim();
+        if (label && textBudget-- > 0) {
+          ctx.font = `${Math.min(48, Math.max(6, px))}px sans-serif`;
+          ctx.fillStyle = isHighlighted ? "#fbbf24" : getLayerColor(layer, parsedDxf.layers);
+          ctx.translate(tx(pos.x || 0), ty(pos.y || 0));
+          const rot = Number(entity.rotation || 0);
+          if (rot) ctx.rotate(-(rot * Math.PI) / 180);
+          ctx.fillText(label.slice(0, 80), 0, 0);
+        }
+      }
     }
     ctx.restore();
   };

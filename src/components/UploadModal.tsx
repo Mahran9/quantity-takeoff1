@@ -205,8 +205,8 @@ export const UploadModal: React.FC<UploadModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-xl w-full overflow-hidden text-right">
-        <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-xl w-full max-h-[92dvh] overflow-y-auto text-right">
+        <div className="bg-slate-900 text-white px-5 py-4 sticky top-0 z-10 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-400/30 flex items-center justify-center">
               <Upload className="w-5 h-5 text-amber-400" />
@@ -223,13 +223,13 @@ export const UploadModal: React.FC<UploadModalProps> = ({
           </button>
         </div>
 
-        <div className="p-6 space-y-4">
+        <div className="p-4 sm:p-6 space-y-4">
           <label className="block border-2 border-dashed border-slate-300 hover:border-amber-400 rounded-2xl p-6 text-center cursor-pointer bg-slate-50 transition-all">
             <input type="file" accept=".pdf,.dxf,.dwg,.png,.jpg,.jpeg,.webp" onChange={handleFileChange} className="hidden" />
             <div className="flex justify-center gap-3 mb-2 text-slate-400">
-              <FileText className="w-6 h-6 text-rose-500" />
-              <FileCode2 className="w-6 h-6 text-cyan-600" />
-              <ImageIcon className="w-6 h-6 text-emerald-600" />
+              <FileText className="w-6 h-6 text-slate-400" />
+              <FileCode2 className="w-6 h-6 text-slate-400" />
+              <ImageIcon className="w-6 h-6 text-slate-400" />
             </div>
             <div className="text-sm font-bold text-slate-800">
               {file ? file.name : "اختر ملف المخطط"}

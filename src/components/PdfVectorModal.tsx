@@ -84,7 +84,7 @@ export const PdfVectorModal: React.FC<Props> = ({ isOpen, onClose, sheet, onAddI
   if (!v) {
     return (
       <div className="fixed inset-0 z-50 bg-slate-950/70 flex items-center justify-center p-4 print:hidden">
-        <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6 text-right space-y-4">
+        <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[90dvh] overflow-y-auto p-6 text-right space-y-4">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 text-amber-700 font-bold">
               <ScanLine className="w-5 h-5" /> لا توجد خطوط متجهة في هذه اللوحة
@@ -132,7 +132,7 @@ export const PdfVectorModal: React.FC<Props> = ({ isOpen, onClose, sheet, onAddI
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-3 qto-fade-in print:hidden">
-      <div className="qto-pop-in bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-5xl w-full max-h-[92vh] flex flex-col overflow-hidden text-right">
+      <div className="qto-pop-in bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-5xl w-full max-h-[92dvh] flex flex-col overflow-hidden text-right">
         <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
           <div>
             <h2 className="text-base font-bold">حصر الكميات من رسم PDF المتجه</h2>

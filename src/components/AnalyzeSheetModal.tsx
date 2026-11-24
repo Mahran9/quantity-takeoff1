@@ -110,7 +110,7 @@ export const AnalyzeSheetModal: React.FC<Props> = ({ isOpen, onClose, sheet, exi
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-3 print:hidden" onClick={onClose}>
-      <div className="bg-white w-full sm:max-w-3xl h-[92vh] sm:h-auto sm:max-h-[92vh] sm:rounded-3xl rounded-t-3xl flex flex-col overflow-hidden text-right" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white w-full sm:max-w-3xl h-[92vh] sm:h-auto sm:max-h-[92dvh] sm:rounded-3xl rounded-t-3xl flex flex-col overflow-hidden text-right" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-4 py-3 bg-slate-900 text-white">
           <div>
             <div className="font-bold">تحليل اللوحة</div>

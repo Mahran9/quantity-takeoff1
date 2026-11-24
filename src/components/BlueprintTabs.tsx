@@ -30,41 +30,17 @@ export const BlueprintTabs: React.FC<BlueprintTabsProps> = ({
   onOpenUpload,
   onDeleteSheet,
 }) => {
-  const getDisciplineStyle = (discipline: DisciplineType) => {
-    switch (discipline) {
-      case "إنشائي":
-        return {
-          bg: "bg-blue-950/40 text-blue-300 border-blue-800/60",
-          badge: "bg-blue-500/20 text-blue-300 border-blue-500/30",
-        };
-      case "معماري":
-        return {
-          bg: "bg-emerald-950/40 text-emerald-300 border-emerald-800/60",
-          badge: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
-        };
-      case "صحي وتغذية":
-        return {
-          bg: "bg-orange-950/40 text-orange-300 border-orange-800/60",
-          badge: "bg-orange-500/20 text-orange-300 border-orange-500/30",
-        };
-      case "كهرباء وإنارة":
-        return {
-          bg: "bg-amber-950/40 text-amber-300 border-amber-800/60",
-          badge: "bg-amber-500/20 text-amber-300 border-amber-500/30",
-        };
-      default:
-        return {
-          bg: "bg-slate-800/40 text-slate-300 border-slate-700/60",
-          badge: "bg-slate-700/40 text-slate-300 border-slate-600/40",
-        };
-    }
-  };
+  // One calm style for every discipline: the discipline name already says what the sheet is.
+  const getDisciplineStyle = (_discipline: DisciplineType) => ({
+    bg: "bg-slate-800/40 text-slate-300 border-slate-700/60",
+    badge: "bg-slate-700/40 text-slate-300 border-slate-600/40",
+  });
 
   const activeSheet = sheets.find((s) => s.id === activeSheetId);
   const activeItemsCount = takeoffItems.filter((i) => i.sheetId === activeSheetId).length;
 
   return (
-    <div className="bg-slate-900 rounded-2xl border border-slate-800 shadow-lg overflow-hidden">
+    <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
       {/* Horizontal Scrollable Tabs */}
       <div className="flex items-center gap-2 px-4 py-2.5 overflow-x-auto scrollbar-thin scrollbar-thumb-slate-700">
         {sheets.map((sheet) => {

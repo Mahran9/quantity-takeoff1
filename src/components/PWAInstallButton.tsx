@@ -28,7 +28,7 @@ export const PWAInstallButton: React.FC<{ className?: string }> = ({ className =
     <>
       <button
         onClick={onClick}
-        className={`flex items-center gap-1.5 rounded-full border border-amber-400/60 bg-gradient-to-r from-amber-500 to-amber-400 px-3.5 py-2 text-xs font-bold text-slate-950 shadow-md shadow-amber-500/20 transition hover:from-amber-400 hover:to-amber-300 active:scale-[0.98] whitespace-nowrap ${className}`}
+        className={`flex items-center gap-1.5 rounded-full border border-amber-400/60 bg-amber-400 px-3.5 py-2 text-xs font-bold text-slate-950 transition hover:bg-amber-300 active:scale-[0.98] whitespace-nowrap ${className}`}
         title="تثبيت التطبيق على جهازك ليعمل كتطبيق مستقل وبدون إنترنت"
       >
         <Download className="w-4 h-4" />

@@ -54,7 +54,7 @@ import {
   markBackupDone,
 } from "./utils/projectStorage";
 
-export const APP_VERSION = "8.13.0";
+export const APP_VERSION = "8.13.1";
 
 // Persistent high-capacity storage powered by IndexedDB (src/utils/projectStorage.ts)
 
@@ -740,7 +740,7 @@ export default function App() {
       />
 
       <main key={tab} className="flex-1 w-full md:pr-64 pt-4 pb-28 md:pb-10 qto-view-in print:p-0">
-        <div className={`mx-auto w-full px-4 md:px-8 md:pt-4 ${tab === "home" ? "max-w-6xl" : tab === "sheets" ? "max-w-3xl" : "max-w-3xl md:max-w-6xl"}`}>
+        <div className={`mx-auto w-full px-4 md:px-8 md:pt-4 ${tab === "home" || tab === "sheets" ? "max-w-3xl" : "max-w-3xl md:max-w-6xl"}`}>
           {tab === "home" && (
             <HomeScreen
               metadata={metadata}

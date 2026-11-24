@@ -136,8 +136,7 @@ export const HomeScreen: React.FC<Props> = ({ metadata, setMetadata, sheets, ite
   const field = "rounded-xl border bg-white px-3 py-2.5 text-sm text-slate-900 w-full";
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 items-start qto-stagger">
-      <div className="lg:col-span-3 flex flex-col gap-5">
+    <div className="flex flex-col gap-5 qto-stagger">
       {/* Project + total: the one dark, memorable block */}
       <section className="hero-card p-5 sm:p-6">
         <button onClick={onProjects} className="flex items-center gap-2 text-right max-w-full" title="المشاريع">
@@ -187,9 +186,6 @@ export const HomeScreen: React.FC<Props> = ({ metadata, setMetadata, sheets, ite
           {autoMsg && <p className="mt-2 rounded-lg bg-teal-50 px-3 py-2 text-[13px] font-bold text-teal-900">{autoMsg}</p>}
         </section>
       )}
-
-      </div>
-      <div className="lg:col-span-2 flex flex-col gap-5">
 
       {/* Workflow: what is done, what is next */}
       <section>
@@ -305,7 +301,6 @@ export const HomeScreen: React.FC<Props> = ({ metadata, setMetadata, sheets, ite
           <span className="font-mono text-slate-400" dir="ltr">{APP_BUILD}</span>
         </button>
       </section>
-      </div>
     </div>
   );
 };

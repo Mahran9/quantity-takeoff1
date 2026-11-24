@@ -12,10 +12,14 @@ import {
   MoreHorizontal,
   Ruler,
   X,
+  RefreshCw,
 } from "lucide-react";
 import { ProjectMetadata, BlueprintSheet, TakeoffItem } from "../types";
 import { PWAInstallButton } from "./PWAInstallButton";
 import { buildQuotation } from "../utils/quotation";
+
+declare const __APP_BUILD__: string;
+const APP_BUILD = typeof __APP_BUILD__ === "string" ? __APP_BUILD__ : "dev";
 
 interface NavbarProps {
   metadata: ProjectMetadata;
@@ -59,6 +63,20 @@ export const Navbar: React.FC<NavbarProps> = ({
   const money = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 2 });
 
   const [more, setMore] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  // Drops the offline copy of the app (service worker + caches) and reloads. Saved projects (IndexedDB) are untouched.
+  const refreshApp = async () => {
+    setRefreshing(true);
+    try {
+      const regs = (await navigator.serviceWorker?.getRegistrations?.()) || [];
+      await Promise.all(regs.map((r) => r.unregister()));
+      const keys = (await caches?.keys?.()) || [];
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    } catch {
+      /* reload anyway */
+    }
+    window.location.reload();
+  };
   const symbols: Record<string, string> = { SAR: "ر.س", AED: "د.إ", USD: "$", EGP: "ج.م", QAR: "ر.ق", KWD: "د.ك" };
 
   const deskTab = (active: boolean) =>
@@ -126,7 +144,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Totals strip */}
-        <div className="bg-slate-950/70 border-t border-slate-800">
+        <div className="bg-slate-950 border-t border-slate-800">
           <div className="max-w-7xl mx-auto px-3 sm:px-6 h-9 flex items-center justify-between gap-3 text-xs font-mono">
             <div className="flex items-center gap-2 text-slate-400">
               <span className="font-sans">الصافي</span>
@@ -207,6 +225,12 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button className={sheetRow} onClick={() => { setMore(false); onOpenSettings(); }}><Settings className="w-5 h-5 text-slate-600" />الإعدادات</button>
             </div>
             <div className="mt-3 flex justify-center"><PWAInstallButton /></div>
+
+            <button className={`${sheetRow} mt-3 w-full`} onClick={refreshApp} disabled={refreshing}>
+              <RefreshCw className={`w-5 h-5 text-teal-600 ${refreshing ? "animate-spin" : ""}`} />
+              {refreshing ? "جارٍ التحديث…" : "تحديث التطبيق"}
+            </button>
+            <p className="mt-1.5 text-center text-[11px] text-slate-400 font-mono" dir="ltr">{APP_BUILD}</p>
 
             <h3 className="mt-5 mb-2 text-xs font-bold text-slate-500">بيانات المشروع</h3>
             <div className="grid grid-cols-2 gap-2.5">

@@ -37,7 +37,7 @@
   --qto-font: "Cairo", "Noto Sans Arabic", "Segoe UI", Tahoma, system-ui, -apple-system, sans-serif;
 }
 
-html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+html { background: var(--qto-surface); scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
   min-width: 320px;
@@ -94,7 +94,7 @@ body { font-variant-numeric: tabular-nums; }
 /* ------------------------------------------------------------------ */
 /* App shell polish (applies to existing components without rewrites)  */
 /* ------------------------------------------------------------------ */
-.app-shell { animation: qto-fade 0.45s ease-out both; }
+.app-shell { background: var(--qto-surface); animation: qto-fade 0.45s ease-out both; }
 
 /* Frosted, sticky header */
 .app-shell > header {
@@ -102,7 +102,6 @@ body { font-variant-numeric: tabular-nums; }
   -webkit-backdrop-filter: saturate(150%) blur(14px);
   backdrop-filter: saturate(150%) blur(14px);
   border-bottom: 0 !important;
-  box-shadow: 0 10px 30px -18px rgb(2 8 23 / 0.8);
 }
 
 /* Buttons: tactile micro-interactions */
@@ -199,7 +198,6 @@ button:not(:disabled):active { transform: scale(0.965); }
   padding: 10px 6px max(8px, env(safe-area-inset-bottom));
   display: grid; grid-template-columns: repeat(4, 1fr); align-items: end; gap: 0;
   background: #0d1e31; border-top: 1px solid rgb(255 255 255 / 0.08);
-  box-shadow: 0 -10px 30px rgb(13 30 49 / 0.25);
 }
 @media (min-width: 640px) { .qto-pillnav { display: none; } }
 .qto-pillnav > button {
@@ -223,8 +221,7 @@ button:not(:disabled):active { transform: scale(0.965); }
 /* Hero: a drafting sheet with crop marks */
 .qto-hero {
   position: relative; overflow: hidden; border-radius: 20px; color: #fff;
-  background: linear-gradient(160deg, #142b41 0%, #0d1e31 100%);
-  box-shadow: 0 18px 40px -22px rgb(13 30 49 / 0.7);
+  background: #0d1e31;
 }
 .qto-draw { stroke-dasharray: 1; stroke-dashoffset: 1; animation: qto-draw 1.4s 0.15s var(--qto-ease) forwards; }
 .qto-draw.d2 { animation-delay: 0.9s; }

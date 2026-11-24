@@ -4,13 +4,21 @@ import path from 'path';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
+const BUILD_ID =
+  (process.env.WORKERS_CI_COMMIT_SHA || process.env.GITHUB_SHA || process.env.CF_PAGES_COMMIT_SHA || '').slice(0, 7) || 'dev';
+const BUILD_DATE = new Date().toISOString().slice(0, 10);
+
 export default defineConfig(() => {
   return {
+    define: {
+      __APP_BUILD__: JSON.stringify(`${BUILD_DATE} · ${BUILD_ID}`),
+    },
     plugins: [
       react(),
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
+        injectRegister: 'auto',
         includeAssets: ['apple-touch-icon.png', 'icon.svg'],
         manifest: {
           id: '/',
@@ -47,6 +55,9 @@ export default defineConfig(() => {
           ],
         },
         workbox: {
+          clientsClaim: true,
+          skipWaiting: true,
+          cleanupOutdatedCaches: true,
           // .mjs = the PDF.js worker; without it PDF reading would fail offline
           globPatterns: ['**/*.{js,mjs,css,html,ico,png,svg,woff,woff2,wasm}'],
           maximumFileSizeToCacheInBytes: 12 * 1024 * 1024,

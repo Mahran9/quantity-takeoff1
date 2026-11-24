@@ -415,6 +415,14 @@ export default function App() {
     if (focusedItem?.id === itemId) setFocusedItem(null);
   };
 
+  const handleDeleteMany = (ids: string[]) => {
+    if (!ids.length) return;
+    const gone = new Set(ids);
+    pushUndoSnapshot();
+    updateActiveProject((p) => ({ ...p, takeoffItems: p.takeoffItems.filter((i) => !gone.has(i.id)) }));
+    if (focusedItem && gone.has(focusedItem.id)) setFocusedItem(null);
+  };
+
   const handleApplyExtractedItems = (newItems: TakeoffItem[], opts?: { replaceSheetId?: string }) => {
     const dedupedRestores = newItems.filter((item) => {
       if (!item.restoredDeduplicatedId) return true;
@@ -697,6 +705,7 @@ export default function App() {
                 onAddItem={handleAddItem}
                 onUpdateItem={handleUpdateItem}
                 onDeleteItem={handleDeleteItem}
+                onDeleteMany={handleDeleteMany}
                 currencySymbol={metadata.currencySymbol}
                 onOpenVisualSearch={openVisualSearch}
                 onOpenExtractionModal={openExtraction}

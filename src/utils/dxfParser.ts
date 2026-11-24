@@ -448,7 +448,8 @@ export function layerHasWord(norm: string, word: string): boolean {
 const layerHasAny = (norm: string, words: string[]) => words.some((w) => layerHasWord(norm, w));
 
 const IGNORE_WORDS = [
-  "TITLE", "TITLEBLOCK", "BORDER", "GRID", "AXIS", "AXES", "DIM", "DIMS", "DIMENSION*",
+  "TITLE", "TITLEBLOCK", "BORDER", "GRID", "AXIS", "AXES", "DIM", "DIMS", "DIM*", "DIMENSION*",
+  "CEN", "CENTER*", "CENTRE*", "CENTERLINE*", "FURN*", "FURNITURE", "FIRNTUR", "TEMP*", "CONSTRUCTION*",
   "DEFPOINTS", "TEXT", "TXT", "ANNO", "ANNOTATION*", "VIEWPORT*", "VPORT*", "VP", "NOTE", "NOTES",
   "SHEET_FRAME", "DRAWING_FRAME", "PAPER_FRAME", "VIEW_FRAME", "LEGEND", "SYMBOL", "SYMBOLS",
   "عنوان", "ملاحظات", "أبعاد", "ابعاد", "محاور",
@@ -1597,7 +1598,9 @@ export function extractEngineeringQuantitiesFromDxf(
       suggestedCategory: category,
       entityCount: layer.entityCount,
       description: desc,
-      selected: true,
+      // A layer nothing recognised (no rule, no known trade word) is offered but not ticked,
+      // so one drawing with 300 layers cannot flood the table with 300 lines.
+      selected: !(desc.startsWith("طول مسار عناصر طبقة") && !rule),
     });
   });
 

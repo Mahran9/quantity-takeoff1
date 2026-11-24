@@ -30,6 +30,7 @@ interface TakeoffTableProps {
   onAddItem: (item: TakeoffItem) => void;
   onUpdateItem: (updatedItem: TakeoffItem) => void;
   onDeleteItem: (id: string) => void;
+  onDeleteMany?: (ids: string[]) => void;
   currencySymbol: string;
   onOpenVisualSearch: () => void;
   onOpenExtractionModal?: () => void;
@@ -44,6 +45,7 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
   onAddItem,
   onUpdateItem,
   onDeleteItem,
+  onDeleteMany,
   currencySymbol,
   onOpenVisualSearch,
   onOpenExtractionModal,
@@ -253,6 +255,23 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
           </div>
 
           <div className="grid grid-cols-2 sm:flex items-center gap-2 sm:flex-wrap w-full sm:w-auto">
+            {onDeleteMany && (() => {
+              const drafts = items.filter((i) => !(i.reviewStatus === "approved" || i.isVerified));
+              if (drafts.length === 0) return null;
+              return (
+                <button
+                  onClick={() => {
+                    if (window.confirm(`سيُحذف ${drafts.length} بنداً غير معتمد من هذه اللوحة، وتبقى البنود المعتمدة. يمكنك التراجع بزر الرجوع الأحمر في الأعلى.`)) onDeleteMany(drafts.map((i) => i.id));
+                  }}
+                  className="col-span-2 sm:col-span-1 flex items-center justify-center gap-1.5 px-3 py-2.5 sm:py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition-all"
+                  title="يحذف كل البنود التي لم تعتمدها بعد"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>حذف غير المعتمدة ({drafts.length})</span>
+                </button>
+              );
+            })()}
+
             {onImportExcelItems && (
               <>
                 <input

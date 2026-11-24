@@ -8,6 +8,10 @@ const dxf = makeMockParsedDxf({
     { name: "S-WALL", entityCount: 4, areaSum: 960, closedPolylinesCount: 1, lineLength: 128 },
     { name: "S-COL", entityCount: 10, areaSum: 0.9, closedPolylinesCount: 10, lineLength: 0 },
     { name: "XYZ-777", entityCount: 3, areaSum: 40, closedPolylinesCount: 3, lineLength: 0 },
+    { name: "DIM1", entityCount: 9, areaSum: 0, closedPolylinesCount: 0, lineLength: 3.56 },
+    { name: "FIRNTUR", entityCount: 9, areaSum: 0, closedPolylinesCount: 0, lineLength: 28.66 },
+    { name: "cen", entityCount: 9, areaSum: 0, closedPolylinesCount: 0, lineLength: 1.66 },
+    { name: "ZZ-OTHER", entityCount: 9, areaSum: 0, closedPolylinesCount: 0, lineLength: 35.5 },
   ],
   detectedBlocks: [],
   textNotes: [],
@@ -16,6 +20,9 @@ const items = extractEngineeringQuantitiesFromDxf(dxf, {});
 // Wall / column outlines never become "floors" area lines.
 assert.equal(items.find((i) => i.layer === "S-WALL" && i.type === "area"), undefined);
 assert.equal(items.find((i) => i.layer === "S-COL" && i.type === "area"), undefined);
+// Dimension / furniture / centre-line layers never reach the table; an unrecognised layer is unticked.
+for (const l of ["DIM1", "FIRNTUR", "cen"]) assert.equal(items.find((i) => i.layer === l), undefined, l + " ignored");
+assert.equal(items.find((i) => i.layer === "ZZ-OTHER" && i.type === "linear")?.selected, false);
 // An unknown layer is offered, but unticked and not filed under floors.
 const unk = items.find((i) => i.layer === "XYZ-777" && i.type === "area");
 assert.ok(unk);

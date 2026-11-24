@@ -18,3 +18,12 @@ console.log("PASS [pdf_free_scale]");
 const few = calibrateScale(paths, [5900, 11000, 12500, 0.5, 3, 7], { width: 842, height: 1191 });
 assert.ok(!few.best || Number.isInteger(few.best.denominator), "no free scale from a handful of numbers");
 console.log("PASS [pdf_free_scale: no false positive]");
+
+// Dimensions written in millimetres on a shrunk sheet (~1:277).
+const Rm = 1000 / (0.352778 * 277);
+const segm = (mm: number, y: number) => ({ closed: false, points: [[40, y], [40 + (mm / 1000) * Rm, y]] }) as any;
+const dmm = [50400, 60400, 7325, 7650, 5050, 7600, 8075, 4325, 5200, 5300, 5325, 5560, 5565, 5415, 2200];
+const pm = dmm.map((v, i) => segm(v, 60 + i * 30));
+const rm = calibrateScale(pm, [...dmm, 1, 2, 3, 4, 5], { width: 842, height: 1191 });
+assert.ok(rm.best && Math.abs(rm.best.denominator - 277) < 6, `mm scale ${rm.best?.denominator}`);
+console.log("PASS [pdf_free_scale: mm]");

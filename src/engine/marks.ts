@@ -134,6 +134,18 @@ export function readMarks(sheet: BlueprintSheet): Candidate[] {
   for (const x of s.sections) lab(`mrk-sec-${x.label}`, `مقطع ${x.label}`, x.n, `التسمية «${x.label}» مكتوبة ${x.n} مرة`);
   for (const g of s.beams) lab(`mrk-beam-${g.prefix}`, `كمرات ${g.prefix}`, g.total, `${g.marks.map((m) => `${m.label}×${m.n}`).join("، ")}`);
   for (const x of s.rods) lab(`mrk-rod-${x.label}`, `تكتيف ${x.label}`, x.n, `«${x.label}» مكتوب ${x.n} مرة`);
+  const plates = readPlateList(texts);
+  if (plates) {
+    const ok = plates.printedTotal !== undefined;
+    out.push({
+      id: "mrk-plates", description: `ألواح فولاذية حسب قائمة الألواح (${plates.rows.length} سطر) — ${sheet.code}`,
+      category: "أعمال الهياكل المعدنية والهناجر", dim: "count", unit: "طن", quantity: plates.tons,
+      sources: ["mark"], confidence: ok ? "high" : "medium", selected: ok,
+      evidence: `قائمة الألواح على اللوحة ${sheet.code}: ${plates.rows.length} سطراً، كل وزن = السماكة×العرض×الطول×7.85 ${ok ? `والمجموع ${plates.printedTotal} طن مطبوع ويطابق` : "(لا يوجد مجموع مطبوع للمقارنة)"}`,
+      checks: [ok ? "المجموع المحسوب يطابق المجموع المطبوع في القائمة" : "راجع المجموع مع القائمة المطبوعة"],
+      layer: "قائمة الألواح",
+    });
+  }
   return out;
 }
 
@@ -183,4 +195,34 @@ export function buildMarksTable(sheets: BlueprintSheet[]): { rows: MarkRow[]; co
   });
   rows.sort((a, b) => a.kind.localeCompare(b.kind, "ar") || a.label.localeCompare(b.label, undefined, { numeric: true }));
   return { rows, codes };
+}
+
+/* ------------------------------------------------------------------ */
+/* Plate list (T, W, L, weight, qty, total) -> tonnage                 */
+/* ------------------------------------------------------------------ */
+
+export interface PlateRow { no: number; t: number; w: number; l: number; weight: number; qty: number; total: number }
+
+/** Reads a printed plate list: rows of "No T W L Weight QTY Total(ton)". Rows that do not satisfy weight = T*W*L*7.85e-6 are dropped. */
+export function readPlateList(texts: string[]): { rows: PlateRow[]; tons: number; printedTotal?: number; rejected: number } | null {
+  const joined = texts.join(" ");
+  if (!/\bT\b/.test(joined) || !/\bW\b/.test(joined) || !/\bL\b/.test(joined) || !/QTY/i.test(joined)) return null;
+  const nums: number[] = [];
+  for (const t of texts) for (const m of t.replace(/,/g, "").match(/-?\d+(?:\.\d+)?/g) || []) nums.push(parseFloat(m));
+  const rows: PlateRow[] = [];
+  let rejected = 0;
+  let i = 0;
+  while (i + 7 <= nums.length) {
+    const [no, t, w, l, weight, qty, total] = nums.slice(i, i + 7);
+    const calc = t * w * l * 7.85e-6;
+    const ok = Number.isInteger(no) && no === rows.length + 1 && t > 0 && w >= 50 && l >= 50 && Math.abs(weight - calc) <= Math.max(0.5, calc * 0.01) && qty > 0 && Math.abs(total - (weight * qty) / 1000) <= 0.02;
+    if (ok) { rows.push({ no, t, w, l, weight, qty, total }); i += 7; }
+    else if (rows.length === 0) i += 1; // still hunting for the first valid row
+    else { rejected += 1; break; }
+  }
+  if (rows.length < 2) return null;
+  const tons = Math.round(rows.reduce((a, r) => a + (r.weight * r.qty) / 1000, 0) * 100) / 100;
+  const next = nums[i];
+  const printedTotal = next !== undefined && Math.abs(next - tons) < 0.1 ? next : undefined;
+  return { rows, tons, printedTotal, rejected };
 }

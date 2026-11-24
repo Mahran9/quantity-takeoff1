@@ -445,7 +445,7 @@ export default function App() {
       takeoffItems: [
         ...stamped,
         ...p.takeoffItems.filter(
-          (it) => !(opts?.replaceSheetId && it.sheetId === opts.replaceSheetId && it.extractionSource === "cad_geometry")
+          (it) => !(opts?.replaceSheetId && it.sheetId === opts.replaceSheetId && (it.extractionSource === "cad_geometry" || it.extractionSource === "pdf_vector"))
         ),
       ],
     }));
@@ -755,7 +755,7 @@ export default function App() {
           onClose={() => setIsAnalyzeOpen(false)}
           sheet={currentSheet}
           existingItemsCount={takeoffItems.length}
-          previousCadCount={takeoffItems.filter((it) => it.sheetId === currentSheet.id && it.extractionSource === "cad_geometry").length}
+          previousCadCount={takeoffItems.filter((it) => it.sheetId === currentSheet.id && (it.extractionSource === "cad_geometry" || it.extractionSource === "pdf_vector")).length}
           onAddItems={handleApplyExtractedItems}
           onOpenAdvanced={openExtraction}
           onOpenAi={() => setIsAiOpen(true)}

@@ -4,7 +4,7 @@ import { DimensionType, TakeoffItem } from "../types";
  * One piece of evidence about a quantity, from any reader (CAD geometry, printed numbers read by OCR, AI).
  * Every reader produces the same shape so the results can be cross-checked and reviewed together.
  */
-export type Source = "cad" | "ocr" | "ai";
+export type Source = "cad" | "pdf" | "ocr" | "ai";
 export type Confidence = "high" | "medium" | "low";
 
 export interface Candidate {
@@ -30,11 +30,11 @@ export interface Candidate {
   height?: number;
 }
 
-export const SOURCE_LABEL: Record<Source, string> = { cad: "هندسة الملف", ocr: "نص مدوّن على اللوحة", ai: "قراءة Claude" };
-export const SOURCE_PREFIX: Record<Source, string> = { cad: "CAD", ocr: "TXT", ai: "AI" };
+export const SOURCE_LABEL: Record<Source, string> = { cad: "هندسة الملف", pdf: "خطوط PDF المتجهة", ocr: "نص مدوّن على اللوحة", ai: "قراءة Claude" };
+export const SOURCE_PREFIX: Record<Source, string> = { cad: "CAD", pdf: "PDF", ocr: "TXT", ai: "AI" };
 
 const CODE: Record<string, string> = { volume: "VOL", area: "ARA", linear: "LIN", count: "CNT" };
-const EXTRACTION: Record<Source, TakeoffItem["extractionSource"]> = { cad: "cad_geometry", ocr: "visual_search", ai: "ai_vision" };
+const EXTRACTION: Record<Source, TakeoffItem["extractionSource"]> = { cad: "cad_geometry", pdf: "pdf_vector", ocr: "visual_search", ai: "ai_vision" };
 
 export function candidatesToTakeoff(
   list: Candidate[],

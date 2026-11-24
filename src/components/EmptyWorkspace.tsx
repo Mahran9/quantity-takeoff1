@@ -12,14 +12,12 @@ export const EmptyWorkspace: React.FC<Props> = ({ onOpenUpload, onOpenProjects }
     <svg className="w-full max-w-sm mb-6 overflow-visible" viewBox="0 0 320 150" fill="none" aria-hidden="true">
       {/* plan outline with a door opening, drawn once */}
       <path className="qto-draw" pathLength={1} d="M30 20H290V100H190M150 100H30V20" stroke="#fff" strokeWidth="3" strokeLinejoin="round" />
-      <path className="qto-draw d2" pathLength={1} d="M70 20V100M230 20V100" stroke="#a9a7d6" strokeWidth="1.5" />
-      {/* marker swipe: this wall is counted */}
-      <rect className="qto-mark" x="30" y="14" width="260" height="12" rx="2" fill="#ffd62e" opacity=".55" />
+      <path className="qto-draw d2" pathLength={1} d="M70 20V100M230 20V100" stroke="#5f7d95" strokeWidth="1.5" />
       {/* dimension line */}
-      <g className="qto-draw d2" stroke="#ffd62e" strokeWidth="1.5">
+      <g className="qto-draw d2" stroke="#2dd4bf" strokeWidth="1.5">
         <path pathLength={1} d="M30 128H290" />
         <path d="M30 120V136M290 120V136" />
-        <path d="M30 128l9-4v8zM290 128l-9-4v8z" fill="#ffd62e" />
+        <path d="M30 128l9-4v8zM290 128l-9-4v8z" fill="#2dd4bf" />
       </g>
     </svg>
     <h2 className="text-2xl sm:text-3xl font-extrabold leading-tight">ارفع المخطط، وخذ الكميات</h2>

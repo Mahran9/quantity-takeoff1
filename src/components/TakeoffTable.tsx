@@ -301,10 +301,10 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
                 />
                 <button
                   onClick={() => excelInputRef.current?.click()}
-                  className="flex items-center justify-center gap-1.5 px-3 py-2.5 sm:py-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-sm transition-all"
+                  className="flex items-center justify-center gap-1.5 px-3 py-2.5 sm:py-2 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 rounded-xl text-xs font-bold transition-all"
                   title="استيراد بنود من جدول Excel موجود إلى هذه اللوحة"
                 >
-                  <FileUp className="w-4 h-4 text-emerald-200" />
+                  <FileUp className="w-4 h-4 text-slate-500" />
                   <span>استيراد Excel</span>
                 </button>
               </>
@@ -434,8 +434,8 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
             onClick={() => setSelectedDimensionType("volume")}
             className={`flex items-center gap-1 shrink-0 whitespace-nowrap px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
               selectedDimensionType === "volume"
-                ? "bg-purple-600 text-white"
-                : "bg-purple-50 text-purple-700 hover:bg-purple-100"
+                ? "bg-slate-800 text-white"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
             }`}
           >
             <Box className="w-3 h-3" />
@@ -445,8 +445,8 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
             onClick={() => setSelectedDimensionType("area")}
             className={`flex items-center gap-1 shrink-0 whitespace-nowrap px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
               selectedDimensionType === "area"
-                ? "bg-blue-600 text-white"
-                : "bg-blue-50 text-blue-700 hover:bg-blue-100"
+                ? "bg-slate-800 text-white"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
             }`}
           >
             <Square className="w-3 h-3" />
@@ -456,8 +456,8 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
             onClick={() => setSelectedDimensionType("linear")}
             className={`flex items-center gap-1 shrink-0 whitespace-nowrap px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
               selectedDimensionType === "linear"
-                ? "bg-emerald-600 text-white"
-                : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                ? "bg-slate-800 text-white"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
             }`}
           >
             <Ruler className="w-3 h-3" />
@@ -467,8 +467,8 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
             onClick={() => setSelectedDimensionType("count")}
             className={`flex items-center gap-1 shrink-0 whitespace-nowrap px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
               selectedDimensionType === "count"
-                ? "bg-amber-600 text-white"
-                : "bg-amber-50 text-amber-700 hover:bg-amber-100"
+                ? "bg-slate-800 text-white"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
             }`}
           >
             <Hash className="w-3 h-3" />

@@ -145,7 +145,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button onClick={onOpenUpload} className={`${chip} bg-amber-500 border-amber-400 text-slate-950 hover:bg-amber-400`}>
               <Plus className="w-4 h-4" /> إضافة مخطط
             </button>
-            <button onClick={onAnalyze} className={`${chip} bg-indigo-600 border-indigo-500 text-white hover:bg-indigo-500`}>
+            <button onClick={onAnalyze} className={`${chip} bg-slate-700 border-slate-600 text-white hover:bg-slate-600`}>
               <Layers className="w-4 h-4" /> حلّل اللوحة
             </button>
             <button onClick={onOpenVisualSearch} className={`${chip} bg-slate-800 border-slate-700 text-cyan-300 hover:bg-slate-700`}>
@@ -210,7 +210,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="grid grid-cols-2 gap-2.5">
               <button className={sheetRow} onClick={() => { setMore(false); onOpenVisualSearch(); }}><ScanSearch className="w-5 h-5 text-cyan-600" />بحث بصري</button>
               <button className={sheetRow} onClick={() => { setMore(false); onOpenProjectsModal(); }}><FolderKanban className="w-5 h-5 text-amber-600" />المشاريع</button>
-              <button className={sheetRow} onClick={() => { setMore(false); onOpenAdvanced(); }}><Ruler className="w-5 h-5 text-indigo-600" />قياس يدوي ومتقدم</button>
+              <button className={sheetRow} onClick={() => { setMore(false); onOpenAdvanced(); }}><Ruler className="w-5 h-5 text-slate-600" />قياس يدوي ومتقدم</button>
               <button className={sheetRow} onClick={() => { setMore(false); onOpenSteelCalc(); }}><Calculator className="w-5 h-5 text-amber-600" />حاسبة الحديد</button>
               <button className={sheetRow} onClick={() => { setMore(false); onOpenSettings(); }}><Settings className="w-5 h-5 text-slate-600" />الإعدادات</button>
             </div>

@@ -123,7 +123,7 @@ export const SheetSummary: React.FC<Props> = ({ sheet, items, currencySymbol, on
         ))}
         {stats.byUnit.length === 0 && (
           <div className="col-span-2 rounded-xl border border-dashed border-slate-300 px-3 py-2 text-xs text-slate-500">
-            لا توجد كميات بعد لهذه اللوحة. استخدم «حصر من الملف» أو أضف بنداً.
+            لا توجد كميات بعد لهذه اللوحة. ابدأ بـ «حلّل اللوحة» أو أضف بنداً يدوياً من الجدول.
           </div>
         )}
       </div>

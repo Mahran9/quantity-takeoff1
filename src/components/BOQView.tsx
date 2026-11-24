@@ -101,7 +101,7 @@ export const BOQView: React.FC<BOQViewProps> = ({
   return (
     <div className="space-y-6">
       {/* Project Financial Summary Card (Screen & Print) */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6 print:border-none print:shadow-none print:p-0">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 sm:p-6 print:border-none print:shadow-none print:p-0">
         {/* Engineering Header (appears cleanly in Print) */}
         <div className="border-b border-slate-200 pb-4 sm:pb-5 mb-4 sm:mb-5 flex flex-wrap items-start justify-between gap-3 sm:gap-4">
           <div>
@@ -188,7 +188,7 @@ export const BOQView: React.FC<BOQViewProps> = ({
             </span>
           </div>
 
-          <div className="p-4 rounded-xl bg-amber-50 border border-amber-200">
+          <div className="p-4 rounded-lg bg-amber-50">
             <span className="text-xs text-amber-800 font-medium block">
               الإجمالي العام شامل الضريبة
             </span>
@@ -198,7 +198,7 @@ export const BOQView: React.FC<BOQViewProps> = ({
             </span>
           </div>
 
-          <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200">
+          <div className="p-4 rounded-lg bg-slate-100">
             <span className="text-xs text-emerald-800 font-medium block">المعتمد مقابل قيد المراجعة</span>
             <div className="text-xs font-mono text-emerald-950 font-bold mt-1">
               معتمد: {approvedSubtotal.toLocaleString("en-US", { maximumFractionDigits: 1 })} {metadata.currencySymbol} ({approvedItems.length})
@@ -221,7 +221,7 @@ export const BOQView: React.FC<BOQViewProps> = ({
         )}
 
         {pendingReviewItems.length > 0 && (
-          <div className="mt-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex flex-wrap items-center justify-between gap-2">
+          <div className="mt-4 p-3 rounded-lg bg-amber-50 text-xs text-amber-900 flex flex-wrap items-center justify-between gap-2">
             <span className="sm:hidden">
               <strong>{pendingReviewItems.length}</strong> بند لم يُعتمد بعد · المعتمد حالياً{" "}
               <strong className="font-mono">{approvedGrandTotal.toLocaleString("en-US", { maximumFractionDigits: 1 })} {metadata.currencySymbol}</strong>
@@ -236,7 +236,7 @@ export const BOQView: React.FC<BOQViewProps> = ({
       </div>
 
       {/* Mode Switcher & Filter Bar (hidden on print) */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-2xs print:hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 sm:p-4 rounded-xl border border-slate-200 shadow-2xs print:hidden">
         {/* Toggle between per-sheet vs consolidated */}
         <div className="grid grid-cols-3 sm:flex items-center bg-slate-100 p-1 rounded-xl w-full sm:w-auto">
           <button
@@ -305,7 +305,7 @@ export const BOQView: React.FC<BOQViewProps> = ({
 
       {/* Main BOQ Presentation Tables */}
       {displayMode === "quotation" ? (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden print:border-none print:shadow-none qto-fade-in">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden print:border-none print:shadow-none qto-fade-in">
           <div className="px-4 py-2.5 sm:p-4 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 print:hidden">
             <div className="hidden sm:block text-xs font-bold text-slate-700">
               عرض السعر — مقسّم إلى أقسام حسب تسلسل التنفيذ بالموقع، وهو نفس ما يُطبع ويُصدَّر
@@ -325,7 +325,7 @@ export const BOQView: React.FC<BOQViewProps> = ({
             )}
             {quotation.sections.map((section) => (
               <div key={section.title}>
-                <div className="bg-slate-800 text-white px-4 py-2 text-xs font-bold">{section.title}</div>
+                <div className="border-y border-slate-300 text-slate-900 px-4 py-2.5 text-[13px] font-extrabold">{section.title}</div>
                 {section.rows.map((row) => {
                   const item = takeoffItems.find((i) => i.id === row.id);
                   return (
@@ -381,7 +381,7 @@ export const BOQView: React.FC<BOQViewProps> = ({
           <div className="overflow-x-auto hidden sm:block print:block">
             <table className="w-full text-right text-sm border-collapse">
               <thead>
-                <tr className="bg-slate-900 text-white text-xs">
+                <tr className="border-b-2 border-slate-900 text-slate-900 text-xs">
                   <th className="py-3 px-3 font-bold text-center w-12">م</th>
                   <th className="py-3 px-4 font-bold">البيان</th>
                   <th className="py-3 px-3 font-bold text-center w-24">الوحدة</th>
@@ -400,8 +400,8 @@ export const BOQView: React.FC<BOQViewProps> = ({
                 )}
                 {quotation.sections.map((section) => (
                   <React.Fragment key={section.title}>
-                    <tr className="bg-slate-800 text-white">
-                      <td colSpan={6} className="py-2 px-4 text-xs font-bold">{section.title}</td>
+                    <tr className="border-y border-slate-300 text-slate-900">
+                      <td colSpan={6} className="py-2.5 px-4 text-[13px] font-extrabold">{section.title}</td>
                     </tr>
                     {section.rows.map((row) => {
                       const item = takeoffItems.find((i) => i.id === row.id);
@@ -483,10 +483,10 @@ export const BOQView: React.FC<BOQViewProps> = ({
             return (
               <div
                 key={sheet.id}
-                className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden page-break-inside-avoid"
+                className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden page-break-inside-avoid"
               >
                 {/* Sheet Section Header */}
-                <div className="bg-slate-900 text-white px-5 py-3.5 flex flex-wrap items-center justify-between gap-3">
+                <div className="border-b-2 border-slate-900 text-slate-900 px-5 py-3.5 flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <span className="px-2.5 py-1 rounded-md bg-amber-500 text-slate-950 font-mono font-bold text-xs">
                       {sheet.code}
@@ -649,12 +649,12 @@ export const BOQView: React.FC<BOQViewProps> = ({
             return (
               <div
                 key={category}
-                className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden"
+                className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"
               >
-                <div className="bg-slate-800 text-white px-5 py-3 flex items-center justify-between">
+                <div className="border-b border-slate-300 text-slate-900 px-5 py-3 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-                    <h3 className="text-sm font-bold text-slate-100">{category}</h3>
+                    <h3 className="text-sm font-extrabold text-slate-900">{category}</h3>
                     <span className="text-xs text-slate-400 font-mono">
                       ({catItems.length} بنود)
                     </span>
@@ -762,7 +762,7 @@ export const BOQView: React.FC<BOQViewProps> = ({
       )}
 
       {/* Engineering Signatures Block (Standard in official engineering BOQs) */}
-      <div className="hidden sm:block print:block bg-white rounded-2xl border border-slate-200 p-6 print:border-t-2 print:border-slate-800 print:mt-8">
+      <div className="hidden sm:block print:block bg-white rounded-xl border border-slate-200 p-6 print:border-t-2 print:border-slate-800 print:mt-8">
         <div className="text-xs font-bold text-slate-800 mb-6 border-b border-slate-100 pb-2">
           اعتمادات وتواقيع جدول الكميات الهندسي:
         </div>

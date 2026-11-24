@@ -48,49 +48,46 @@ export const SheetSummary: React.FC<Props> = ({ sheet, items, currencySymbol, on
     reading = { text: "صورة: القياس بالنقر بعد معايرة المقياس", tone: "info" };
   }
 
-  const toneCls =
-    reading.tone === "ok"
-      ? "text-emerald-800 bg-emerald-50 border-emerald-200"
-      : reading.tone === "warn"
-        ? "text-amber-800 bg-amber-50 border-amber-200"
-        : "text-sky-800 bg-sky-50 border-sky-200";
-
   const count = live.length;
   return (
-    <section className="qto-rise-in sm:flex sm:items-center sm:justify-between sm:gap-6 rounded-2xl border border-slate-200 bg-white p-3 sm:p-4">
+    <section className="qto-rise-in flex items-center justify-between gap-3 pb-1">
       <div className="min-w-0">
-        <h2 className="truncate text-base font-bold text-slate-900">{sheet.code} <span className="text-slate-300">—</span> {sheet.title}</h2>
+        <h2 className="truncate text-[17px] font-extrabold text-slate-900">
+          <span className="font-mono text-[13px] text-slate-500 ml-2">{sheet.code}</span>
+          {sheet.title}
+        </h2>
         <p className="mt-0.5 text-[12px] text-slate-500">
-          {count > 0 ? `${count} بند · ${fmt(stats.value)} ${currencySymbol}` : "لم تُحصر كميات بعد"}
+          {count > 0 ? (
+            <>
+              {count} بند · <b className="font-mono text-slate-800">{fmt(stats.value)}</b> {currencySymbol}
+            </>
+          ) : (
+            "لم تُحصر كميات بعد"
+          )}
         </p>
+        {reading.tone === "warn" && (
+          <p className="mt-1.5 flex items-start gap-1.5 text-[12px] leading-relaxed text-amber-800">
+            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <span>{reading.text}</span>
+          </p>
+        )}
       </div>
-
-      <div className="mt-3 sm:mt-0 flex gap-2 sm:shrink-0">
-        <button
-          onClick={onAnalyze}
-          className="flex-1 sm:flex-none flex items-center justify-center gap-2 qto-cta rounded-xl px-4 py-3 text-[15px] font-bold transition active:scale-[0.98]"
-        >
-          <Layers className="w-5 h-5" />
-          <span>حلّل اللوحة</span>
-        </button>
+      <div className="flex gap-2 shrink-0">
         {count > 0 && (
           <button
             onClick={onExportExcel}
             title="تصدير جدول الكميات Excel"
-            className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800 active:scale-[0.98]"
+            aria-label="تصدير Excel"
+            className="grid h-10 w-10 place-items-center rounded-lg border border-slate-300 text-slate-800"
           >
             <FileSpreadsheet className="w-5 h-5" />
-            <span>Excel</span>
           </button>
         )}
+        <button onClick={onAnalyze} className="qto-cta flex h-10 items-center gap-2 rounded-lg px-4 text-sm">
+          <Layers className="w-[18px] h-[18px]" />
+          حلّل اللوحة
+        </button>
       </div>
-
-      {reading.tone === "warn" && (
-        <div className={`mt-3 flex items-start gap-2 rounded-xl border px-3 py-2 text-xs leading-relaxed ${toneCls}`}>
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-          <span>{reading.text}</span>
-        </div>
-      )}
     </section>
   );
 };

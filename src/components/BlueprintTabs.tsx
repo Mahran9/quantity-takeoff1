@@ -37,8 +37,8 @@ export const BlueprintTabs: React.FC<BlueprintTabsProps> = ({
               tabIndex={0}
               onClick={() => onSelectSheet(sheet.id)}
               onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onSelectSheet(sheet.id)}
-              className={`shrink-0 flex items-center gap-2 pl-2 pr-3 py-2 rounded-xl border select-none cursor-pointer ${
-                isActive ? "bg-white border-amber-500 text-slate-900" : "bg-white/50 border-slate-200 text-slate-500"
+              className={`shrink-0 flex items-center gap-2 pl-2 pr-3 py-2 rounded-lg border select-none cursor-pointer ${
+                isActive ? "border-amber-500 text-slate-900" : "border-slate-200 text-slate-500"
               }`}
             >
               <span className="font-mono text-[11px] font-bold">{sheet.code}</span>

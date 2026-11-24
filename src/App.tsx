@@ -627,7 +627,7 @@ export default function App() {
 
   if (!storageReady) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-300" dir="rtl" role="status">
+      <div className="min-h-screen flex items-center justify-center text-slate-600" style={{ background: "var(--paper)" }} dir="rtl" role="status">
         <div className="flex flex-col items-center gap-4 qto-fade-in">
           <div className="qto-spinner" aria-hidden="true" />
           <span className="text-sm">جارٍ فتح مشاريعك…</span>
@@ -809,7 +809,7 @@ export default function App() {
       )}
 
       {notice && (
-        <div className="fixed inset-x-3 bottom-24 sm:bottom-6 z-[60] mx-auto max-w-sm rounded-2xl bg-slate-900 text-white text-sm font-semibold px-4 py-3 shadow-2xl text-center qto-fade-in print:hidden" role="status">
+        <div className="fixed inset-x-3 bottom-24 sm:bottom-6 z-[60] mx-auto max-w-sm rounded-xl bg-slate-900 text-white text-sm font-semibold px-4 py-3 shadow-2xl text-center qto-fade-in print:hidden" role="status">
           {notice}
         </div>
       )}

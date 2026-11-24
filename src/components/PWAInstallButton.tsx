@@ -37,11 +37,11 @@ export const PWAInstallButton: React.FC<{ className?: string }> = ({ className =
 
       {help && (
         <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/70 backdrop-blur-sm p-3 qto-fade-in print:hidden"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/40 p-3 qto-fade-in print:hidden"
           onClick={() => setHelp(false)}
         >
           <div
-            className="qto-slide-up w-full max-w-sm rounded-3xl border border-slate-700 bg-slate-900 p-5 text-right text-white shadow-2xl"
+            className="qto-slide-up w-full max-w-sm rounded-2xl border border-slate-300 p-5 text-right text-slate-900 keep-paper" style={{ background: "var(--paper)" }} data-k=""
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
@@ -49,7 +49,7 @@ export const PWAInstallButton: React.FC<{ className?: string }> = ({ className =
                 <Smartphone className="w-5 h-5 text-amber-400" />
                 تثبيت التطبيق
               </div>
-              <button onClick={() => setHelp(false)} aria-label="إغلاق" className="rounded-lg p-1.5 hover:bg-slate-800">
+              <button onClick={() => setHelp(false)} aria-label="إغلاق" className="rounded-lg p-1.5 hover:bg-slate-200">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -58,22 +58,22 @@ export const PWAInstallButton: React.FC<{ className?: string }> = ({ className =
             </p>
             {isIOS ? (
               <ol className="mt-4 space-y-3 text-sm">
-                <li className="flex items-center gap-3 rounded-xl bg-slate-800 p-3">
+                <li className="flex items-center gap-3 rounded-lg border border-slate-300 p-3">
                   <Share className="w-5 h-5 shrink-0 text-sky-400" />
                   <span>اضغط زر <b>المشاركة</b> في أسفل Safari</span>
                 </li>
-                <li className="flex items-center gap-3 rounded-xl bg-slate-800 p-3">
+                <li className="flex items-center gap-3 rounded-lg border border-slate-300 p-3">
                   <PlusSquare className="w-5 h-5 shrink-0 text-amber-400" />
                   <span>اختر <b>إضافة إلى الشاشة الرئيسية</b> ثم <b>إضافة</b></span>
                 </li>
               </ol>
             ) : (
               <ol className="mt-4 space-y-3 text-sm">
-                <li className="flex items-center gap-3 rounded-xl bg-slate-800 p-3">
+                <li className="flex items-center gap-3 rounded-lg border border-slate-300 p-3">
                   <MoreVertical className="w-5 h-5 shrink-0 text-sky-400" />
                   <span>افتح قائمة المتصفح <b>⋮</b> (أعلى الصفحة)</span>
                 </li>
-                <li className="flex items-center gap-3 rounded-xl bg-slate-800 p-3">
+                <li className="flex items-center gap-3 rounded-lg border border-slate-300 p-3">
                   <PlusSquare className="w-5 h-5 shrink-0 text-amber-400" />
                   <span>اختر <b>تثبيت التطبيق</b> أو <b>إضافة إلى الشاشة الرئيسية</b></span>
                 </li>
@@ -82,7 +82,7 @@ export const PWAInstallButton: React.FC<{ className?: string }> = ({ className =
             <p className="mt-3 text-[11px] text-slate-500">
               إن لم يظهر الخيار فافتح الرابط من Chrome (أندرويد) أو Safari (آيفون) وليس من داخل تطبيق آخر.
             </p>
-            <button onClick={() => setHelp(false)} className="mt-4 w-full rounded-2xl bg-slate-800 py-3 text-sm font-semibold hover:bg-slate-700">
+            <button onClick={() => setHelp(false)} className="mt-4 w-full rounded-lg qto-cta py-3 text-sm">
               حسناً
             </button>
           </div>

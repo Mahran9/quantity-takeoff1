@@ -31,6 +31,7 @@ import {
 } from "../types";
 import { sampleDrawingsSvg } from "../data/sampleBlueprints";
 import { renderDxfToCanvas, ParsedDxfResult } from "../utils/dxfParser";
+import { onPaperColor } from "../utils/paperColor";
 
 interface BlueprintViewerProps {
   sheet: BlueprintSheet;
@@ -340,160 +341,136 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
     }
   };
 
+  const toolBtn = (on: boolean) =>
+    `grid sm:flex h-8 min-w-8 place-items-center sm:items-center sm:gap-1.5 px-1.5 sm:px-2.5 shrink-0 rounded-lg ${
+      on ? "bg-amber-500 text-slate-900" : "text-slate-600 hover:bg-slate-100"
+    }`;
   const svgContent = sampleDrawingsSvg[sheet.id] || "";
 
   return (
-    <div className="flex flex-col h-[56dvh] min-h-[340px] max-h-[600px] lg:h-[640px] lg:max-h-none bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden relative">
-      {/* Toolbar */}
-      <div className="bg-slate-900/95 backdrop-blur-md px-2.5 sm:px-4 py-2 sm:py-2.5 border-b border-slate-800 flex items-center justify-between gap-2 z-10">
-        {/* Measurement Tools */}
-        <div className="flex items-center gap-1 bg-slate-950/70 p-1 rounded-xl border border-slate-800">
+    <div className="flex flex-col h-[56dvh] min-h-[340px] max-h-[600px] lg:h-[640px] lg:max-h-none rounded-xl border border-slate-300 overflow-hidden relative" style={{ background: "var(--paper)" }}>
+      {/* Toolbar: same paper as the page, a hairline under it */}
+      <div className="px-2 sm:px-3 py-1.5 border-b border-slate-300 flex items-center justify-between gap-2 z-10" dir="rtl">
+        <div className="flex items-center gap-0.5">
           <button
             onClick={() => {
               setToolMode("select");
               setActivePoints([]);
             }}
-            className={`p-1 sm:p-1.5 shrink-0 rounded-lg text-xs flex items-center gap-1.5 ${
-              toolMode === "select" ? "bg-amber-500 text-slate-950 font-bold" : "text-slate-400 hover:text-white"
-            }`}
+            className={toolBtn(toolMode === "select")}
             title="تحريك وتصفح المخطط"
+            aria-label="تصفح"
           >
-            <MousePointer className="w-4 h-4" />
-            <span className="hidden sm:inline">تصفح</span>
+            <MousePointer className="w-[18px] h-[18px]" />
+            <span className="hidden sm:inline text-xs font-bold">تصفح</span>
           </button>
-
           <button
             onClick={() => {
               setToolMode("calibrate");
               setActivePoints([]);
             }}
-            className={`p-1 sm:p-1.5 shrink-0 rounded-lg text-xs flex items-center gap-1.5 ${
-              toolMode === "calibrate"
-                ? "bg-emerald-500 text-slate-950 font-bold"
-                : sheet.calibration
-                ? "text-emerald-400 hover:bg-slate-800"
-                : "text-amber-300 hover:bg-slate-800"
-            }`}
+            className={toolBtn(toolMode === "calibrate") + (sheet.calibration && toolMode !== "calibrate" ? " !text-amber-700" : "")}
             title="معايرة مقياس الرسم بنقطتين معلومتي المسافة بالمتر"
+            aria-label="معايرة المقياس"
           >
-            <SlidersHorizontal className="w-4 h-4" />
-            <span className="hidden sm:inline">
-              {sheet.calibration ? "معاير ✓" : "معايرة المقياس"}
-            </span>
+            <SlidersHorizontal className="w-[18px] h-[18px]" />
+            <span className="hidden sm:inline text-xs font-bold">{sheet.calibration ? "معاير ✓" : "معايرة"}</span>
           </button>
-
           <button
             onClick={() => {
               setToolMode("count");
               setActivePoints([]);
             }}
-            className={`p-1 sm:p-1.5 shrink-0 rounded-lg text-xs flex items-center gap-1.5 ${
-              toolMode === "count" ? "bg-amber-500 text-slate-950 font-bold" : "text-slate-400 hover:text-white"
-            }`}
+            className={toolBtn(toolMode === "count")}
+            title="عد"
+            aria-label="عد"
           >
-            <Hash className="w-4 h-4" />
-            <span className="hidden sm:inline">عد</span>
+            <Hash className="w-[18px] h-[18px]" />
+            <span className="hidden sm:inline text-xs font-bold">عد</span>
           </button>
-
           <button
             onClick={() => {
               setToolMode("length");
               setActivePoints([]);
             }}
-            className={`p-1 sm:p-1.5 shrink-0 rounded-lg text-xs flex items-center gap-1.5 ${
-              toolMode === "length" ? "bg-amber-500 text-slate-950 font-bold" : "text-slate-400 hover:text-white"
-            }`}
+            className={toolBtn(toolMode === "length")}
+            title="مسافة"
+            aria-label="مسافة"
           >
-            <Ruler className="w-4 h-4" />
-            <span className="hidden sm:inline">مسافة</span>
+            <Ruler className="w-[18px] h-[18px]" />
+            <span className="hidden sm:inline text-xs font-bold">مسافة</span>
           </button>
-
           <button
             onClick={() => {
               setToolMode("area");
               setActivePoints([]);
             }}
-            className={`p-1 sm:p-1.5 shrink-0 rounded-lg text-xs flex items-center gap-1.5 ${
-              toolMode === "area" ? "bg-amber-500 text-slate-950 font-bold" : "text-slate-400 hover:text-white"
-            }`}
+            className={toolBtn(toolMode === "area")}
+            title="مساحة"
+            aria-label="مساحة"
           >
-            <Square className="w-4 h-4" />
-            <span className="hidden sm:inline">مساحة</span>
+            <Square className="w-[18px] h-[18px]" />
+            <span className="hidden sm:inline text-xs font-bold">مساحة</span>
           </button>
         </div>
 
-        {/* Center Info & DXF Layers */}
-        <div className="flex items-center gap-2 text-xs text-slate-400">
-          <div className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-md bg-slate-800/80 border border-slate-700/60 font-mono text-slate-200">
-            <span>المقياس:</span>
-            <span className="font-bold text-amber-400">{sheet.scale}</span>
-          </div>
-
+        <div className="flex items-center gap-1.5 text-xs text-slate-500">
           {sheet.dxfLayers && sheet.dxfLayers.length > 0 && (
             <div className="relative">
               <button
                 onClick={() => setShowLayersDropdown(!showLayersDropdown)}
-                className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-cyan-300 rounded-md text-xs font-mono border border-slate-700"
+                className="flex h-8 items-center gap-1.5 px-2.5 rounded-lg border border-slate-300 text-slate-700 text-xs font-bold"
               >
-                <Layers className="w-3.5 h-3.5 text-cyan-400" />
-                <span>طبقات ({sheet.dxfLayers.length})</span>
+                <Layers className="w-4 h-4" />
+                <span>طبقات {sheet.dxfLayers.length}</span>
               </button>
 
               {showLayersDropdown && (
-                <div className="absolute left-0 top-full mt-2 w-56 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-2 z-50 text-xs max-h-60 overflow-y-auto">
-                  <div className="font-bold text-slate-200 px-2 py-1 mb-1 border-b border-slate-800">
-                    طبقات ملف CAD:
-                  </div>
+                <div className="absolute left-0 top-full mt-1.5 w-56 border border-slate-300 rounded-xl p-1.5 z-50 text-xs max-h-60 overflow-y-auto" style={{ background: "var(--paper)" }}>
+                  <div className="font-bold text-slate-800 px-2 py-1 mb-1 border-b border-slate-200">طبقات ملف CAD</div>
                   {sheet.dxfLayers.map((l) => (
                     <div
                       key={l.name}
                       onClick={() => toggleLayer(l.name)}
-                      className="flex items-center justify-between px-2 py-1 rounded hover:bg-slate-800 cursor-pointer text-slate-300"
+                      className="flex items-center justify-between px-2 py-1.5 rounded hover:bg-slate-100 cursor-pointer text-slate-700"
                     >
                       <div className="flex items-center gap-2 truncate">
-                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: l.color || "#38bdf8" }} />
+                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: onPaperColor(l.color || "#38bdf8") }} />
                         <span className="truncate">{l.name}</span>
                       </div>
-                      {dxfLayerState[l.name] === false ? (
-                        <EyeOff className="w-3.5 h-3.5 text-slate-500" />
-                      ) : (
-                        <Eye className="w-3.5 h-3.5 text-emerald-400" />
-                      )}
+                      {dxfLayerState[l.name] === false ? <EyeOff className="w-3.5 h-3.5 text-slate-400" /> : <Eye className="w-3.5 h-3.5 text-amber-600" />}
                     </div>
                   ))}
                 </div>
               )}
             </div>
           )}
-        </div>
-
-        {/* Right: Zoom & Self-Reliant Engines */}
-        <div className="flex items-center gap-1">
-          <button onClick={handleZoomIn} className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg" title="تكبير">
-            <ZoomIn className="w-4 h-4" />
-          </button>
-          <button onClick={handleResetView} className="text-xs font-mono text-slate-400 hover:text-white w-11 text-center" title="ملاءمة الشاشة">{Math.round(zoom * 100)}%</button>
-          <button onClick={handleZoomOut} className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg" title="تصغير">
+          <button onClick={handleZoomOut} className="hidden sm:grid h-8 w-8 place-items-center rounded-lg text-slate-600 hover:bg-slate-100" title="تصغير" aria-label="تصغير">
             <ZoomOut className="w-4 h-4" />
           </button>
-          
+          <button onClick={handleResetView} className="h-8 min-w-[3rem] px-1 rounded-lg text-xs font-mono font-bold text-slate-700 hover:bg-slate-100" title="ملاءمة الشاشة">
+            {Math.round(zoom * 100)}%
+          </button>
+          <button onClick={handleZoomIn} className="hidden sm:grid h-8 w-8 place-items-center rounded-lg text-slate-600 hover:bg-slate-100" title="تكبير" aria-label="تكبير">
+            <ZoomIn className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
       {/* Active Visual Search Highlight Banner */}
       {highlightedTokens.length > 0 && (
-        <div className="bg-cyan-950/90 border-b border-cyan-700/60 px-4 py-1.5 flex items-center justify-between text-xs text-cyan-200 z-10">
+        <div className="border-b border-slate-300 px-4 py-1.5 flex items-center justify-between text-xs text-slate-700 z-10">
           <div className="flex items-center gap-2">
-            <ScanSearch className="w-4 h-4 text-cyan-400" />
+            <ScanSearch className="w-4 h-4 text-amber-600" />
             <span>
               تم تحديد <strong>{highlightedTokens.length}</strong> تطابق بصري لـ{" "}
-              <strong className="text-amber-300">"{highlightLabel}"</strong> على المخطط
+              <strong className="text-amber-700">"{highlightLabel}"</strong> على المخطط
             </span>
           </div>
           {onClearHighlights && (
             <button
               onClick={onClearHighlights}
-              className="flex items-center gap-1 px-2 py-0.5 rounded bg-cyan-900 hover:bg-cyan-800 text-cyan-100"
+              className="flex items-center gap-1 px-2 py-0.5 rounded border border-slate-300 text-slate-700"
             >
               <X className="w-3 h-3" />
               <span>مسح التحديد</span>
@@ -533,11 +510,11 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
               ref={dxfCanvasRef}
               width={STAGE_W}
               height={STAGE_H}
-              className="border border-slate-800 shadow-2xl bg-slate-950"
+              style={{ background: "var(--paper)" }}
             />
           ) : (
             <div
-              className="w-[1000px] h-[700px] border border-slate-800 shadow-2xl"
+              className="w-[1000px] h-[700px]"
               dangerouslySetInnerHTML={{ __html: svgContent }}
             />
           )}
@@ -590,7 +567,7 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
                   <MapPin className="w-3 h-3" />
                 </div>
 
-                <div className="hidden group-hover:flex absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-3 py-2 bg-slate-900 border border-slate-700 text-white rounded-xl text-[11px] font-sans whitespace-nowrap shadow-2xl flex-col items-center gap-1 z-30">
+                <div className="hidden group-hover:flex absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-3 py-2 border border-slate-400 text-slate-900 keep-paper rounded-xl text-[11px] font-sans whitespace-nowrap flex-col items-center gap-1 z-30" style={{ background: "var(--paper)" }}>
                   <span className="font-bold text-amber-300">{pin.label}</span>
                   <span className="font-mono text-emerald-400 font-bold">
                     {pin.calculatedValue} {pin.unit}
@@ -627,21 +604,22 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
         {focusedItem && (
           <div
             onClick={(e) => e.stopPropagation()}
-            className="absolute top-3 right-3 z-30 w-80 max-w-[92%] bg-slate-900/95 backdrop-blur-md border border-amber-400/50 rounded-2xl shadow-2xl p-4 text-right text-white space-y-2.5"
+            style={{ background: "var(--paper)" }}
+            className="absolute top-3 right-3 z-30 w-80 max-w-[92%] border border-slate-400 rounded-xl p-4 text-right text-slate-900 space-y-2.5"
           >
             <div className="flex items-start justify-between gap-2">
               <div>
-                <div className="text-[10px] font-bold text-amber-400 uppercase tracking-wider">
+                <div className="text-[11px] font-bold text-amber-700">
                   مراجعة الحصر على اللوحة ({sheet.code})
                 </div>
-                <h4 className="text-xs font-bold text-white mt-0.5 leading-snug">
+                <h4 className="text-sm font-extrabold text-slate-900 mt-0.5 leading-snug">
                   {focusedItem.description}
                 </h4>
               </div>
               {onCloseFocusedItem && (
                 <button
                   onClick={onCloseFocusedItem}
-                  className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white"
+                  className="p-1 rounded-lg hover:bg-slate-200 text-slate-500"
                   title="إغلاق بطاقة المراجعة"
                 >
                   <X className="w-4 h-4" />
@@ -649,32 +627,32 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-2 text-[11px] bg-slate-950/70 rounded-xl p-2.5 border border-slate-800">
+            <div className="grid grid-cols-2 gap-2 text-[11px] rounded-lg p-2.5 border border-slate-300">
               <div>
-                <span className="text-slate-400 block">الكمية الصافية:</span>
-                <span className="font-mono font-black text-emerald-400 text-sm">
+                <span className="text-slate-500 block">الكمية الصافية:</span>
+                <span className="font-mono font-black text-amber-700 text-sm">
                   {focusedItem.quantity} {focusedItem.unit}
                 </span>
               </div>
               <div>
-                <span className="text-slate-400 block">التصنيف:</span>
-                <span className="text-slate-200 font-semibold truncate block">{focusedItem.category}</span>
+                <span className="text-slate-500 block">التصنيف:</span>
+                <span className="text-slate-800 font-semibold truncate block">{focusedItem.category}</span>
               </div>
               {focusedItem.formula && (
-                <div className="col-span-2 border-t border-slate-800 pt-1.5">
-                  <span className="text-slate-400 block">المعادلة:</span>
-                  <span className="font-mono text-cyan-300 text-[11px] break-all">{focusedItem.formula}</span>
+                <div className="col-span-2 border-t border-slate-200 pt-1.5">
+                  <span className="text-slate-500 block">المعادلة:</span>
+                  <span className="font-mono text-slate-700 text-[11px] break-all">{focusedItem.formula}</span>
                 </div>
               )}
               {(focusedItem.sourceEvidence || focusedItem.sourceDetails?.layer) && (
-                <div className="col-span-2 border-t border-slate-800 pt-1.5">
-                  <span className="text-slate-400 block">المصدر / الطبقة:</span>
-                  <span className="text-amber-200 text-[11px]">
+                <div className="col-span-2 border-t border-slate-200 pt-1.5">
+                  <span className="text-slate-500 block">المصدر / الطبقة:</span>
+                  <span className="text-slate-700 text-[11px]">
                     {focusedItem.sourceDetails?.layer ? `طبقة: ${focusedItem.sourceDetails.layer} — ` : ""}
                     {focusedItem.sourceEvidence || "حصر من اللوحة"}
                   </span>
                   {sheet.dxfRawSummary?.unitInfo && (
-                    <span className="block text-[10px] text-emerald-300 font-mono mt-0.5">
+                    <span className="block text-[10px] text-amber-700 font-mono mt-0.5">
                       وحدة CAD: {sheet.dxfRawSummary.unitInfo.name} (معامل التحويل: ×{sheet.dxfRawSummary.unitInfo.toMeters})
                     </span>
                   )}
@@ -683,7 +661,7 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
             </div>
 
             {focusedItem.auditLog && focusedItem.auditLog.length > 0 && (
-              <div className="text-[10px] text-slate-400 flex items-center gap-1.5">
+              <div className="text-[10px] text-slate-500 flex items-center gap-1.5">
                 <History className="w-3.5 h-3.5 text-slate-500" />
                 <span>
                   سجل التعديلات: {focusedItem.auditLog.length} حركة — آخر تحديث:{" "}
@@ -696,21 +674,21 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
               <div className="flex items-center gap-1.5 pt-1">
                 <button
                   onClick={() => onUpdateFocusedItemStatus(focusedItem, "approved", "اعتماد بعد المراجعة على اللوحة")}
-                  className="flex-1 flex items-center justify-center gap-1 py-1.5 px-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold"
+                  className="flex-1 flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg bg-slate-900 text-white text-[11px] font-bold"
                 >
                   <ShieldCheck className="w-3.5 h-3.5" />
                   <span>اعتماد</span>
                 </button>
                 <button
                   onClick={() => onUpdateFocusedItemStatus(focusedItem, "needs_review", "تم تأشير البند للمراجعة")}
-                  className="flex-1 flex items-center justify-center gap-1 py-1.5 px-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-[11px] font-bold"
+                  className="flex-1 flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg qto-cta text-[11px] font-bold"
                 >
                   <AlertTriangle className="w-3.5 h-3.5" />
                   <span>مراجعة</span>
                 </button>
                 <button
                   onClick={() => onUpdateFocusedItemStatus(focusedItem, "rejected", "مرفوض بعد المطابقة")}
-                  className="flex items-center justify-center gap-1 py-1.5 px-2.5 rounded-xl bg-rose-600/90 hover:bg-rose-500 text-white text-[11px] font-bold"
+                  className="flex items-center justify-center gap-1 py-1.5 px-2.5 rounded-lg border border-rose-300 text-rose-700 text-[11px] font-bold"
                   title="رفض البند"
                 >
                   <XCircle className="w-3.5 h-3.5" />
@@ -724,11 +702,11 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
         {pendingCalibPts && (
           <div
             onClick={(e) => e.stopPropagation()}
-            className="absolute inset-0 z-30 bg-slate-950/60 flex items-center justify-center p-4"
+            className="absolute inset-0 z-30 bg-slate-900/30 flex items-center justify-center p-4"
           >
-            <div className="bg-white rounded-2xl p-5 max-w-sm w-full shadow-2xl text-right space-y-3">
+            <div className="keep-paper rounded-xl p-5 max-w-sm w-full border border-slate-400 text-right space-y-3" style={{ background: "var(--paper)" }}>
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <SlidersHorizontal className="w-4 h-4 text-emerald-600" />
+                <SlidersHorizontal className="w-4 h-4 text-amber-700" />
                 <span>أدخل المسافة الحقيقية بين النقطتين</span>
               </h3>
               <p className="text-xs text-slate-500">
@@ -754,7 +732,7 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
                 </button>
                 <button
                   onClick={confirmCalibration}
-                  className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold"
+                  className="px-4 py-1.5 rounded-lg qto-cta text-xs font-bold"
                 >
                   اعتماد المعايرة
                 </button>
@@ -765,8 +743,8 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
 
         {/* Active Tool Guidance & Finish Polygon Button */}
         {toolMode !== "select" && (
-          <div className="absolute bottom-4 left-4 z-20 px-3.5 py-2 rounded-xl bg-slate-900/95 border border-amber-500/40 text-amber-300 text-xs font-semibold shadow-lg flex items-center gap-3">
-            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+          <div className="absolute bottom-3 left-3 right-3 sm:right-auto z-20 px-3.5 py-2 rounded-xl border border-slate-400 text-slate-800 text-xs font-semibold flex items-center gap-3">
+            <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
             <span>
               {toolMode === "calibrate" &&
                 (activePoints.length === 0
@@ -783,7 +761,7 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
                   e.stopPropagation();
                   finishPolygonArea(activePoints);
                 }}
-                className="px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center gap-1"
+                className="px-2.5 py-1 rounded-lg qto-cta text-xs flex items-center gap-1"
               >
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 <span>إنهاء وحساب المساحة</span>
@@ -795,3 +773,5 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
     </div>
   );
 };
+
+

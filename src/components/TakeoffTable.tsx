@@ -252,7 +252,7 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden flex flex-col">
+    <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden flex flex-col">
       {/* Top Banner with Strict Segregation Badge & Summary Cards */}
       <div className="p-4 sm:p-5 border-b border-slate-100 bg-slate-50/70">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-4">

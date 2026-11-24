@@ -10,9 +10,9 @@ import {
   Undo2,
   Settings,
   MoreHorizontal,
-  Ruler,
   X,
   RefreshCw,
+  ChevronLeft,
 } from "lucide-react";
 import { ProjectMetadata, BlueprintSheet, TakeoffItem } from "../types";
 import { PWAInstallButton } from "./PWAInstallButton";
@@ -40,6 +40,21 @@ interface NavbarProps {
   onUndo?: () => void;
 }
 
+const SYMBOLS: Record<string, string> = { SAR: "ر.س", AED: "د.إ", USD: "$", EGP: "ج.م", QAR: "ر.ق", KWD: "د.ك" };
+const CURRENCIES: [string, string][] = [
+  ["SAR", "ريال سعودي"],
+  ["AED", "درهم إماراتي"],
+  ["USD", "دولار أمريكي"],
+  ["EGP", "جنيه مصري"],
+  ["QAR", "ريال قطري"],
+  ["KWD", "دينار كويتي"],
+];
+
+/**
+ * Header + navigation. One paper colour everywhere: the header is a single row (project, quotation)
+ * with the totals under it, separated by hairlines only. On the phone the four destinations live in a
+ * flat bottom bar; secondary tools are a plain list under "المزيد".
+ */
 export const Navbar: React.FC<NavbarProps> = ({
   metadata,
   setMetadata,
@@ -49,8 +64,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   takeoffItems,
   onOpenUpload,
   onOpenVisualSearch,
-  onAnalyze,
-  onOpenAdvanced,
   onOpenProjectsModal,
   onOpenSteelCalc,
   onOpenSettings,
@@ -77,170 +90,167 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
     window.location.reload();
   };
-  const symbols: Record<string, string> = { SAR: "ر.س", AED: "د.إ", USD: "$", EGP: "ج.م", QAR: "ر.ق", KWD: "د.ك" };
 
-  const deskTab = (active: boolean) =>
-    `flex items-center gap-2 px-3 lg:px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition-all ${
-      active ? "bg-amber-500 text-slate-950 shadow-sm" : "text-slate-300 hover:text-white hover:bg-slate-700/50"
-    }`;
-  const chip =
-    "shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold border transition-colors whitespace-nowrap";
-  const navBtn = (active: boolean) =>
-    `flex-1 flex flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-bold whitespace-nowrap transition-colors ${
-      active ? "qto-nav-active text-amber-600" : "text-slate-500"
-    }`;
-  const sheetRow =
-    "w-full flex items-center gap-3 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 px-4 py-3.5 text-sm font-bold text-slate-800 text-right";
-  const field = "rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400";
+  const setCurrency = (cur: string) => setMetadata({ ...metadata, currency: cur as any, currencySymbol: SYMBOLS[cur] || cur });
+
+  const tab = (active: boolean) =>
+    `relative px-1 py-4 text-sm font-bold whitespace-nowrap ${active ? "text-slate-900" : "text-slate-500 hover:text-slate-800"}`;
+  const tabBar = (active: boolean) => (active ? <span className="absolute inset-x-0 bottom-0 h-0.5 bg-amber-500" /> : null);
+  const row = "w-full flex items-center gap-3 py-3.5 text-sm font-bold text-slate-800 text-right border-b border-slate-200";
+  const field = "rounded-lg border px-3 py-2.5 text-sm text-slate-900 w-full";
 
   return (
     <>
-      <header className="bg-slate-900 text-white sticky top-0 z-30 shadow-md print:hidden">
-        {/* Compact top bar */}
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 h-14 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <img src="/icon.svg" alt="" width={36} height={36} className="w-9 h-9 shrink-0 rounded-xl" />
-            <div className="min-w-0">
-              <h1 className="text-[15px] font-bold leading-tight truncate">حصر الكميات</h1>
-              <p className="text-[11px] text-slate-400 truncate leading-tight">{metadata.projectName}</p>
-            </div>
-          </div>
-
-          {/* Desktop tabs */}
-          <div className="hidden sm:flex items-center gap-1 bg-slate-800/80 p-1 rounded-xl border border-slate-700/60 whitespace-nowrap shrink-0">
-            <button onClick={() => setActiveView("workspace")} className={deskTab(activeView === "workspace")}>
-              <Layers className="w-4 h-4" /> <span className="hidden lg:inline">المخططات والحصر</span><span className="lg:hidden">الحصر</span>
-              <span className="text-[11px] px-1.5 rounded-full bg-slate-900/30 font-mono">{sheets.length}</span>
+      <header className="qto-header print:hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="h-14 flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={onOpenProjectsModal}
+              className="flex items-center gap-2.5 min-w-0 text-right"
+              aria-label="المشاريع"
+              title="المشاريع"
+            >
+              <img src="/icon.svg" alt="" width={32} height={32} className="w-8 h-8 shrink-0 rounded-lg" />
+              <span className="min-w-0 block">
+                <span className="block text-[15px] font-extrabold leading-tight truncate text-slate-900">{metadata.projectName}</span>
+                <span className="block text-[11px] leading-tight text-slate-500 font-semibold">حصر الكميات</span>
+              </span>
             </button>
-            <button onClick={() => setActiveView("boq")} className={deskTab(activeView === "boq")}>
-              <FileSpreadsheet className="w-4 h-4" /> <span className="hidden lg:inline">الجدول وعرض السعر</span><span className="lg:hidden">الجدول</span>
-              <span className="text-[11px] px-1.5 rounded-full bg-slate-900/30 font-mono">{takeoffItems.length}</span>
-            </button>
-          </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
-            {canUndo && onUndo && (
-              <button onClick={onUndo} className="p-2 bg-rose-600/90 hover:bg-rose-500 rounded-xl" title="تراجع" aria-label="تراجع">
-                <Undo2 className="w-[18px] h-[18px]" />
+            {/* Desktop destinations */}
+            <nav className="hidden sm:flex items-center gap-6 mx-auto">
+              <button onClick={() => setActiveView("workspace")} className={tab(activeView === "workspace")}>
+                المخططات <span className="text-[11px] font-mono text-slate-400 mr-1">{sheets.length}</span>
+                {tabBar(activeView === "workspace")}
               </button>
-            )}
-            <button
-              onClick={onOpenQuotation}
-              className="qto-cta flex items-center gap-1.5 px-3 py-2 rounded-xl text-[13px] font-bold"
-              title="عرض السعر: معاينة وطباعة وتصدير Excel"
-            >
-              <Printer className="w-4 h-4" />
-              عرض السعر
-            </button>
-            <button
-              onClick={onOpenSettings}
-              className="hidden sm:block p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl"
-              aria-label="الإعدادات"
-              title="بيانات الشركة والورق الرسمي"
-            >
-              <Settings className="w-[18px] h-[18px]" />
-            </button>
-          </div>
-        </div>
+              <button onClick={() => setActiveView("boq")} className={tab(activeView === "boq")}>
+                الجدول <span className="text-[11px] font-mono text-slate-400 mr-1">{takeoffItems.length}</span>
+                {tabBar(activeView === "boq")}
+              </button>
+            </nav>
 
-        {/* Totals strip */}
-        <div className="bg-slate-950 border-t border-slate-800">
-          <div className="max-w-7xl mx-auto px-3 sm:px-6 h-9 flex items-center justify-between gap-2 text-[11px] sm:text-xs font-mono whitespace-nowrap">
-            <div className="flex items-center gap-2 text-slate-400">
-              <span className="font-sans">الصافي</span>
-              <b className="text-slate-100">{money(q.subtotal)} {metadata.currencySymbol}</b>
-            </div>
-            <div className="flex items-center gap-2 text-amber-300/80">
-              <span className="font-sans">شامل الضريبة<span className="hidden min-[360px]:inline"> {metadata.taxRate}%</span></span>
-              <b className="text-amber-400">{money(q.grandTotal)} {metadata.currencySymbol}</b>
+            <div className="flex items-center gap-2 shrink-0">
+              {canUndo && onUndo && (
+                <button onClick={onUndo} className="p-2 rounded-lg text-slate-700 border border-slate-300" title="تراجع" aria-label="تراجع">
+                  <Undo2 className="w-[18px] h-[18px]" />
+                </button>
+              )}
+              <button
+                onClick={onOpenQuotation}
+                className="qto-cta flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[13px]"
+                title="عرض السعر: معاينة وطباعة وتصدير Excel"
+              >
+                <Printer className="w-4 h-4" />
+                عرض السعر
+              </button>
+              <button onClick={onOpenUpload} className="hidden sm:flex h-9 items-center gap-1.5 px-3 rounded-lg border border-slate-300 text-[13px] font-bold text-slate-800">
+                <Plus className="w-4 h-4" /> مخطط
+              </button>
+              <button onClick={() => setMore(true)} className="hidden sm:grid h-9 w-9 place-items-center rounded-lg border border-slate-300 text-slate-700" aria-label="المزيد">
+                <MoreHorizontal className="w-[18px] h-[18px]" />
+              </button>
             </div>
           </div>
-        </div>
 
-        {/* Desktop action chips */}
-        <div className="hidden sm:block bg-slate-900 border-t border-slate-800">
-          <div className="max-w-7xl mx-auto px-6 py-2 flex items-center gap-2 overflow-x-auto no-scrollbar">
-            <button onClick={onOpenUpload} className={`${chip} bg-amber-500 border-amber-400 text-slate-950 hover:bg-amber-400`}>
-              <Plus className="w-4 h-4" /> إضافة مخطط
-            </button>
-            <button onClick={onOpenVisualSearch} className={`${chip} bg-slate-800 border-slate-700 text-cyan-300 hover:bg-slate-700`}>
-              <ScanSearch className="w-4 h-4" /> بحث بصري
-            </button>
-            <button onClick={onOpenProjectsModal} className={`${chip} bg-slate-800 border-slate-700 text-amber-300 hover:bg-slate-700`}>
-              <FolderKanban className="w-4 h-4" /> المشاريع
-            </button>
-            <button onClick={onOpenSteelCalc} className={`${chip} bg-slate-800 border-slate-700 text-amber-300 hover:bg-slate-700`}>
-              <Calculator className="w-4 h-4" /> حاسبة الحديد
-            </button>
-            <PWAInstallButton className="shrink-0" />
-            <div className="mr-auto hidden 2xl:flex items-center gap-3 text-xs text-slate-400">
-              <label className="flex items-center gap-1.5">الكود
-                <input value={metadata.projectCode} onChange={(e) => setMetadata({ ...metadata, projectCode: e.target.value })} className="bg-transparent border-b border-dashed border-slate-700 text-slate-300 font-mono w-24 focus:outline-none focus:border-amber-400" />
-              </label>
-              <label className="flex items-center gap-1.5">الضريبة %
-                <input type="number" value={metadata.taxRate} onChange={(e) => setMetadata({ ...metadata, taxRate: Math.max(0, Number(e.target.value)) })} className="bg-slate-800 border border-slate-700 text-slate-200 rounded px-1.5 py-1 w-14 font-mono" />
-              </label>
-              <select value={metadata.currency} onChange={(e) => { const cur = e.target.value as any; setMetadata({ ...metadata, currency: cur, currencySymbol: symbols[cur] || cur }); }} className="bg-slate-800 border border-slate-700 text-slate-200 rounded px-1.5 py-1">
-                <option value="SAR">ريال سعودي</option><option value="AED">درهم إماراتي</option><option value="USD">دولار أمريكي</option><option value="EGP">جنيه مصري</option><option value="QAR">ريال قطري</option><option value="KWD">دينار كويتي</option>
-              </select>
+          {/* Totals: two figures, no band */}
+          <div className="pb-2.5 -mt-0.5 flex items-baseline justify-between gap-3">
+            <div className="qto-total">
+              <small>الصافي</small>
+              <b className="font-mono text-slate-900">{money(q.subtotal)}</b>
+              <small>{metadata.currencySymbol}</small>
+            </div>
+            <div className="qto-total">
+              <small>
+                شامل الضريبة<span className="hidden min-[360px]:inline"> {metadata.taxRate}%</span>
+              </small>
+              <b className="font-mono text-amber-700">{money(q.grandTotal)}</b>
+              <small>{metadata.currencySymbol}</small>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Mobile floating pill navigation */}
+      {/* Phone navigation */}
       <nav className="qto-pillnav sm:hidden print:hidden">
         <button onClick={() => setActiveView("workspace")} className={activeView === "workspace" ? "is-active" : ""}>
-          <Layers className="w-[22px] h-[22px] justify-self-center" />
+          <Layers className="w-[21px] h-[21px] justify-self-center" />
           المخططات
         </button>
         <button onClick={() => setActiveView("boq")} className={activeView === "boq" ? "is-active" : ""}>
-          <FileSpreadsheet className="w-[22px] h-[22px] justify-self-center" />
+          <FileSpreadsheet className="w-[21px] h-[21px] justify-self-center" />
           الجدول
         </button>
-        <button onClick={onOpenUpload} aria-label="إضافة مخطط" className={`qto-plus ${sheets.length === 0 ? "qto-fab-attention" : ""}`}>
-          <Plus className="w-6 h-6" />
+        <button onClick={onOpenUpload} aria-label="إضافة مخطط" className="qto-plus">
+          <span>
+            <Plus className="w-5 h-5" />
+          </span>
         </button>
         <button onClick={() => setMore(true)} className={more ? "is-active" : ""}>
-          <MoreHorizontal className="w-[22px] h-[22px] justify-self-center" />
+          <MoreHorizontal className="w-[21px] h-[21px] justify-self-center" />
           المزيد
         </button>
       </nav>
 
-      {/* More sheet (mobile) */}
+      {/* More: a plain list */}
       {more && (
-        <div className="sm:hidden fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm flex items-end print:hidden" onClick={() => setMore(false)}>
-          <div className="qto-sheet-up w-full max-h-[85vh] overflow-y-auto bg-white rounded-t-3xl p-4 pb-8 text-right" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-bold text-slate-900">المزيد</h2>
-              <button onClick={() => setMore(false)} aria-label="إغلاق" className="p-2 rounded-lg hover:bg-slate-100 text-slate-500"><X className="w-5 h-5" /></button>
+        <div className="fixed inset-0 z-40 bg-slate-950/40 flex items-end sm:items-start sm:justify-start print:hidden" onClick={() => setMore(false)}>
+          <div
+            className="qto-sheet-up w-full sm:w-96 sm:mt-14 sm:mx-6 max-h-[88vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl px-5 pt-4 pb-8 text-right keep-paper"
+            style={{ background: "var(--paper)", border: "1px solid var(--line)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="font-extrabold text-slate-900">المزيد</h2>
+              <button onClick={() => setMore(false)} aria-label="إغلاق" className="p-2 -ml-2 text-slate-500">
+                <X className="w-5 h-5" />
+              </button>
             </div>
-            <div className="grid grid-cols-2 gap-2.5">
-              <button className={sheetRow} onClick={() => { setMore(false); onOpenVisualSearch(); }}><ScanSearch className="w-5 h-5 text-cyan-600" />بحث بصري</button>
-              <button className={sheetRow} onClick={() => { setMore(false); onOpenProjectsModal(); }}><FolderKanban className="w-5 h-5 text-amber-600" />المشاريع</button>
-              <button className={sheetRow} onClick={() => { setMore(false); onOpenSteelCalc(); }}><Calculator className="w-5 h-5 text-amber-600" />حاسبة الحديد</button>
-              <button className={sheetRow} onClick={() => { setMore(false); onOpenSettings(); }}><Settings className="w-5 h-5 text-slate-600" />الإعدادات</button>
-            </div>
-            <div className="mt-3 flex justify-center"><PWAInstallButton /></div>
 
-            <button className={`${sheetRow} mt-3 w-full`} onClick={refreshApp} disabled={refreshing}>
-              <RefreshCw className={`w-5 h-5 text-teal-600 ${refreshing ? "animate-spin" : ""}`} />
-              {refreshing ? "جارٍ التحديث…" : "تحديث التطبيق"}
+            <button className={row} onClick={() => { setMore(false); onOpenProjectsModal(); }}>
+              <FolderKanban className="w-5 h-5 text-slate-500" /> <span className="flex-1">المشاريع</span> <ChevronLeft className="w-4 h-4 text-slate-300" />
             </button>
-            <p className="mt-1.5 text-center text-[11px] text-slate-400 font-mono" dir="ltr">{APP_BUILD}</p>
+            <button className={row} onClick={() => { setMore(false); onOpenVisualSearch(); }}>
+              <ScanSearch className="w-5 h-5 text-slate-500" /> <span className="flex-1">بحث بصري</span> <ChevronLeft className="w-4 h-4 text-slate-300" />
+            </button>
+            <button className={row} onClick={() => { setMore(false); onOpenSteelCalc(); }}>
+              <Calculator className="w-5 h-5 text-slate-500" /> <span className="flex-1">حاسبة الحديد</span> <ChevronLeft className="w-4 h-4 text-slate-300" />
+            </button>
+            <button className={row} onClick={() => { setMore(false); onOpenSettings(); }}>
+              <Settings className="w-5 h-5 text-slate-500" /> <span className="flex-1">بيانات الشركة والورق الرسمي</span> <ChevronLeft className="w-4 h-4 text-slate-300" />
+            </button>
+            <button className={row} onClick={refreshApp} disabled={refreshing}>
+              <RefreshCw className={`w-5 h-5 text-slate-500 ${refreshing ? "animate-spin" : ""}`} />
+              <span className="flex-1">{refreshing ? "جارٍ التحديث…" : "تحديث التطبيق"}</span>
+              <span className="text-[11px] text-slate-400 font-mono" dir="ltr">{APP_BUILD}</span>
+            </button>
+            <div className="py-2 flex">
+              <PWAInstallButton />
+            </div>
 
-            <h3 className="mt-5 mb-2 text-xs font-bold text-slate-500">بيانات المشروع</h3>
-            <div className="grid grid-cols-2 gap-2.5">
-              <label className="col-span-2 text-xs font-semibold text-slate-600 space-y-1">كود المشروع
-                <input value={metadata.projectCode} onChange={(e) => setMetadata({ ...metadata, projectCode: e.target.value })} className={`${field} w-full font-mono`} />
+            <h3 className="mt-4 mb-2 text-xs font-bold text-slate-500">المشروع</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="col-span-2 text-xs font-semibold text-slate-600 space-y-1 block">
+                الاسم
+                <input value={metadata.projectName} onChange={(e) => setMetadata({ ...metadata, projectName: e.target.value })} className={field} />
               </label>
-              <label className="text-xs font-semibold text-slate-600 space-y-1">العملة
-                <select value={metadata.currency} onChange={(e) => { const cur = e.target.value as any; setMetadata({ ...metadata, currency: cur, currencySymbol: symbols[cur] || cur }); }} className={`${field} w-full`}>
-                  <option value="SAR">ريال سعودي</option><option value="AED">درهم إماراتي</option><option value="USD">دولار أمريكي</option><option value="EGP">جنيه مصري</option><option value="QAR">ريال قطري</option><option value="KWD">دينار كويتي</option>
+              <label className="text-xs font-semibold text-slate-600 space-y-1 block">
+                العملة
+                <select value={metadata.currency} onChange={(e) => setCurrency(e.target.value)} className={field}>
+                  {CURRENCIES.map(([c, n]) => (
+                    <option key={c} value={c}>
+                      {n}
+                    </option>
+                  ))}
                 </select>
               </label>
-              <label className="text-xs font-semibold text-slate-600 space-y-1">الضريبة %
-                <input type="number" value={metadata.taxRate} onChange={(e) => setMetadata({ ...metadata, taxRate: Math.max(0, Number(e.target.value)) })} className={`${field} w-full font-mono`} />
+              <label className="text-xs font-semibold text-slate-600 space-y-1 block">
+                الضريبة %
+                <input type="number" value={metadata.taxRate} onChange={(e) => setMetadata({ ...metadata, taxRate: Math.max(0, Number(e.target.value)) })} className={`${field} font-mono`} />
+              </label>
+              <label className="col-span-2 text-xs font-semibold text-slate-600 space-y-1 block">
+                كود المشروع
+                <input value={metadata.projectCode} onChange={(e) => setMetadata({ ...metadata, projectCode: e.target.value })} className={`${field} font-mono`} />
               </label>
             </div>
           </div>

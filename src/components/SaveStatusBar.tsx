@@ -34,24 +34,25 @@ export const SaveStatusBar: React.FC<Props> = ({ notice, onBackup, onDismiss }) 
   return (
     <div
       role={critical ? "alert" : "status"}
-      className={`fixed bottom-[6.75rem] sm:bottom-4 right-3 left-3 sm:right-4 sm:left-auto sm:max-w-md z-40 qto-slide-up rounded-2xl border px-3.5 py-3 flex items-start gap-3 text-xs leading-relaxed print:hidden ${
+      style={{ background: "var(--paper)" }}
+      className={`fixed bottom-[6.75rem] sm:bottom-4 right-3 left-3 sm:right-4 sm:left-auto sm:max-w-md z-40 qto-slide-up rounded-xl border px-3.5 py-3 flex items-start gap-3 text-xs keep-paper leading-relaxed print:hidden ${
         critical
-          ? "bg-rose-950/95 border-rose-500/50 text-rose-100"
-          : "bg-slate-900/95 border-amber-500/40 text-amber-100"
+          ? "border-rose-400 text-rose-900"
+          : "border-slate-300 text-slate-800"
       }`}
     >
-      <Icon className={`w-5 h-5 shrink-0 mt-0.5 ${critical ? "text-rose-400" : "text-amber-400"}`} />
+      <Icon className={`w-5 h-5 shrink-0 mt-0.5 ${critical ? "text-rose-600" : "text-amber-600"}`} />
       <div className="flex-1 flex flex-wrap items-center gap-x-3 gap-y-2">
         <p className="flex-1 min-w-[10rem]">{text}</p>
         <button
           onClick={onBackup}
-          className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold whitespace-nowrap"
+          className="px-3 py-1.5 rounded-lg qto-cta whitespace-nowrap"
         >
           نسخة احتياطية
         </button>
       </div>
       {!critical && (
-        <button onClick={onDismiss} aria-label="إغلاق" className="p-1 rounded-md hover:bg-white/10">
+        <button onClick={onDismiss} aria-label="إغلاق" className="p-1 rounded-md hover:bg-slate-200">
           <X className="w-4 h-4" />
         </button>
       )}

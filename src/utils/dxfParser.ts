@@ -1,3 +1,4 @@
+import { onPaperColor } from "./paperColor";
 import { pairedLineFraction, Seg } from "./parallelLines";
 import DxfParser from "dxf-parser";
 import { DxfLayerInfo, ExtractedCadQuantity, TradeCategory } from "../types";
@@ -1829,7 +1830,7 @@ export function renderDxfToCanvas(
   const height = canvas.height;
 
   // Clear canvas
-  ctx.fillStyle = "#090d16";
+  ctx.fillStyle = "#f3f6f5"; // the app paper; line colours are darkened to read on it
   ctx.fillRect(0, 0, width, height);
 
   const { minX, minY, maxX, maxY } = parsedDxf.bounds;
@@ -1863,8 +1864,8 @@ export function renderDxfToCanvas(
     if (hlTarget) {
       ctx.globalAlpha = isHighlighted ? 1.0 : 0.2;
       ctx.lineWidth = isHighlighted ? 3.2 : 1.0;
-      ctx.strokeStyle = isHighlighted ? "#f59e0b" : getLayerColor(layer, parsedDxf.layers);
-      ctx.fillStyle = isHighlighted ? "rgba(245, 158, 11, 0.24)" : ctx.strokeStyle;
+      ctx.strokeStyle = isHighlighted ? "#0b8a7e" : getLayerColor(layer, parsedDxf.layers);
+      ctx.fillStyle = isHighlighted ? "rgba(20, 184, 166, 0.28)" : ctx.strokeStyle;
     } else {
       ctx.globalAlpha = 1.0;
       ctx.lineWidth = 1.2;
@@ -1944,7 +1945,7 @@ export function renderDxfToCanvas(
         const label = cleanDxfText(raw).replace(/\s+/g, " ").trim();
         if (label && textBudget-- > 0) {
           ctx.font = `${Math.min(48, Math.max(6, px))}px sans-serif`;
-          ctx.fillStyle = isHighlighted ? "#fbbf24" : getLayerColor(layer, parsedDxf.layers);
+          ctx.fillStyle = isHighlighted ? "#0b8a7e" : getLayerColor(layer, parsedDxf.layers);
           ctx.translate(tx(pos.x || 0), ty(pos.y || 0));
           const rot = Number(entity.rotation || 0);
           if (rot) ctx.rotate(-(rot * Math.PI) / 180);
@@ -1975,14 +1976,14 @@ export function renderDxfToCanvas(
 
 function getLayerColor(layerName: string, layers: DxfLayerInfo[]): string {
   const match = layers.find((l) => l.name === layerName);
-  if (match?.color) return match.color;
+  if (match?.color) return onPaperColor(match.color);
 
   const defaultPalettes = ["#38bdf8", "#34d399", "#f59e0b", "#f43f5e", "#a855f7", "#ec4899", "#60a5fa"];
   let hash = 0;
   for (let i = 0; i < layerName.length; i++) {
     hash = layerName.charCodeAt(i) + ((hash << 5) - hash);
   }
-  return defaultPalettes[Math.abs(hash) % defaultPalettes.length];
+  return onPaperColor(defaultPalettes[Math.abs(hash) % defaultPalettes.length]);
 }
 
 // AutoCAD color index (ACI) to standard RGB hex approximation

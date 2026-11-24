@@ -11,6 +11,26 @@ const FAMILY: Record<string, string> = {
   BR: "تكتيف (Bracing)", GT: "كمرات جانبية", EG: "كمرات حافة", ST: "ستيفنرات", P: "بلاطات / صفائح", PL: "صفائح",
 };
 
+/** Reinforced-concrete drawings use the same letters for other members. */
+const RC_FAMILY: Record<string, string> = {
+  C: "أعمدة خرسانية", F: "قواعد", N: "رقاب أعمدة", GB: "ميدات", TB: "ميدات ربط", B: "كمرات خرسانية",
+  RB: "كمرات سقف", R: "كمرات سقف (R)", S: "بلاطات (S)", SB: "كمرات ثانوية", W: "جدران خرسانية", SW: "جدران قص", ST: "درج",
+};
+const STEEL_CAT = "أعمال الهياكل المعدنية والهناجر";
+const RC_CAT = "أعمال خرسانية مسلحة وعادية";
+
+/**
+ * Steel shop/erection drawings carry bolts, rolled sections and purlins; anything else with piece marks
+ * (C1, F3, GB2, TB1 …) is a reinforced-concrete drawing and its members are concrete, not steel.
+ */
+export function isSteelDrawing(texts: string[], s: Pick<MarkStats, "bolts" | "sections">): boolean {
+  if (s.bolts.length || s.sections.length) return true;
+  const joined = texts.join(" ");
+  const steel = (joined.match(/\b(IPE|HEA|HEB|UPN|UB|UC|SHS|RHS|CHS|PURLINS?|RAFTERS?|ANCHOR\s?BOLTS?|BRACING|BASE\s?PLATE|HAUNCH|GIRTS?)\b/gi) || []).length;
+  const rc = (joined.match(/Ø|\bT\d{2}\b|\bFOOTINGS?\b|\bBLINDING\b|\bSTIRRUPS?\b|\bCONCRETE\b|\bREINF|\bSLAB\b|\bTIE\s?BEAMS?\b|\bNECK\b|خرسان|قواعد|ميد|تسليح/gi) || []).length;
+  return steel > rc;
+}
+
 export interface LabelCount { label: string; n: number }
 export interface MarkStats {
   /** Section designations written on design drawings: "SHS 100x4", "Z200x50x16.5x1.8", "W200-300*5 / F150*6". */
@@ -98,18 +118,25 @@ export function readMarks(sheet: BlueprintSheet): Candidate[] {
   const where = `نص مكتوب على اللوحة ${sheet.code}`;
   const sample = (marks: { mark: string; n: number }[]) =>
     marks.slice(0, 12).map((m) => (m.n > 1 ? `${m.mark}×${m.n}` : m.mark)).join("، ") + (marks.length > 12 ? " …" : "");
+  const steel = isSteelDrawing(texts, s);
   for (const f of s.families) {
-    const name = FAMILY[f.prefix] || `علامات ${f.prefix}`;
+    const name = (steel ? FAMILY[f.prefix] : RC_FAMILY[f.prefix]) || `علامات ${f.prefix}`;
     out.push({
       id: `mrk-${f.prefix}`,
-      description: `${name} (${sheet.code}) — ${f.marks.length} علامة مختلفة`,
-      category: "أعمال الهياكل المعدنية والهناجر",
+      description: steel
+        ? `${name} (${sheet.code}) — ${f.marks.length} علامة مختلفة`
+        : `عدد ${name} حسب العلامات (${f.marks.map((m) => m.mark).slice(0, 8).join("، ")}${f.marks.length > 8 ? "…" : ""})`,
+      category: steel ? STEEL_CAT : RC_CAT,
       dim: "count", unit: "عدد", quantity: f.total, count: f.total,
       sources: ["mark"], confidence: "medium", selected: true,
       evidence: `${where}: ظهرت علامات ${f.prefix} ${f.total} مرة (${sample(f.marks)})`,
-      checks: ["العدد = عدد مرات ظهور العلامة في هذا المنظر؛ لا تجمعه مع لوحة تعرض نفس العناصر من زاوية أخرى"],
+      checks: steel
+        ? ["العدد = عدد مرات ظهور العلامة في هذا المنظر؛ لا تجمعه مع لوحة تعرض نفس العناصر من زاوية أخرى"]
+        : ["عدد العناصر فقط: حجم الخرسانة يحتاج مقاس كل علامة من جدول القواعد/الأعمدة/الميدات على اللوحة"],
       layer: `علامات ${f.prefix}`,
-    });
+      // Per-mark counts so the same members shown on several sheets can be merged (largest per mark, never the sum).
+      perMark: Object.fromEntries(f.marks.map((m) => [m.mark, m.n])),
+    } as Candidate);
   }
   for (const b of s.bolts) {
     out.push({

@@ -39,7 +39,7 @@ import { readMarks } from "./engine/marks";
 import { readPrintedLabels } from "./utils/ocrLabels";
 import { importWithRecovery } from "./utils/lazyImport";
 import { reconcile } from "./engine/reconcile";
-import { candidatesToTakeoff } from "./engine/candidate";
+import { Candidate, candidatesToTakeoff, mergeRepeatedMarks } from "./engine/candidate";
 import { getSheetVisualTokens, searchSheetTokens } from "./utils/visualSearchEngine";
 import {
   loadProjectsFromStorage,
@@ -54,7 +54,7 @@ import {
   markBackupDone,
 } from "./utils/projectStorage";
 
-export const APP_VERSION = "8.14.0";
+export const APP_VERSION = "8.15.0";
 
 // Persistent high-capacity storage powered by IndexedDB (src/utils/projectStorage.ts)
 
@@ -489,6 +489,7 @@ export default function App() {
     let ocrLabels = 0;
     let ocrFailures = 0;
     const scope = onlySheetId ? sheetList.filter((x) => x.id === onlySheetId) : sheetList;
+    const perSheet: { sheetId: string; code: string; cands: Candidate[] }[] = [];
     for (const sh of scope) {
       let cands: ReturnType<typeof readMarks> = [];
       try {
@@ -515,10 +516,16 @@ export default function App() {
       // selected by readPdf, so they wait for the person in «راجع».
       const chosen = all.filter((c) => c.selected);
       toReview += all.length - chosen.length;
-      if (!chosen.length) continue;
+      perSheet.push({ sheetId: sh.id, code: sh.code, cands: chosen });
+      // A re-read replaces this sheet's earlier automatic lines even if the merge below moves its marks elsewhere.
+      if (chosen.length) replaced.add(sh.id);
+    }
+    // Plan, sections and schedules repeat the same marks: one line per family, never the sum of the sheets.
+    for (const { sheetId, cands } of mergeRepeatedMarks(perSheet)) {
+      if (!cands.length) continue;
+      const sh = scope.find((x) => x.id === sheetId)!;
       readSheets++;
-      replaced.add(sh.id);
-      fresh.push(...candidatesToTakeoff(chosen, sh, base + fresh.length));
+      fresh.push(...candidatesToTakeoff(cands, sh, base + fresh.length));
     }
     if (!fresh.length) return toReview
       ? `لم أجد كمية مؤكدة أضيفها وحدي، ووجدت ${toReview} قراءة تحتاج اختيارك: اضغط «راجع» واختر منها ما تعتمده.${ocrFailures ? ` تعذرت قراءة النص آلياً في ${ocrFailures} لوحة.` : ""}`
@@ -583,21 +590,61 @@ export default function App() {
     setReadMsg(msg); // stays above the table until the next read
   };
 
+  /**
+   * The same file uploaded twice doubled every count (two sets of identical sheets with identical codes).
+   * Ask once: replace the old copy (its sheets and lines go) or skip the upload. Returns the old sheet ids to drop,
+   * or null when the person chose not to add the file again. Also gives every incoming sheet a code no other sheet uses.
+   */
+  const settleIncoming = (incoming: BlueprintSheet[]): { drop: Set<string>; sheets: BlueprintSheet[] } | null => {
+    const same = sheets.filter((s) => incoming.some((n) => n.fileName === s.fileName && n.fileSize === s.fileSize));
+    const drop = new Set(same.map((s) => s.id));
+    if (same.length) {
+      const lines = takeoffItems.filter((i) => drop.has(i.sheetId));
+      const priced = lines.filter((i) => i.unitPrice > 0).length;
+      const ok = window.confirm(
+        `الملف «${same[0].fileName}» مرفوع من قبل في هذا المشروع (${same.length} لوحة، ${lines.length} بند${priced ? `، منها ${priced} مسعّر` : ""}).\n\n` +
+        `موافق: استبدال النسخة القديمة وبنودها بهذه وإعادة القراءة.\nإلغاء: عدم إضافة الملف مرة ثانية.`
+      );
+      if (!ok) return null;
+    }
+    const used = new Set(sheets.filter((s) => !drop.has(s.id)).map((s) => s.code));
+    const renamed = incoming.map((s) => {
+      let code = s.code;
+      for (let k = 2; used.has(code); k++) code = `${s.code}-${k}`;
+      used.add(code);
+      return code === s.code ? s : { ...s, code };
+    });
+    return { drop, sheets: renamed };
+  };
+
   const handleSheetCreated = (newSheet: BlueprintSheet) => {
+    const settled = settleIncoming([newSheet]);
+    if (!settled) return;
     pushUndoSnapshot();
-    updateActiveProject((p) => ({ ...p, sheets: [...p.sheets, newSheet] }));
-    void readNewSheetsIntoTable([newSheet]);
+    updateActiveProject((p) => ({
+      ...p,
+      sheets: [...p.sheets.filter((s) => !settled.drop.has(s.id)), ...settled.sheets],
+      takeoffItems: p.takeoffItems.filter((i) => !settled.drop.has(i.sheetId)),
+    }));
+    void readNewSheetsIntoTable(settled.sheets);
   };
 
   /** ETABS / SAFE model: adds the model sheet and its concrete quantities in one step, then shows the table. */
-  const handleModelImported = (newSheet: BlueprintSheet, items: TakeoffItem[], message: string) => {
+  const handleModelImported = (incomingSheet: BlueprintSheet, items: TakeoffItem[], message: string) => {
+    const settled = settleIncoming([incomingSheet]);
+    if (!settled) return;
+    const newSheet = settled.sheets[0];
     pushUndoSnapshot();
     const now = new Date().toISOString();
     const stamped = items.map((it) => {
       const status: ReviewStatus = it.reviewStatus || "extracted";
-      return { ...it, reviewStatus: status, auditLog: [{ timestamp: now, action: "قراءة نموذج إنشائي", newQty: it.quantity, status }] };
+      return { ...it, sheetCode: newSheet.code, reviewStatus: status, auditLog: [{ timestamp: now, action: "قراءة نموذج إنشائي", newQty: it.quantity, status }] };
     });
-    updateActiveProject((p) => ({ ...p, sheets: [...p.sheets, newSheet], takeoffItems: [...stamped, ...p.takeoffItems] }));
+    updateActiveProject((p) => ({
+      ...p,
+      sheets: [...p.sheets.filter((s) => !settled.drop.has(s.id)), newSheet],
+      takeoffItems: [...stamped, ...p.takeoffItems.filter((i) => !settled.drop.has(i.sheetId))],
+    }));
     setActiveSheetId(newSheet.id);
     setItemsAllSheets(true);
     setDrawingOpen(false);
@@ -608,9 +655,15 @@ export default function App() {
 
   const handleMultipleSheetsCreated = (newSheets: BlueprintSheet[]) => {
     if (newSheets.length === 0) return;
+    const settled = settleIncoming(newSheets);
+    if (!settled) return;
     pushUndoSnapshot();
-    updateActiveProject((p) => ({ ...p, sheets: [...p.sheets, ...newSheets] }));
-    void readNewSheetsIntoTable(newSheets);
+    updateActiveProject((p) => ({
+      ...p,
+      sheets: [...p.sheets.filter((s) => !settled.drop.has(s.id)), ...settled.sheets],
+      takeoffItems: p.takeoffItems.filter((i) => !settled.drop.has(i.sheetId)),
+    }));
+    void readNewSheetsIntoTable(settled.sheets);
   };
 
   const handleDeleteSheet = (sheetId: string) => {

@@ -1,5 +1,5 @@
 import { BlueprintSheet } from "../types";
-import { extractEngineeringQuantitiesFromDxf } from "../utils/dxfParser";
+import { extractEngineeringQuantitiesFromDxf, isIgnoredLayer } from "../utils/dxfParser";
 import { LabelledQty } from "../utils/ocrLabels";
 import { AiItem } from "../utils/aiTakeoff";
 import { Candidate } from "./candidate";
@@ -99,7 +99,10 @@ export function readPdf(sheet: BlueprintSheet): Candidate[] {
     // A colour, line weight, or closed outline does not identify a construction item, so anonymous length/area
     // buckets stay review-only. Two things are safe to preselect: a layer the drawing itself named, and repeated
     // identical shapes (e.g. 8 squares of 1.50×1.50) measured at a scale verified from the dimension numbers.
-    const named = Boolean(g.layer && !/^(0|default|layer\s*\d*)$/i.test(g.layer.trim()));
+    // Axes, dimensions, text, hatching, title blocks: the same helper layers DXF ignores never carry quantities.
+    if (g.layer && isIgnoredLayer(g.layer)) return;
+    // "0", "11", "ev" are not names that say what the lines are; a real name has a word in it.
+    const named = Boolean(g.layer && /[A-Za-z؀-ۿ]{3,}/.test(g.layer) && !/^(0|default|layer\s*\d*)$/i.test(g.layer.trim()));
     const trusted = named || (sure && role.mode === "count");
     const push = (q: number, mode: string, hint: string, idSuffix: string, count?: number) => {
       if (!(q > 0)) return;

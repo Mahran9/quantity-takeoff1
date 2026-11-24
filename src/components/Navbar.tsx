@@ -157,9 +157,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button onClick={onOpenSteelCalc} className={`${chip} bg-slate-800 border-slate-700 text-amber-300 hover:bg-slate-700`}>
               <Calculator className="w-4 h-4" /> حاسبة الحديد
             </button>
-            <button onClick={onOpenAdvanced} className={`${chip} bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700`}>
-              <Ruler className="w-4 h-4" /> قياس يدوي ومتقدم
-            </button>
             <PWAInstallButton className="shrink-0" />
             <div className="mr-auto hidden 2xl:flex items-center gap-3 text-xs text-slate-400">
               <label className="flex items-center gap-1.5">الكود
@@ -189,10 +186,6 @@ export const Navbar: React.FC<NavbarProps> = ({
         <button onClick={onOpenUpload} aria-label="إضافة مخطط" className={`qto-plus ${sheets.length === 0 ? "qto-fab-attention" : ""}`}>
           <Plus className="w-6 h-6" />
         </button>
-        <button onClick={onAnalyze}>
-          <Calculator className="w-[22px] h-[22px] justify-self-center" />
-          حلّل
-        </button>
         <button onClick={() => setMore(true)} className={more ? "is-active" : ""}>
           <MoreHorizontal className="w-[22px] h-[22px] justify-self-center" />
           المزيد
@@ -210,7 +203,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="grid grid-cols-2 gap-2.5">
               <button className={sheetRow} onClick={() => { setMore(false); onOpenVisualSearch(); }}><ScanSearch className="w-5 h-5 text-cyan-600" />بحث بصري</button>
               <button className={sheetRow} onClick={() => { setMore(false); onOpenProjectsModal(); }}><FolderKanban className="w-5 h-5 text-amber-600" />المشاريع</button>
-              <button className={sheetRow} onClick={() => { setMore(false); onOpenAdvanced(); }}><Ruler className="w-5 h-5 text-slate-600" />قياس يدوي ومتقدم</button>
               <button className={sheetRow} onClick={() => { setMore(false); onOpenSteelCalc(); }}><Calculator className="w-5 h-5 text-amber-600" />حاسبة الحديد</button>
               <button className={sheetRow} onClick={() => { setMore(false); onOpenSettings(); }}><Settings className="w-5 h-5 text-slate-600" />الإعدادات</button>
             </div>

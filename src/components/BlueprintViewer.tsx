@@ -405,7 +405,7 @@ export const BlueprintViewer: React.FC<BlueprintViewerProps> = ({
           <button onClick={handleZoomOut} className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg" title="تصغير">
             <ZoomOut className="w-4 h-4" />
           </button>
-          <button onClick={handleResetView} className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg" title="إعادة ضبط">
+          <button onClick={handleResetView} className="hidden sm:block p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg" title="إعادة ضبط">
             <RotateCcw className="w-4 h-4" />
           </button>
 

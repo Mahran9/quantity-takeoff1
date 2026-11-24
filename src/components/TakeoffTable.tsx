@@ -20,6 +20,7 @@ import {
   ChevronDown,
   Eye,
   FileUp,
+  MoreHorizontal,
   History,
 } from "lucide-react";
 import { TakeoffItem, BlueprintSheet, TradeCategory, DimensionType, ReviewStatus } from "../types";
@@ -61,6 +62,7 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
   const [isAddingNew, setIsAddingNew] = useState(false);
   const excelInputRef = useRef<HTMLInputElement>(null);
   // Phone list: which row is open for editing, and which sections are folded.
+  const [menuOpen, setMenuOpen] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
   const [catClosed, setCatClosed] = useState<Record<string, boolean>>({});
   const money2 = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -134,6 +136,8 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
     const matchesStatus = selectedStatus === "all" || getEffectiveStatus(item) === selectedStatus;
     return matchesSearch && matchesCategory && matchesDimensionType && matchesStatus;
   });
+
+  const draftItems = items.filter((i) => !(i.reviewStatus === "approved" || i.isVerified));
 
   // Phone list: sections in first-appearance order, numbering matches the desktop table.
   const phoneGroups = (() => {
@@ -261,7 +265,7 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
                 دفتر حصر كميات: {sheet.title}
               </h2>
             </div>
-            <p className="text-xs text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
+            <p className="text-xs text-slate-500 mt-1 hidden sm:flex items-center gap-2 flex-wrap">
               <span>التخصص: {sheet.discipline}</span>
               <span>•</span>
               <span>الملف: {sheet.fileName}</span>
@@ -272,7 +276,50 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
             </p>
           </div>
 
-          <div className="grid grid-cols-2 sm:flex items-center gap-2 sm:flex-wrap w-full sm:w-auto">
+          <div className="sm:hidden relative flex items-center gap-2 w-full">
+            <button
+              onClick={() => setIsAddingNew(true)}
+              className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-3 py-3 text-sm font-bold text-white"
+            >
+              <Plus className="w-4 h-4 text-amber-400" />
+              <span>بند يدوي</span>
+            </button>
+            {(onImportExcelItems || draftItems.length > 0) && (
+              <button
+                onClick={() => setMenuOpen((o) => !o)}
+                aria-label="خيارات أخرى"
+                aria-expanded={menuOpen}
+                className="flex h-12 w-12 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-700"
+              >
+                <MoreHorizontal className="w-5 h-5" />
+              </button>
+            )}
+            {menuOpen && (
+              <div className="absolute left-0 top-full z-20 mt-2 w-64 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg">
+                {onImportExcelItems && (
+                  <button
+                    onClick={() => { setMenuOpen(false); excelInputRef.current?.click(); }}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-3 text-right text-sm font-semibold text-slate-800 hover:bg-slate-50"
+                  >
+                    <FileUp className="w-4 h-4 text-slate-500" /> استيراد بنود من Excel
+                  </button>
+                )}
+                {draftItems.length > 0 && onDeleteMany && (
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      if (window.confirm(`سيُحذف ${draftItems.length} بنداً غير معتمد من هذه اللوحة، وتبقى البنود المعتمدة. يمكنك التراجع بزر الرجوع الأحمر في الأعلى.`)) onDeleteMany(draftItems.map((i) => i.id));
+                    }}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-3 text-right text-sm font-semibold text-rose-700 hover:bg-rose-50"
+                  >
+                    <Trash2 className="w-4 h-4" /> حذف غير المعتمدة ({draftItems.length})
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="hidden sm:flex items-center gap-2 sm:flex-wrap w-full sm:w-auto">
             {onDeleteMany && (() => {
               const drafts = items.filter((i) => !(i.reviewStatus === "approved" || i.isVerified));
               if (drafts.length === 0) return null;
@@ -323,7 +370,7 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
         </div>
 
         {/* Metric Badges for this specific sheet */}
-        <div className="flex sm:grid overflow-x-auto no-scrollbar sm:overflow-visible sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 text-right -mx-1 px-1 sm:mx-0 sm:px-0 qto-stagger">
+        <div className="hidden sm:grid sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 text-right -mx-1 px-1 sm:mx-0 sm:px-0 qto-stagger">
           <div className="bg-white p-2.5 rounded-xl border border-slate-200/80 shadow-2xs shrink-0 min-w-[132px] sm:min-w-0">
             <span className="text-[11px] text-slate-500 flex items-center gap-1">
               <Box className="w-3 h-3 text-purple-600" /> الحجوم والخرسانات
@@ -400,7 +447,7 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
         </div>
 
         {/* Review Status Filter */}
-        <div className="flex items-center gap-1.5">
+        <div className="hidden sm:flex items-center gap-1.5">
           <span className="text-xs text-slate-500">الحالة:</span>
           <select
             value={selectedStatus}
@@ -418,7 +465,7 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
         </div>
 
         {/* Dimension Type Quick Filters */}
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar sm:flex-wrap sm:overflow-visible [&>*]:shrink-0 [&>button]:whitespace-nowrap -mx-1 px-1 sm:mx-0 sm:px-0">
+        <div className="hidden sm:flex items-center gap-1.5 sm:flex-wrap">
           <span className="text-xs text-slate-500 ml-1 whitespace-nowrap">نوع القياس:</span>
           <button
             onClick={() => setSelectedDimensionType("all")}
@@ -476,7 +523,7 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
           </button>
         </div>
 
-        <div className="flex items-center gap-2 text-xs">
+        <div className="hidden sm:flex items-center gap-2 text-xs">
           <Filter className="w-3.5 h-3.5 text-slate-400" />
           <span className="text-slate-500">التصنيف:</span>
           <select
@@ -695,7 +742,7 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
                               <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px] text-slate-500">
                                 <span className="font-mono">#{index + 1}</span>
                                 {item.location && <span>{item.location}</span>}
-                                {st !== "approved" && st !== "rejected" && <span className={`px-1.5 rounded border text-[10px] font-bold ${STATUS_META[st].cls}`}>{STATUS_META[st].label}</span>}
+                                {st === "needs_review" && <span className={`px-1.5 rounded border text-[10px] font-bold ${STATUS_META[st].cls}`}>{STATUS_META[st].label}</span>}
                               </div>
                             </button>
                             <button onClick={() => setOpenId(open ? null : item.id)} aria-label={open ? "إغلاق التعديل" : "تعديل البند"} className="shrink-0 p-1.5 rounded-lg text-slate-500 hover:bg-slate-100">

@@ -55,7 +55,7 @@ import {
   markBackupDone,
 } from "./utils/projectStorage";
 
-export const APP_VERSION = "8.16.0";
+export const APP_VERSION = "8.16.1";
 
 // Persistent high-capacity storage powered by IndexedDB (src/utils/projectStorage.ts)
 
@@ -543,7 +543,7 @@ export default function App() {
       fresh.push(...candidatesToTakeoff(cands, sh, base + fresh.length));
     }
     if (!fresh.length) return toReview
-      ? `لم أجد كمية مؤكدة أضيفها وحدي، ووجدت ${toReview} قراءة تحتاج اختيارك: اضغط «راجع» واختر منها ما تعتمده.${ocrFailures ? ` تعذرت قراءة النص آلياً في ${ocrFailures} لوحة.` : ""}`
+      ? `لم أجد كمية مؤكدة أضيفها وحدي. في «راجع» قراءات غير مؤكدة (أطوال خطوط وعلامات) يمكنك أن تختار منها ما تعرف أنه صحيح.${ocrFailures ? ` تعذرت قراءة النص آلياً في ${ocrFailures} لوحة.` : ""}`
       : `لم أجد كميات يمكن قراءتها آلياً في هذا الملف (غالباً صورة أو بلا أبعاد مكتوبة). ${ocrLabels ? `قُرئ ${ocrLabels} رقم، لكن لم ينتج بنداً صالحاً. ` : ""}يمكنك إضافة بند يدوياً، أو فتح اللوحة من «اللوحات» والقياس عليها.${ocrFailures ? ` تعذرت قراءة النص آلياً في ${ocrFailures} لوحة.` : ""}`;
     pushUndoSnapshot();
     const now = new Date().toISOString();
@@ -561,7 +561,10 @@ export default function App() {
         ))),
       ],
     }));
-    return `أُضيف ${fresh.length} بنداً من ${readSheets} لوحة. ${ocrLabels ? `تم التقاط ${ocrLabels} رقم مطبوع.` : ""}${toReview ? ` وبقيت ${toReview} قراءة غير مؤكدة: اضغط «راجع» لاختيار ما تعتمده منها.` : ""}${ocrFailures ? ` تعذرت قراءة النص في ${ocrFailures} لوحة.` : ""} راجع البنود ثم صدّر Excel.`;
+    // The raw number of unconfirmed readings (often 100+ line totals and labels) only alarms; say what to do instead.
+    const flagged = fresh.filter((i) => i.reviewStatus === "needs_review").length;
+    const n = fresh.length === 1 ? "بند واحد" : fresh.length === 2 ? "بندان" : `${fresh.length} بنود`;
+    return `أُضيف ${n} مؤكدة من الجداول والمخططات.${flagged ? ` ${flagged} منها «يحتاج مراجعة» لأنه مبني على افتراض مذكور في البند.` : ""}${ocrLabels ? ` تم التقاط ${ocrLabels} رقم مطبوع.` : ""}${ocrFailures ? ` تعذرت قراءة النص في ${ocrFailures} لوحة.` : ""} ما لم يُضف (أطوال خطوط وعلامات غير مؤكدة) تجده في «راجع» إن احتجته.`;
   };
 
   // Reverse Link: Inspect a takeoff item on its blueprint

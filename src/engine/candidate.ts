@@ -112,7 +112,10 @@ export function candidatesToTakeoff(
     description: c.description,
     category: c.category,
     dimensionType: c.dim,
-    location: c.layer ? `طبقة: ${c.layer}` : c.sources.map((s) => SOURCE_LABEL[s]).join(" + "),
+    // Only a CAD/PDF layer is a «طبقة»; written marks and schedules are where the number came from.
+    location: c.layer
+      ? (c.sources.includes("mark") || c.sources.includes("ocr") ? `المصدر: ${c.layer}` : `طبقة: ${c.layer}`)
+      : c.sources.map((s) => SOURCE_LABEL[s]).join(" + "),
     count: c.count || 1,
     length: c.length,
     width: c.width,

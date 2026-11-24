@@ -59,36 +59,40 @@ export const ItemsScreen: React.FC<Props> = ({ sheets, items, activeSheetId, onS
         }
       />
       {msg && <p className="rounded-lg bg-teal-50 px-3 py-2 text-[13px] font-bold leading-6 text-teal-900">{msg}</p>}
-      {sheets.length > 1 && (
-        <div className="-mx-4 px-4 sm:mx-0 sm:px-0 flex gap-2 overflow-x-auto no-scrollbar">
-          <button
-            onClick={() => onSelectSheet("")}
-            className={`shrink-0 flex items-center gap-2 rounded-full px-3.5 py-2 text-[13px] font-bold border ${
-              !activeSheetId ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 border-slate-200"
-            }`}
-          >
-            الكل
-            <span className={`font-mono text-[11px] ${!activeSheetId ? "text-teal-300" : "text-slate-400"}`}>{items.length}</span>
-          </button>
-          {sheets.map((s) => {
-            const on = s.id === activeSheetId;
-            const n = items.filter((i) => i.sheetId === s.id).length;
-            return (
-              <button
-                key={s.id}
-                onClick={() => onSelectSheet(s.id)}
-                className={`shrink-0 flex items-center gap-2 rounded-full px-3.5 py-2 text-[13px] font-bold border ${
-                  on ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 border-slate-200"
-                }`}
-              >
-                <span className="font-mono text-[11px] opacity-80">{s.code}</span>
-                <span className="max-w-[120px] truncate">{s.title}</span>
-                <span className={`font-mono text-[11px] ${on ? "text-teal-300" : "text-slate-400"}`}>{n}</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
+      {sheets.length > 1 && (() => {
+        // One table for the whole project by default. A many-page PDF used to show a strip of 16 page buttons here;
+        // picking a single sheet is now one dropdown, sheets with lines first.
+        const count = (id: string) => items.filter((i) => i.sheetId === id).length;
+        const ordered = [...sheets].sort((a, b) => Number(count(b.id) > 0) - Number(count(a.id) > 0));
+        return (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onSelectSheet("")}
+              className={`shrink-0 flex items-center gap-2 rounded-full px-3.5 py-2 text-[13px] font-bold border ${
+                !activeSheetId ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 border-slate-200"
+              }`}
+            >
+              كل اللوحات
+              <span className={`font-mono text-[11px] ${!activeSheetId ? "text-teal-300" : "text-slate-400"}`}>{items.length}</span>
+            </button>
+            <select
+              value={activeSheetId}
+              onChange={(e) => onSelectSheet(e.target.value)}
+              aria-label="عرض لوحة واحدة"
+              className={`min-w-0 flex-1 sm:flex-none sm:w-64 rounded-full border px-3.5 py-2 text-[13px] font-bold ${
+                activeSheetId ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 border-slate-200"
+              }`}
+            >
+              <option value="">عرض لوحة واحدة… ({sheets.length})</option>
+              {ordered.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.code} · {s.title} — {count(s.id)} بند
+                </option>
+              ))}
+            </select>
+          </div>
+        );
+      })()}
       {children}
     </div>
   );

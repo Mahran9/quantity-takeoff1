@@ -78,6 +78,23 @@ export function readMarks(sheet: BlueprintSheet): Candidate[] {
   if (texts.length < 5) return [];
   const s = readMarkStats(texts);
   const out: Candidate[] = [];
+  // Architectural plans tag doors and windows with a bare "D" / "W".
+  if (texts.some((t) => /FLOOR PLAN|ROOF PLAN/i.test(t))) {
+    // Some CAD fonts export the tag number as a control character ("D\u0014"), so accept a letter followed by one.
+    const tags = texts.map((t) => /^([DW])([\u0000-\u001f]|\d{1,2})?$/.exec(t.trim())).filter(Boolean) as RegExpExecArray[];
+    for (const [ch, name] of [["D", "أبواب"], ["W", "نوافذ"]] as const) {
+      const mine = tags.filter((m) => m[1] === ch);
+      const n = mine.length;
+      const kinds = new Set(mine.map((m) => m[2] || "")).size;
+      if (n >= 1) out.push({
+        id: `mrk-tag-${ch}`, description: `${name} (علامة ${ch}) — ${sheet.code}`, category: "أعمال الأبواب والشبابيك والألمنيوم",
+        dim: "count", unit: "عدد", quantity: n, count: n, sources: ["mark"], confidence: "low", selected: false,
+        evidence: `نص مكتوب على اللوحة ${sheet.code}: علامة «${ch}» مكتوبة ${n} مرة (${kinds} نوع/رقم مختلف)`,
+        checks: ["رقم النوع غير مقروء من الملف: طابق العدد والمقاسات مع جدول الأبواب والشبابيك على اللوحة"],
+        layer: `علامات ${ch}`,
+      });
+    }
+  }
   const where = `نص مكتوب على اللوحة ${sheet.code}`;
   const sample = (marks: { mark: string; n: number }[]) =>
     marks.slice(0, 12).map((m) => (m.n > 1 ? `${m.mark}×${m.n}` : m.mark)).join("، ") + (marks.length > 12 ? " …" : "");

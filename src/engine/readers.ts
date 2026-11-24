@@ -98,16 +98,18 @@ export function readPdf(sheet: BlueprintSheet): Candidate[] {
       if (!(q > 0)) return;
       out.push({
         id: `pdf-${g.id}-${i}${idSuffix}`,
-        description: `${g.label} — ${hint}`,
+        description: g.layer ? `${g.label} — ${hint}` : `خطوط غير مسمّاة (${g.label}) — مجموع كل الخطوط بهذا اللون والسمك`,
         category: "أعمال متنوعة أخرى",
         dim: mode === "count" ? "count" : mode === "area" ? "area" : "linear",
         unit: mode === "count" ? "عدد" : mode === "area" ? "م²" : "م.ط",
         quantity: Number(q.toFixed(2)),
         sources: ["pdf"],
-        confidence: sure ? "medium" : "low",
+        // A group named by the drawing's own layer is an element; a bare colour/thickness bucket is every line of that
+        // look added together (hatching, text outlines, furniture) and must never reach the BOQ unless the person picks it.
+        confidence: sure && g.layer ? "medium" : "low",
         evidence: `رسم PDF متجه بمقياس 1:${den} (${sure ? "مؤكَّد من أرقام الأبعاد" : "تقدير يحتاج تأكيد"}) — ${g.pathCount} عنصر`,
         checks: [],
-        selected: sure,
+        selected: sure && !!g.layer,
         layer: g.layer || g.label,
         count,
       } as Candidate);

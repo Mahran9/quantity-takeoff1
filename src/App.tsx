@@ -479,19 +479,24 @@ export default function App() {
     const replaced = new Set<string>();
     const base = takeoffItems.length;
     let readSheets = 0;
+    let toReview = 0;
     for (const sh of sheets) {
       let cands: ReturnType<typeof readMarks> = [];
       try {
         if (sh.dxfData) cands = readCad(sh, {});
         else cands = [...(sh.pdfVector ? readPdf(sh) : []), ...readMarks(sh)];
       } catch { cands = []; }
-      const chosen = reconcile(cands).filter((c) => c.selected && c.quantity > 0);
+      const all = reconcile(cands).filter((c) => c.quantity > 0);
+      const chosen = all.filter((c) => c.selected);
+      toReview += all.length - chosen.length;
       if (!chosen.length) continue;
       readSheets++;
       replaced.add(sh.id);
       fresh.push(...candidatesToTakeoff(chosen, sh, base + fresh.length));
     }
-    if (!fresh.length) return "لم أجد كميات مكتوبة أو مقاسة تلقائياً في أي لوحة. جرّب لوحة ممسوحة؟ افتحها وعاير المقياس يدوياً.";
+    if (!fresh.length) return toReview
+      ? `لم أضف شيئاً تلقائياً لأن القراءات (${toReview}) غير مؤكَّدة. افتح «الكميات» واضغط «حلّل اللوحة» لتختار منها ما تعتمده.`
+      : "لم أجد كميات مكتوبة أو مقاسة في أي لوحة. افتح اللوحة وعاير المقياس بقياس بُعد معروف ثم قِس بالأدوات.";
     pushUndoSnapshot();
     const now = new Date().toISOString();
     const stamped = fresh.map((it, i) => ({ ...it, id: `${it.id}-${i}`, reviewStatus: "extracted" as ReviewStatus,
@@ -503,7 +508,7 @@ export default function App() {
         ...p.takeoffItems.filter((it) => !(replaced.has(it.sheetId) && (it.extractionSource === "cad_geometry" || it.extractionSource === "pdf_vector"))),
       ],
     }));
-    return `تم حصر ${fresh.length} بنداً من ${readSheets} لوحة من أصل ${sheets.length}. راجعها ثم صدّر Excel.`;
+    return `تم حصر ${fresh.length} بنداً من ${readSheets} لوحة من أصل ${sheets.length}.${toReview ? ` وهناك ${toReview} قراءة أخرى تنتظر اختيارك في «حلّل اللوحة».` : ""} راجع ثم صدّر Excel.`;
   };
 
   // Reverse Link: Inspect a takeoff item on its blueprint

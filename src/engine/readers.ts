@@ -3,7 +3,7 @@ import { extractEngineeringQuantitiesFromDxf } from "../utils/dxfParser";
 import { LabelledQty } from "../utils/ocrLabels";
 import { AiItem } from "../utils/aiTakeoff";
 import { Candidate } from "./candidate";
-import { measureGroup, suggestRole } from "../utils/pdfPlan";
+import { measureGroup, ptToMetres, suggestRole } from "../utils/pdfPlan";
 
 /** CAD geometry reader: layers, closed shapes, blocks (already parsed when the file was uploaded). */
 export interface CadAssumptions { wallHeight?: number; footingDepth?: number; slabThickness?: number; floorSlabThickness?: number }
@@ -87,26 +87,35 @@ export function readPdf(sheet: BlueprintSheet): Candidate[] {
   const groups = [...v.groups].sort((a, b) => b.lengthPt - a.lengthPt).slice(0, 8);
   groups.forEach((g, i) => {
     const role = suggestRole(g, den);
-    const m = measureGroup(g, den, v.userUnit || 1, role.mode === "count" ? 0 : undefined);
-    const q = role.mode === "count" ? m.count : role.mode === "area" ? m.areaM2 : m.lengthM;
-    if (!(q > 0)) return;
-    const unit = role.mode === "count" ? "عدد" : role.mode === "area" ? "م²" : "م.ط";
-    const dim = role.mode === "count" ? "count" : role.mode === "area" ? "area" : "linear";
-    out.push({
-      id: `pdf-${g.id}-${i}`,
-      description: `${g.label} — ${role.hint}`,
-      category: "أعمال متنوعة أخرى",
-      dim,
-      unit,
-      quantity: Number(q.toFixed(2)),
-      sources: ["pdf"],
-      confidence: sure ? "medium" : "low",
-      evidence: `رسم PDF متجه بمقياس 1:${den} (${sure ? "مؤكَّد من أرقام الأبعاد" : "تقدير يحتاج تأكيد"}) — ${g.pathCount} عنصر`,
-      checks: [],
-      selected: sure,
-      layer: g.layer || g.label,
-      count: role.mode === "count" ? m.count : undefined,
-    } as Candidate);
+    const push = (q: number, mode: string, hint: string, idSuffix: string, count?: number) => {
+      if (!(q > 0)) return;
+      out.push({
+        id: `pdf-${g.id}-${i}${idSuffix}`,
+        description: `${g.label} — ${hint}`,
+        category: "أعمال متنوعة أخرى",
+        dim: mode === "count" ? "count" : mode === "area" ? "area" : "linear",
+        unit: mode === "count" ? "عدد" : mode === "area" ? "م²" : "م.ط",
+        quantity: Number(q.toFixed(2)),
+        sources: ["pdf"],
+        confidence: sure ? "medium" : "low",
+        evidence: `رسم PDF متجه بمقياس 1:${den} (${sure ? "مؤكَّد من أرقام الأبعاد" : "تقدير يحتاج تأكيد"}) — ${g.pathCount} عنصر`,
+        checks: [],
+        selected: sure,
+        layer: g.layer || g.label,
+        count,
+      } as Candidate);
+    };
+    if (role.mode === "count") {
+      // One line per size (F1, F2 …): footings/columns of different sizes are different items.
+      const k = ptToMetres(1, den, v.userUnit || 1);
+      g.sizeClusters.slice(0, 5).forEach((c, ci) => {
+        if (c.count < 1) return;
+        push(c.count, "count", `${c.count} عنصراً بمقاس ${(c.wPt * k).toFixed(2)}×${(c.hPt * k).toFixed(2)} م (أعمدة/قواعد)`, `-c${ci}`, c.count);
+      });
+      return;
+    }
+    const m = measureGroup(g, den, v.userUnit || 1);
+    push(role.mode === "area" ? m.areaM2 : m.lengthM, role.mode, role.hint, "");
   });
   return out;
 }

@@ -136,3 +136,51 @@ export function readMarks(sheet: BlueprintSheet): Candidate[] {
   for (const x of s.rods) lab(`mrk-rod-${x.label}`, `تكتيف ${x.label}`, x.n, `«${x.label}» مكتوب ${x.n} مرة`);
   return out;
 }
+
+/* ------------------------------------------------------------------ */
+/* Unified table of marks across all sheets                            */
+/* ------------------------------------------------------------------ */
+
+export interface MarkRow {
+  kind: "علامة" | "براغي" | "مقطع" | "كمرة" | "قضيب";
+  label: string;
+  /** sheet code -> times written on that sheet */
+  perSheet: Record<string, number>;
+  /** The same label on several sheets is usually the same member in another view: take the largest, never the sum. */
+  best: number;
+  total: number;
+  warning: string;
+}
+
+export function buildMarksTable(sheets: BlueprintSheet[]): { rows: MarkRow[]; codes: string[] } {
+  const map = new Map<string, MarkRow>();
+  const codes: string[] = [];
+  const add = (kind: MarkRow["kind"], label: string, code: string, n: number) => {
+    const key = `${kind}|${label}`;
+    const r = map.get(key) || { kind, label, perSheet: {}, best: 0, total: 0, warning: "" };
+    r.perSheet[code] = (r.perSheet[code] || 0) + n;
+    map.set(key, r);
+  };
+  for (const sh of sheets) {
+    const texts = (sh.visualTokens || []).filter((t) => t.source === "pdf_text").map((t) => t.text);
+    if (texts.length < 5) continue;
+    const s = readMarkStats(texts);
+    const code = sh.code || sh.id;
+    let any = false;
+    for (const f of s.families) for (const m of f.marks) { add("علامة", m.mark, code, m.n); any = true; }
+    for (const b of s.bolts) { add("براغي", `M${b.dia}×${b.len}`, code, b.n); any = true; }
+    for (const x of s.sections) { add("مقطع", x.label, code, x.n); any = true; }
+    for (const g of s.beams) for (const m of g.marks) { add("كمرة", m.label, code, m.n); any = true; }
+    for (const x of s.rods) { add("قضيب", x.label, code, x.n); any = true; }
+    if (any) codes.push(code);
+  }
+  const rows = [...map.values()].map((r) => {
+    const v = Object.values(r.perSheet);
+    r.total = v.reduce((a, b) => a + b, 0);
+    r.best = Math.max(...v);
+    if (v.length > 1) r.warning = `مكتوبة في ${v.length} لوحات: غالباً نفس العناصر من منظر آخر، لا تجمعها (الأرجح ${r.best})`;
+    return r;
+  });
+  rows.sort((a, b) => a.kind.localeCompare(b.kind, "ar") || a.label.localeCompare(b.label, undefined, { numeric: true }));
+  return { rows, codes };
+}

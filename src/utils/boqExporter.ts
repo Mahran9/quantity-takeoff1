@@ -2,6 +2,7 @@ import * as XLSX from "xlsx";
 import { buildXlsx, CellInput, CellStyle, colLetter, downloadXlsx, SheetSpec } from "./xlsxWriter";
 import { BlueprintSheet, CompanyProfile, EMPTY_COMPANY_PROFILE, ProjectMetadata, TakeoffItem } from "../types";
 import { getSiteExecutionRank, sortItemsBySiteExecutionOrder } from "./executionOrder";
+import { buildMarksTable } from "../engine/marks";
 import { buildQuotation, isExportable, QUOTATION_LABELS, QuotationMeta } from "./quotation";
 
 // Re-exported for existing imports/tests.
@@ -480,6 +481,52 @@ export function buildBoqWorkbookBytes(
       label: "الإجمالي قبل الضريبة",
     })
   );
+
+
+  // Summary of drawings: one line per sheet.
+  {
+    const hs: CellStyle = { bold: true, color: C.white, fill: C.blue, align: "center", border: true, wrap: true };
+    const cs: CellStyle = { border: true, align: "center" };
+    const ts: CellStyle = { border: true, align: "right", wrap: true };
+    const head: CellInput[] = ["اللوحة", "العنوان", "التخصص", "عدد البنود", "بنود قيد المراجعة", `الإجمالي (${sym})`].map((v) => ({ v, s: hs }));
+    const body: CellInput[][] = sheets
+      .map((sh) => {
+        const its = takeoffItems.filter((i) => i.sheetId === sh.id);
+        if (!its.length) return null;
+        const pend = its.filter((i) => !(i.reviewStatus === "approved" || i.isVerified)).length;
+        const tot = its.reduce((a, i) => a + q2(q2(i.quantity) * q2(i.unitPrice)), 0);
+        return [{ v: sh.code, s: cs }, { v: sh.title, s: ts }, { v: sh.discipline, s: cs }, { v: its.length, s: cs }, { v: pend, s: cs }, { v: q2(tot), s: { ...cs, numFmt: MONEY } }] as CellInput[];
+      })
+      .filter(Boolean) as CellInput[][];
+    if (body.length > 1) {
+      specs.push({ name: uniqueSheetName("ملخص اللوحات", used), rows: [head, ...body], colWidths: [12, 40, 18, 12, 16, 18], rtl: true, freezeRows: 1 });
+    }
+  }
+
+  // Unified table of marks written on the drawings (never summed across sheets).
+  {
+    const { rows: mrows, codes } = buildMarksTable(sheets);
+    if (mrows.length) {
+      const hs: CellStyle = { bold: true, color: C.white, fill: C.blue, align: "center", border: true, wrap: true };
+      const cs: CellStyle = { border: true, align: "center" };
+      const ws: CellStyle = { border: true, align: "right", wrap: true, fill: C.warn };
+      const head: CellInput[] = ["النوع", "العلامة", ...codes, "الأرجح", "تنبيه"].map((v) => ({ v, s: hs }));
+      const body: CellInput[][] = mrows.map((r) => [
+        { v: r.kind, s: cs }, { v: r.label, s: cs },
+        ...codes.map((c) => ({ v: r.perSheet[c] ?? "", s: cs })),
+        { v: r.best, s: { ...cs, bold: true } },
+        { v: r.warning, s: r.warning ? ws : { border: true, align: "right" as const } },
+      ]);
+      specs.push({
+        name: uniqueSheetName("جدول العلامات", used),
+        rows: [head, ...body],
+        colWidths: [10, 26, ...codes.map(() => 11), 10, 48],
+        rtl: true,
+        freezeRows: 1,
+        filter: { headerRow: 0, lastRow: body.length },
+      });
+    }
+  }
 
   // One compact sheet per drawing.
   sheets.forEach((sheet) => {

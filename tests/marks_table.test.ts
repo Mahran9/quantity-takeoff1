@@ -1,0 +1,20 @@
+import { strict as assert } from "node:assert";
+import { buildMarksTable } from "../src/engine/marks";
+
+const tok = (texts: string[]) => texts.map((text, i) => ({ id: String(i), text, source: "pdf_text", x: 0, y: 0, w: 0, h: 0 }));
+const note = (n: number) => [String(n), "XM", "20", "X", "70"];
+const a: any = { id: "a", code: "E-01", visualTokens: tok([...note(14), "C3", "C3", "C4", "C5", "RF1", "RF2", "RF3", "X1", "X2"]) };
+const b: any = { id: "b", code: "E-02", visualTokens: tok([...note(14), "C3", "C4", "C5", "C6", "A", "B", "C", "D", "E"]) };
+const { rows, codes } = buildMarksTable([a, b]);
+assert.deepEqual(codes, ["E-01", "E-02"]);
+const c3 = rows.find((r) => r.kind === "علامة" && r.label === "C3")!;
+assert.equal(c3.perSheet["E-01"], 2);
+assert.equal(c3.perSheet["E-02"], 1);
+assert.equal(c3.best, 2, "largest count, never the sum");
+assert.equal(c3.total, 3);
+assert.ok(c3.warning.includes("لوحات"), "duplicate across sheets is flagged");
+const c6 = rows.find((r) => r.label === "C6");
+assert.ok(c6 && c6.warning === "", "a mark on one sheet has no warning");
+const bolt = rows.find((r) => r.kind === "براغي")!;
+assert.equal(bolt.best, 14);
+console.log("OK [marks_table]");

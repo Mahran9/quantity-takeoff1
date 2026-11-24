@@ -103,7 +103,11 @@ export function readPdf(sheet: BlueprintSheet): Candidate[] {
     if (g.layer && isIgnoredLayer(g.layer)) return;
     // "0", "11", "ev" are not names that say what the lines are; a real name has a word in it.
     const named = Boolean(g.layer && /[A-Za-z؀-ۿ]{3,}/.test(g.layer) && !/^(0|default|layer\s*\d*)$/i.test(g.layer.trim()));
+    // A named layer tells what the lines are, but adding up its lines is still not a BOQ length or area (both faces of
+    // a wall, hatch borders, details drawn at another scale): lengths and areas wait for the person even when named.
+    // Only counts of repeated identical shapes are preselected. "trusted" keeps the readable description.
     const trusted = named || (sure && role.mode === "count");
+    const preselect = sure && role.mode === "count";
     const push = (q: number, mode: string, hint: string, idSuffix: string, count?: number) => {
       if (!(q > 0)) return;
       out.push({
@@ -122,7 +126,7 @@ export function readPdf(sheet: BlueprintSheet): Candidate[] {
         confidence: sure && trusted ? "medium" : "low",
         evidence: `رسم PDF متجه بمقياس 1:${den} (${sure ? "مؤكَّد من أرقام الأبعاد" : "تقدير يحتاج تأكيد"}) — ${g.pathCount} عنصر`,
         checks: [],
-        selected: sure && trusted,
+        selected: preselect,
         layer: g.layer || g.label,
         named: !!g.layer,
         count,

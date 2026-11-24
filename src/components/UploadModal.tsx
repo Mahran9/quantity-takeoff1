@@ -79,7 +79,8 @@ export const UploadModal: React.FC<UploadModalProps> = ({
         const count = await getPdfPageCount(buffer);
         setPdfTotalPages(count);
         setSelectedPage(1);
-        setPageRangeEnd(Math.min(count, 10));
+        // Read the whole set by default: schedules (footings, columns) are usually on the last sheets.
+        setPageRangeEnd(Math.min(count, 40));
         setImportAllPages(count > 1);
       } catch (err) {
         console.error("PDF preview error:", err);

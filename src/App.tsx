@@ -40,6 +40,7 @@ import { readPrintedLabels } from "./utils/ocrLabels";
 import { importWithRecovery } from "./utils/lazyImport";
 import { reconcile } from "./engine/reconcile";
 import { Candidate, candidatesToTakeoff, mergeRepeatedMarks } from "./engine/candidate";
+import { scheduleVolumes } from "./engine/schedules";
 import { getSheetVisualTokens, searchSheetTokens } from "./utils/visualSearchEngine";
 import {
   loadProjectsFromStorage,
@@ -54,7 +55,7 @@ import {
   markBackupDone,
 } from "./utils/projectStorage";
 
-export const APP_VERSION = "8.15.0";
+export const APP_VERSION = "8.16.0";
 
 // Persistent high-capacity storage powered by IndexedDB (src/utils/projectStorage.ts)
 
@@ -496,7 +497,9 @@ export default function App() {
         if (sh.dxfData) cands = readCad(sh, {});
         else {
           cands = [...(sh.pdfVector ? readPdf(sh) : []), ...readMarks(sh)];
-          if (sh.imageUrl) {
+          // OCR only where the page has (almost) no text layer — scans or text exported as outlines. A page that
+          // already carries its text is read directly; running OCR on it only costs time (16 pages ≈ minutes).
+          if (sh.imageUrl && (sh.visualTokens?.length ?? 0) < 20) {
             try {
               const labels = await readPrintedLabels(
                 sh.imageUrl,
@@ -521,7 +524,19 @@ export default function App() {
       if (chosen.length) replaced.add(sh.id);
     }
     // Plan, sections and schedules repeat the same marks: one line per family, never the sum of the sheets.
-    for (const { sheetId, cands } of mergeRepeatedMarks(perSheet)) {
+    // Schedules (footing L×W×H, column b×h) on any sheet of the file × the counted marks = m³ of concrete.
+    // Volume lines replace the bare counts they were built from; the counts stay available in «راجع».
+    const merged = mergeRepeatedMarks(perSheet);
+    const vol = scheduleVolumes(sheetList, merged);
+    const finalPerSheet = merged.map(({ sheetId, cands }) => ({
+      sheetId,
+      cands: [
+        ...vol.lines.filter((l) => l.sheetId === sheetId).map((l) => l.cand),
+        ...cands.filter((c) => !vol.replaced.some((r) => r.sheetId === sheetId && r.id === c.id)),
+      ],
+    }));
+    toReview += vol.replaced.length;
+    for (const { sheetId, cands } of finalPerSheet) {
       if (!cands.length) continue;
       const sh = scope.find((x) => x.id === sheetId)!;
       readSheets++;
@@ -532,8 +547,10 @@ export default function App() {
       : `لم أجد كميات يمكن قراءتها آلياً في هذا الملف (غالباً صورة أو بلا أبعاد مكتوبة). ${ocrLabels ? `قُرئ ${ocrLabels} رقم، لكن لم ينتج بنداً صالحاً. ` : ""}يمكنك إضافة بند يدوياً، أو فتح اللوحة من «اللوحات» والقياس عليها.${ocrFailures ? ` تعذرت قراءة النص آلياً في ${ocrFailures} لوحة.` : ""}`;
     pushUndoSnapshot();
     const now = new Date().toISOString();
-    const stamped = fresh.map((it, i) => ({ ...it, id: `${it.id}-${i}`, reviewStatus: "extracted" as ReviewStatus,
-      auditLog: [{ timestamp: now, action: "حصر تلقائي لكل اللوحات", newQty: it.quantity, status: "extracted" as ReviewStatus }] }));
+    const stamped = fresh.map((it, i) => {
+      const status: ReviewStatus = it.reviewStatus || "extracted"; // lines built on an assumption arrive as «needs_review»
+      return { ...it, id: `${it.id}-${i}`, reviewStatus: status, auditLog: [{ timestamp: now, action: "حصر تلقائي لكل اللوحات", newQty: it.quantity, status }] };
+    });
     updateActiveProject((p) => ({
       ...p,
       takeoffItems: [

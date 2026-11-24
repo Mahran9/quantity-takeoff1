@@ -49,7 +49,10 @@ assert.equal(ok[0].unit, "م.ط");
 assert.equal(ok[0].quantity, 100, "1000 mm of paper at 1:100 = 100 m");
 assert.equal(ok[0].selected, false, "unnamed colour/thickness bucket is never pre-selected");
 const named = readPdf({ pdfVector: { ...base, groups: [{ ...grp("g1", 2834.6), layer: "WALLS" }], scaleConfidence: "high", detectedDenominator: 100 } } as any);
-assert.equal(named[0].selected, true, "a layer named by the drawing itself is an element");
+// The name says what the lines are (the description uses it), but a layer's line total is not a BOQ length:
+// on a real villa set, named layers (BEAM, WALL, COULMN, FOOTING, a logo) gave 10 meaningless lengths. Review only.
+assert.equal(named[0].selected, false, "a named layer's line total waits for the person");
+assert.equal(named[0].layer, "WALLS");
 const med = readPdf({ pdfVector: { ...base, scaleConfidence: "medium", detectedDenominator: 100 } } as any);
 assert.equal(med[0].selected, false);
 assert.equal(med[0].confidence, "low");

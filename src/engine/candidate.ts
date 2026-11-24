@@ -32,12 +32,14 @@ export interface Candidate {
   height?: number;
   /** Mark families: times each mark (C1, C2 …) is written on this sheet. */
   perMark?: Record<string, number>;
+  /** Built on an assumption the person must confirm (e.g. storey height): the line arrives as «needs review». */
+  review?: boolean;
 }
 
 /**
- * The same piece marks written on several sheets (plan, sections, schedules) are the same members seen again.
- * Merge each family into one line: per mark the largest count on any one sheet, never the sum across sheets.
- * Bolt groups / tags repeated on several sheets keep the largest single-sheet number. Returns which sheet keeps the line.
+ * Steel shop/erection sets: the same piece marks on several sheets (plan, elevations) are the same members seen
+ * again, so each family becomes one line with, per mark, the largest count on any one sheet (never the sum).
+ * Concrete design sets: see below — floors stay separate, exact repeats are dropped.
  */
 export function mergeRepeatedMarks(perSheet: { sheetId: string; code: string; cands: Candidate[] }[]): { sheetId: string; cands: Candidate[] }[] {
   const groups = new Map<string, { sheetId: string; code: string; c: Candidate }[]>();
@@ -47,8 +49,24 @@ export function mergeRepeatedMarks(perSheet: { sheetId: string; code: string; ca
   }
   const drop = new Set<Candidate>();
   const replace = new Map<Candidate, Candidate>();
+  const hasFootings = (sheetId: string) => perSheet.find((s) => s.sheetId === sheetId)?.cands.some((c) => c.id === "mrk-F");
   for (const list of groups.values()) {
     if (list.length < 2) continue;
+    // Reinforced-concrete sets: each plan is a different floor (ground, first, annex …), so its marks are different
+    // members and stay on their own line. Only a sheet that repeats another's marks exactly (the footing plan
+    // re-drawing the ground-floor columns) is the same members again: drop that copy, keeping the floor plan.
+    if (list[0].c.category === "أعمال خرسانية مسلحة وعادية") {
+      const seen = new Map<string, (typeof list)[number]>();
+      for (const x of [...list].sort((a, b) => Number(!!hasFootings(a.sheetId)) - Number(!!hasFootings(b.sheetId)))) {
+        const key = JSON.stringify(Object.entries(x.c.perMark || { _: x.c.quantity }).sort());
+        const first = seen.get(key);
+        if (!first) { seen.set(key, x); continue; }
+        drop.add(x.c);
+        const prev = replace.get(first.c) || first.c;
+        replace.set(first.c, { ...prev, checks: [...prev.checks, `نفس العلامات بنفس الأعداد مكررة في اللوحة ${x.code}: حُسبت مرة واحدة`] });
+      }
+      continue;
+    }
     let qty: number;
     let detail = "";
     if (list.every((x) => x.c.perMark)) {
@@ -113,6 +131,7 @@ export function candidatesToTakeoff(
       "لم يتم إدخال سعر وحدة",
     ],
     extractionSource: c.sources.length === 1 ? EXTRACTION[c.sources[0]] : "cad_geometry",
+    ...(c.review ? { reviewStatus: "needs_review" as const } : {}),
     sourceDetails: c.layer ? { layer: c.layer } : undefined,
   }));
 }

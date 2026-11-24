@@ -14,8 +14,14 @@ const FAMILY: Record<string, string> = {
 /** Reinforced-concrete drawings use the same letters for other members. */
 const RC_FAMILY: Record<string, string> = {
   C: "أعمدة خرسانية", F: "قواعد", N: "رقاب أعمدة", GB: "ميدات", TB: "ميدات ربط", B: "كمرات خرسانية",
-  RB: "كمرات سقف", R: "كمرات سقف (R)", S: "بلاطات (S)", SB: "كمرات ثانوية", W: "جدران خرسانية", SW: "جدران قص", ST: "درج",
+  RB: "كمرات سقف", R: "أنواع بلاطات هوردي (R)", S: "أنواع بلاطات مصمتة (S)", SB: "كمرات ثانوية", W: "جدران خرسانية", SW: "جدران قص", ST: "درج",
 };
+/**
+ * In a concrete design set only a column or footing mark stands for one member. Beam, tie-beam and slab marks
+ * label spans or slab types (one beam can carry its mark several times), so their counts are not quantities:
+ * they are offered for review, not added to the BOQ.
+ */
+const RC_MEMBER_MARKS = new Set(["C", "F", "N"]);
 const STEEL_CAT = "أعمال الهياكل المعدنية والهناجر";
 const RC_CAT = "أعمال خرسانية مسلحة وعادية";
 
@@ -128,11 +134,13 @@ export function readMarks(sheet: BlueprintSheet): Candidate[] {
         : `عدد ${name} حسب العلامات (${f.marks.map((m) => m.mark).slice(0, 8).join("، ")}${f.marks.length > 8 ? "…" : ""})`,
       category: steel ? STEEL_CAT : RC_CAT,
       dim: "count", unit: "عدد", quantity: f.total, count: f.total,
-      sources: ["mark"], confidence: "medium", selected: true,
+      sources: ["mark"], confidence: "medium", selected: steel || RC_MEMBER_MARKS.has(f.prefix),
       evidence: `${where}: ظهرت علامات ${f.prefix} ${f.total} مرة (${sample(f.marks)})`,
       checks: steel
         ? ["العدد = عدد مرات ظهور العلامة في هذا المنظر؛ لا تجمعه مع لوحة تعرض نفس العناصر من زاوية أخرى"]
-        : ["عدد العناصر فقط: حجم الخرسانة يحتاج مقاس كل علامة من جدول القواعد/الأعمدة/الميدات على اللوحة"],
+        : RC_MEMBER_MARKS.has(f.prefix)
+          ? ["عدد العناصر فقط: حجم الخرسانة يحتاج مقاس كل علامة من جدول القواعد/الأعمدة على اللوحة"]
+          : ["عدد مرات كتابة العلامة، لا عدد ولا طول العناصر: الكمرات والميدات تُحسب بالطول والبلاطات بالمساحة"],
       layer: `علامات ${f.prefix}`,
       // Per-mark counts so the same members shown on several sheets can be merged (largest per mark, never the sum).
       perMark: Object.fromEntries(f.marks.map((m) => [m.mark, m.n])),

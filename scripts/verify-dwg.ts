@@ -49,7 +49,7 @@ async function main() {
   const members = readCadMembers(res, { storeyHeight: h > 0 ? Number(process.argv[h + 1]) : undefined, slabThickness: t > 0 ? Number(process.argv[t + 1]) : undefined });
   console.log(`\nbeams measured from geometry: ${members.length}`);
   for (const m of members) {
-    console.log(`  ${m.quantity.toFixed(3).padStart(10)} م³  ${m.description}  [${m.layer}]`);
+    console.log(`  ${m.quantity.toFixed(3).padStart(10)} ${m.unit}  ${m.description}  [${m.layer ?? ""}]`);
     console.log(`       ${m.evidence}`);
     for (const c of m.checks) console.log(`       ! ${c}`);
   }

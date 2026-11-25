@@ -1,5 +1,5 @@
 import { strict as assert } from "node:assert";
-import { readCadMembers, parseBeamSchedules } from "../src/engine/cadMembers";
+import { readCadMembers, parseBeamSchedules, parseBar, parseStirrup, kgPerM, beamRebarKg, columnRebarKg, footingRebarKg } from "../src/engine/cadMembers";
 
 // Synthetic framing plan in metres: four beams drawn as edge pairs between columns, labelled GB1 / GB2, with the
 // beam schedule pasted as a block (as real DWG sets do), plus noise that must not count as beams.
@@ -30,8 +30,8 @@ const dxf = {
 };
 
 const s = parseBeamSchedules(schedule.map((t) => ({ s: t.text.replace("%%U", ""), x: t.startPoint.x, y: t.startPoint.y })));
-assert.deepEqual(s.sections.GB1, { b: 0.2, h: 0.6 });
-assert.deepEqual(s.sections.GB9, { b: 0.5, h: 0.6 });
+assert.deepEqual([s.sections.GB1.b, s.sections.GB1.h], [0.2, 0.6]);
+assert.deepEqual([s.sections.GB9.b, s.sections.GB9.h], [0.5, 0.6]);
 
 const out = readCadMembers(dxf);
 assert.equal(out.filter((c) => c.id.endsWith("-GB")).length, 1, "one ground-beam line for the one plan");
@@ -115,6 +115,36 @@ assert.equal(ft.filter((c) => c.id.endsWith("-rc")).length, 1, "only the foundat
 assert.ok(Math.abs(frc.quantity - (6 * 1.2 * 1.2 * 0.6 + 2 * 1.8 * 1.8 * 0.6 + 4.5 * 2.5 * 0.6)) < 1e-6, `RC footings ${frc.quantity}`);
 assert.ok(Math.abs(fpc.quantity - Math.round((6 * 1.4 * 1.4 * 0.1 + 2 * 2 * 2 * 0.1 + 4.7 * 2.7 * 0.1) * 1000) / 1000) < 1e-6, `blinding ${fpc.quantity}`);
 assert.match(frc.description, /FOUNDATION PLAN \(9 قاعدة\)/);
+
+// Rebar: notation, unit weights and the per-element formulas.
+{
+  assert.deepEqual(parseBar("4Ø16"), { n: 4, d: 16 });
+  assert.deepEqual(parseStirrup("6Ø8/m'"), { d: 8, perM: 6 });
+  assert.deepEqual(parseStirrup("1Ø10@15cm"), { d: 10, perM: 100 / 15 });
+  assert.deepEqual(parseStirrup("5Ø14MM/M"), { d: 14, perM: 5 });
+  assert.ok(Math.abs(kgPerM(16) - 1.580) < 0.001 && Math.abs(kgPerM(12) - 0.889) < 0.001);
+  // 10 m beam in 2 spans, 0.2×0.6, 3Ø16 bottom & top, 6Ø8/m stirrups.
+  const bk = beamRebarKg(10, 2, 0.2, 0.6, { bot: { n: 3, d: 16 }, top: { n: 3, d: 16 }, stirrup: { d: 8, perM: 6 } });
+  const exp = 2 * 3 * (10 + 2 * 2 * 0.64) * kgPerM(16) + 6 * 10 * (2 * (0.12 + 0.52) + 0.16) * kgPerM(8);
+  assert.ok(Math.abs(bk - exp) < 1e-6, `beam rebar ${bk}`);
+  // 4 m column 0.2×0.6, 10Ø16, 6Ø8/m × 2 sets.
+  const ck = columnRebarKg(4, { b: 0.2, h: 0.6, vert: { n: 10, d: 16 }, stirrup: { d: 8, perM: 6 }, sets: 2 });
+  assert.ok(Math.abs(ck - (10 * 4.64 * kgPerM(16) + 2 * 6 * 4 * (2 * (0.12 + 0.52) + 0.16) * kgPerM(8))) < 1e-6, `column rebar ${ck}`);
+  // 1.2×1.2×0.6 footing, 5Ø14/m both ways lower, 3Ø14 upper each way.
+  const fk = footingRebarKg({ L: 1.2, W: 1.2, H: 0.6 }, { sl: { d: 14, perM: 5 }, su: { d: 14, n: 3 }, ll: { d: 14, perM: 5 }, lu: { d: 14, n: 3 } });
+  const piece = 1.2 - 0.15 + 2 * 0.45;
+  assert.ok(Math.abs(fk - 2 * (5 * 1.05 + 1 + 3) * piece * kgPerM(14)) < 1e-6, `footing rebar ${fk}`);
+}
+// A beam schedule with only bottom and top bars (tie beams) maps them to bottom and top.
+const tbs = parseBeamSchedules([{ s: "TB1", x: 0, y: 0 }, { s: "0.20", x: 3, y: 0 }, { s: "0.60", x: 5, y: 0 }, { s: "4Ø16", x: 8, y: 0 }, { s: "4Ø16", x: 16, y: 0 }, { s: "6Ø8/m'", x: 24, y: 0 },
+  { s: "TB2", x: 0, y: -1.5 }, { s: "0.20", x: 3, y: -1.5 }, { s: "0.60", x: 5, y: -1.5 }, { s: "6Ø16", x: 8, y: -1.5 }, { s: "6Ø16", x: 16, y: -1.5 }]);
+assert.deepEqual(tbs.sections.TB1.bars, { bot: { n: 4, d: 16 }, botAdd: undefined, top: { n: 4, d: 16 }, topAdd: undefined, stirrup: { d: 8, perM: 6 } });
+// The footing schedule above gives F1 a lower short mesh (5Ø14/m) only: one rebar line for the six F1.
+const fr = ft.filter((c) => c.unit === "طن");
+assert.equal(fr.length, 1);
+const f1kg = 6 * footingRebarKg({ L: 1.2, W: 1.2, H: 0.6 }, { sl: { d: 14, perM: 5 } });
+assert.equal(fr[0].quantity, Math.round(f1kg) / 1000);
+assert.match(fr[0].checks.join(" "), /بلا تسليح مقروء في الجدول: F2، CF1/);
 
 // No schedule → nothing guessed.
 assert.equal(readCadMembers({ unitInfo: { toMeters: 1 }, parsedData: { entities: plan, blocks: {} } }).length, 0);

@@ -32,7 +32,68 @@ const r1 = (v: number) => Math.round(v * 10) / 10;
 interface Txt { s: string; x: number; y: number }
 interface Seg { ax: number; ay: number; bx: number; by: number; layer: string }
 interface Span { layer: string; width: number; length: number; x0: number; y0: number; x1: number; y1: number }
-export interface Section { b: number; h: number }
+export interface Bar { n: number; d: number }
+export interface Stirrup { d: number; perM: number }
+/** Beam reinforcement as the schedule writes it: straight and additional bars, bottom and top, and stirrups. */
+export interface BeamBars { bot?: Bar; botAdd?: Bar; top?: Bar; topAdd?: Bar; stirrup?: Stirrup }
+export interface Section { b: number; h: number; bars?: BeamBars }
+
+/** kg per metre of a bar of diameter d mm. */
+export const kgPerM = (d: number) => (d * d) / 162;
+const BAR = /^(\d{1,2})\s*Ø\s*(\d{1,2})$/;
+const PER_M = /^(\d{1,2})\s*Ø\s*(\d{1,2})\s*(?:MM)?\s*\/\s*M'?$/i;
+const AT_CM = /^(\d{1,2})\s*Ø\s*(\d{1,2})\s*@\s*(\d{1,3})\s*CM$/i;
+export const parseBar = (s: string): Bar | undefined => { const m = BAR.exec(s); return m ? { n: +m[1], d: +m[2] } : undefined; };
+export const parseStirrup = (s: string): Stirrup | undefined => {
+  const a = PER_M.exec(s); if (a) return { d: +a[2], perM: +a[1] };
+  const b = AT_CM.exec(s); if (b) return { d: +b[2], perM: (+b[1] * 100) / +b[3] };
+  return undefined;
+};
+
+/** Cells to the right of a schedule mark on its row: bars (or "---" for none) in column order, and stirrups. */
+function rowBars(texts: Txt[], m: Txt, reach = 45): { bars: (Bar | null)[]; stirrups: Stirrup[] } {
+  const cells = texts.filter((t) => t.x > m.x && t.x - m.x < reach && Math.abs(t.y - m.y) < 0.35).sort((a, b) => a.x - b.x);
+  const bars: (Bar | null)[] = [], stirrups: Stirrup[] = [];
+  for (const c of cells) {
+    const st = parseStirrup(c.s);
+    if (st) { stirrups.push(st); continue; }
+    const b = parseBar(c.s);
+    if (b) bars.push(b);
+    else if (/^-{2,}$/.test(c.s)) bars.push(null);
+  }
+  return { bars, stirrups };
+}
+
+/** A rebar line in tonnes, with its kg/m³ ratio so an outlier is visible at a glance. */
+function rebarLine(id: string, description: string, kg: number, concreteM3: number, evidence: string, checks: string[]): Candidate {
+  const ratio = concreteM3 > 0 ? kg / concreteM3 : 0;
+  return {
+    id, description, category: "أعمال حديد التسليح", dim: "count", unit: "طن",
+    quantity: Math.round(kg) / 1000, sources: ["cad"], confidence: "medium",
+    evidence: `${evidence}${ratio ? ` — ${Math.round(ratio)} كجم لكل م³ خرسانة` : ""}`,
+    checks: [...checks, "الوزن من جداول التسليح مع افتراضات أطوال الربط والإضافي المذكورة؛ راجعها مع مخططات التفاصيل"],
+    selected: true, formula: "Σ عدد × الطول × ق²/162", review: true,
+  };
+}
+
+const STIR_HOOK = 10; // hook allowance per end, in bar diameters
+const ANCHOR = 40; // anchorage / lap, in bar diameters
+/**
+ * Beam rebar (kg) for a mark run: straight bars over the whole length plus anchorage at each span end, additional
+ * bottom bars over 0.7 of the span, additional top bars over 0.5 of the span (a third each side of each support),
+ * stirrups at the scheduled rate with 4 cm cover and hooks.
+ */
+export function beamRebarKg(L: number, spans: number, b: number, h: number, r: BeamBars): number {
+  let kg = 0;
+  for (const bar of [r.bot, r.top]) if (bar) kg += bar.n * (L + spans * 2 * ANCHOR * bar.d / 1000) * kgPerM(bar.d);
+  if (r.botAdd) kg += r.botAdd.n * 0.7 * L * kgPerM(r.botAdd.d);
+  if (r.topAdd) kg += r.topAdd.n * 0.5 * L * kgPerM(r.topAdd.d);
+  if (r.stirrup) {
+    const c = 0.04, piece = 2 * (b - 2 * c + h - 2 * c) + (2 * STIR_HOOK * r.stirrup.d) / 1000;
+    kg += r.stirrup.perM * L * piece * kgPerM(r.stirrup.d);
+  }
+  return kg;
+}
 
 export function cleanCadText(s: unknown): string {
   return String(s ?? "")
@@ -58,12 +119,22 @@ export function parseBeamSchedules(texts: Txt[]): { sections: Record<string, Sec
     const [v1, v2] = [Number(row[0].s), Number(row[1].s)];
     const k = v1 <= 3 && v2 <= 3 ? 1 : v1 >= 10 && v2 >= 10 && v1 <= 300 && v2 <= 300 ? 0.01 : 0;
     if (!k || v1 <= 0 || v2 <= 0) continue;
-    entries.push({ ...m, b: v1 * k, h: v2 * k });
+    // Bars in column order: bottom straight, bottom additional, top straight, top additional ("---" = none).
+    const { bars, stirrups } = rowBars(texts, m);
+    const has = bars.some(Boolean) || stirrups.length;
+    // Two bar columns = bottom and top straight only (a tie-beam table has no additional bars).
+    const two = bars.length === 2;
+    const rb: BeamBars | undefined = has ? {
+      bot: bars[0] ?? undefined, botAdd: two ? undefined : bars[1] ?? undefined,
+      top: (two ? bars[1] : bars[2]) ?? undefined, topAdd: two ? undefined : bars[3] ?? undefined,
+      stirrup: stirrups.sort((a, b) => b.perM - a.perM)[0],
+    } : undefined;
+    entries.push({ ...m, b: v1 * k, h: v2 * k, bars: rb });
   }
   // A schedule lists several marks of a family in one column; a lone mark beside two numbers is not a table.
   const kept = entries.filter((e) => entries.some((o) => o !== e && familyOf(o.s) === familyOf(e.s) && Math.abs(o.x - e.x) < 0.6));
   const sections: Record<string, Section> = {};
-  for (const e of kept) sections[e.s] ||= { b: e.b, h: e.h };
+  for (const e of kept) sections[e.s] ||= { b: e.b, h: e.h, bars: e.bars };
   return { sections, rows: kept };
 }
 
@@ -127,7 +198,7 @@ function cluster<T extends { x: number; y: number }>(pts: T[], gap: number): T[]
 }
 
 /** Column schedule rows: a column mark with its "20 x 60 cm" / "60*20" size near it (cm). */
-export function parseColumnSizes(texts: Txt[]): Record<string, Section> {
+export function parseColumnSizes(texts: Txt[]): Record<string, ColSection> {
   const marks = texts.filter((t) => /^C\d{1,2}$/.test(t.s));
   const sizes = texts
     .map((t) => ({ t, m: /^(\d{2,3})\s*[xX×*]\s*(\d{2,3})(?:\s*(?:cm|CM|سم|sL))?$/.exec(t.s) }))
@@ -145,24 +216,67 @@ export function parseColumnSizes(texts: Txt[]): Record<string, Section> {
     found.push({ ...c, b: Number(near.z.m[1]) / 100, h: Number(near.z.m[2]) / 100 });
   }
   const kept = found.filter((e) => found.some((o) => o !== e && Math.abs(o.x - e.x) < 0.6));
-  const out: Record<string, Section> = {};
-  for (const e of kept) out[e.s] ||= { b: e.b, h: e.h };
+  const out: Record<string, ColSection> = {};
+  // Reinforcement written under each mark in the schedule: "10Ø16" vertical bars, "6Ø8/m" stirrups, "2 SETS".
+  // A text belongs to the nearest schedule mark above it.
+  const ownerAbove = (t: Txt) =>
+    kept.filter((m) => m.y >= t.y - 0.8 && t.x - m.x > -1.5 && t.x - m.x < 30).sort((a, b) => a.y - t.y - (b.y - t.y))[0];
+  const vert: Record<string, Bar> = {}, stir: Record<string, Stirrup> = {}, sets: Record<string, number> = {};
+  for (const t of texts) {
+    const o = ownerAbove(t);
+    if (!o || o.y - t.y > 7) continue;
+    const bar = parseBar(t.s), st = parseStirrup(t.s), se = /^(\d)\s*SETS?$/i.exec(t.s);
+    if (bar && t.x - o.x < 8 && !vert[o.s]) vert[o.s] = bar;
+    else if (st && t.x - o.x < 8 && !stir[o.s]) stir[o.s] = st;
+    else if (se && !sets[o.s]) sets[o.s] = +se[1];
+  }
+  for (const e of kept) out[e.s] ||= { b: e.b, h: e.h, vert: vert[e.s], stirrup: stir[e.s], sets: sets[e.s] };
   return out;
 }
 
+export interface ColSection { b: number; h: number; vert?: Bar; stirrup?: Stirrup; sets?: number }
+/** One column storey: vertical bars over the height plus a lap, stirrup sets at the scheduled rate (4 cm cover). */
+export function columnRebarKg(H: number, s: ColSection): number {
+  let kg = 0;
+  if (s.vert) kg += s.vert.n * (H + (ANCHOR * s.vert.d) / 1000) * kgPerM(s.vert.d);
+  if (s.stirrup) {
+    const c = 0.04, piece = 2 * (s.b - 2 * c + s.h - 2 * c) + (2 * STIR_HOOK * s.stirrup.d) / 1000;
+    kg += (s.sets || 1) * s.stirrup.perM * H * piece * kgPerM(s.stirrup.d);
+  }
+  return kg;
+}
+
 type Box3 = { L: number; W: number; H: number };
+/** One footing mesh layer: bars per metre ("5Ø14MM/M") or a bar count ("3Ø14"). */
+export interface Mesh { d: number; perM?: number; n?: number }
+/** Short and long direction, lower and upper layers, in the schedule's column order. */
+export interface FootBars { sl?: Mesh; su?: Mesh; ll?: Mesh; lu?: Mesh }
+const meshOf = (s: string): Mesh | undefined => {
+  const st = parseStirrup(s); if (st) return { d: st.d, perM: st.perM };
+  const b = parseBar(s); return b ? { d: b.d, n: b.n } : undefined;
+};
+/**
+ * Rebar in one footing (kg): bars run the full length or width less 7.5 cm cover each end and are bent up the depth
+ * at both ends; a per-metre layer is spread across the other side.
+ */
+export function footingRebarKg(box: Box3, r: FootBars): number {
+  const c = 0.075, Lx = Math.max(box.L, box.W), Sx = Math.min(box.L, box.W), up = 2 * Math.max(0, box.H - 2 * c);
+  const layer = (m: Mesh | undefined, along: number, across: number) =>
+    m ? (m.perM ? m.perM * (across - 2 * c) + 1 : m.n || 0) * (along - 2 * c + up) * kgPerM(m.d) : 0;
+  return layer(r.sl, Sx, Lx) + layer(r.su, Sx, Lx) + layer(r.ll, Lx, Sx) + layer(r.lu, Lx, Sx);
+}
 const FOOT_MARK = /^C?F\d{1,2}$/;
 
 /**
  * Footing schedule rows in a CAD drawing: a footing mark followed on its row by L W H of plain concrete and of
  * reinforced concrete (order from the headings above), in metres or centimetres.
  */
-export function parseCadFootingSchedule(texts: Txt[]): { sizes: Record<string, { pc?: Box3; rc?: Box3 }>; rows: Set<Txt> } {
+export function parseCadFootingSchedule(texts: Txt[]): { sizes: Record<string, { pc?: Box3; rc?: Box3; bars?: FootBars }>; rows: Set<Txt> } {
   const nums = texts.filter((t) => /^\d+(\.\d+)?$/.test(t.s));
   const pcHeads = texts.filter((t) => /PLAIN|\bP\.?\s?C\b|LEAN|BLINDING/i.test(t.s));
   const rcHeads = texts.filter((t) => /REINF(?!ORCEMENT)|\bR\.?\s?C\b/i.test(t.s));
   const above = (m: Txt) => (h: Txt) => h.y > m.y && h.y - m.y < 20 && h.x > m.x - 2 && h.x < m.x + 25;
-  const entries: (Txt & { pc?: Box3; rc?: Box3 })[] = [];
+  const entries: (Txt & { pc?: Box3; rc?: Box3; bars?: FootBars })[] = [];
   for (const m of texts) {
     if (!FOOT_MARK.test(m.s)) continue;
     const row = nums.filter((n) => n.x > m.x && n.x - m.x < 25 && Math.abs(n.y - m.y) < 0.35).sort((a, b) => a.x - b.x);
@@ -175,18 +289,27 @@ export function parseCadFootingSchedule(texts: Txt[]): { sizes: Record<string, {
     };
     const pcH = pcHeads.filter(above(m)).sort((a, b) => a.y - m.y - (b.y - m.y))[0];
     const rcH = rcHeads.filter(above(m)).sort((a, b) => a.y - m.y - (b.y - m.y))[0];
+    // Mesh cells after the sizes, in column order: short lower, short upper, long lower, long upper.
+    const lastX = row[Math.min(row.length, 6) - 1].x;
+    const meshes = texts
+      // Mesh cells are often split over two text lines within the row (±0.5 m); rows are ~1.5 m apart.
+      .filter((t) => t.x > lastX && t.x - m.x < 55 && Math.abs(t.y - m.y) < 0.6)
+      .sort((a, b) => a.x - b.x)
+      .map((t) => meshOf(t.s))
+      .filter(Boolean) as Mesh[];
+    const bars: FootBars | undefined = meshes.length ? { sl: meshes[0], su: meshes[1], ll: meshes[2], lu: meshes[3] } : undefined;
     if (row.length >= 6) {
       const pcFirst = pcH && rcH ? pcH.x < rcH.x : true;
       const a = box(0), b = box(3);
-      if (a && b) entries.push({ ...m, pc: pcFirst ? a : b, rc: pcFirst ? b : a });
+      if (a && b) entries.push({ ...m, pc: pcFirst ? a : b, rc: pcFirst ? b : a, bars });
     } else if (rcH && !pcH) {
       const a = box(0);
-      if (a) entries.push({ ...m, rc: a });
+      if (a) entries.push({ ...m, rc: a, bars });
     }
   }
   const kept = entries.filter((e) => entries.some((o) => o !== e && Math.abs(o.x - e.x) < 0.6));
-  const sizes: Record<string, { pc?: Box3; rc?: Box3 }> = {};
-  for (const e of kept) sizes[e.s] ||= { pc: e.pc, rc: e.rc };
+  const sizes: Record<string, { pc?: Box3; rc?: Box3; bars?: FootBars }> = {};
+  for (const e of kept) sizes[e.s] ||= { pc: e.pc, rc: e.rc, bars: e.bars };
   return { sizes, rows: new Set(kept) };
 }
 
@@ -215,15 +338,24 @@ export function readCadFootings(world: Txt[], titles: Txt[]): Candidate[] {
       .filter((t) => t.x > Math.min(...xs) - 8 && t.x < Math.max(...xs) + 8 && t.y > y0 - 19 && t.y < Math.max(...ys) + 9)
       .sort((a, b) => Math.hypot(a.x - cx, a.y - y0) - Math.hypot(b.x - cx, b.y - y0))[0]?.s;
     const where = title || `مخطط القواعد ${gi + 1}`;
-    let rc = 0, pc = 0;
-    const rcParts: string[] = [], pcParts: string[] = [], missing: string[] = [];
+    let rc = 0, pc = 0, kg = 0;
+    const rcParts: string[] = [], pcParts: string[] = [], missing: string[] = [], rParts: string[] = [], noBars: string[] = [];
     let count = 0;
     for (const [mark, k] of Object.entries(n).sort((a, b) => order(a[0]) - order(b[0]))) {
       const s = sizes[mark];
       count += k;
       if (s.rc) { rc += k * s.rc.L * s.rc.W * s.rc.H; rcParts.push(`${mark}×${k} (${s.rc.L}×${s.rc.W}×${s.rc.H})`); } else missing.push(mark);
       if (s.pc) { pc += k * s.pc.L * s.pc.W * s.pc.H; pcParts.push(`${mark}×${k} (${s.pc.L}×${s.pc.W}×${s.pc.H})`); }
+      if (s.rc && s.bars) {
+        const w = k * footingRebarKg(s.rc, s.bars);
+        kg += w;
+        const f = (m?: Mesh) => (m ? (m.perM ? `${m.perM}Ø${m.d}/م` : `${m.n}Ø${m.d}`) : "—");
+        rParts.push(`${mark}×${k} ${Math.round(w)} كجم (قصير ${f(s.bars.sl)}/${f(s.bars.su)}، طويل ${f(s.bars.ll)}/${f(s.bars.lu)})`);
+      } else if (s.rc) noBars.push(mark);
     }
+    if (kg > 0) out.push(rebarLine(`cadfr-${gi}`, `حديد تسليح القواعد — ${where}`, kg, rc,
+      `${rParts.join("، ")}. الأسياخ بطول القاعدة أو عرضها ناقص غطاء 7.5 سم من كل طرف، مثنية بعمق القاعدة عند الطرفين`,
+      noBars.length ? [`بلا تسليح مقروء في الجدول: ${noBars.join("، ")}`] : []));
     if (rc > 0) out.push({
       id: `cadf-${gi}-rc`,
       description: `توريد وصب خرسانة مسلحة للقواعد — ${where} (${count} قاعدة)`,
@@ -366,8 +498,8 @@ export function readCadMembers(dxf: any, a: MemberAssumptions = {}): Candidate[]
     for (const [fam, fm] of byFam) {
       const list = [...fm].sort((a, b) => markNo(a[0]) - markNo(b[0]));
       const dropped = fam === "DB" || fam === "B" || fam === "SB" || fam === "RB";
-      let vol = 0, len = 0;
-      const parts: string[] = [], checks: string[] = [];
+      let vol = 0, len = 0, kg = 0;
+      const parts: string[] = [], checks: string[] = [], rParts: string[] = [], noBars: string[] = [];
       for (const [mark, r] of list) {
         const sec = sectionFor(mark, r.widths);
         // Office practice: a beam drawn wider than its schedule is built as drawn, so the drawn width is taken
@@ -380,6 +512,12 @@ export function readCadMembers(dxf: any, a: MemberAssumptions = {}): Candidate[]
         }
         vol += r.L * b * sec.h; len += r.L;
         parts.push(`${mark}: ${r1(r.L)} م × ${b.toFixed(2)} × ${sec.h.toFixed(2)}`);
+        if (sec.bars) {
+          const w = beamRebarKg(r.L, r.widths.length, b, sec.h, sec.bars);
+          kg += w;
+          const bb = sec.bars, f = (x?: Bar) => (x ? `${x.n}Ø${x.d}` : "—");
+          rParts.push(`${mark} ${Math.round(w)} كجم (سفلي ${f(bb.bot)}+${f(bb.botAdd)}، علوي ${f(bb.top)}+${f(bb.topAdd)}${bb.stirrup ? `، كانات Ø${bb.stirrup.d} ${r1(bb.stirrup.perM)}/م` : ""})`);
+        } else noBars.push(mark);
       }
       if (dropped) checks.push("العمق الكامل من جدول الكمرات (شاملاً سمك البلاطة)");
       if (unlabelled > 1) checks.push(`${r1(unlabelled)} م من الخطوط المزدوجة بلا علامة قريبة لم تُحسب`);
@@ -400,6 +538,9 @@ export function readCadMembers(dxf: any, a: MemberAssumptions = {}): Candidate[]
         length: r3(len),
         review: false,
       });
+      if (kg > 0) out.push(rebarLine(`cadr-${gi}-${fam}`, `${(FAMILY_DESC[fam] || FAMILY_DESC.B).replace("توريد وصب خرسانة مسلحة", "حديد تسليح")} — ${where}`, kg, vol,
+        `${rParts.join("، ")}. الأسياخ المستمرة بطول الكمرات + ربط ${ANCHOR}Ø عند طرفي كل بحر، الإضافي السفلي 0.7 من البحر، والعلوي 0.5 منه، والكانات بغطاء 4 سم`,
+        noBars.length ? [`بلا تسليح مقروء في الجدول: ${noBars.join("، ")}`] : []));
     }
 
     const fams = new Set(g.map((m) => familyOf(m.s)));
@@ -420,14 +561,22 @@ export function readCadMembers(dxf: any, a: MemberAssumptions = {}): Candidate[]
         n[c.s] = (n[c.s] || 0) + 1;
       }
       const H = a.storeyHeight && a.storeyHeight > 0 ? a.storeyHeight : DEFAULT_COLUMN_HEIGHT;
-      let area = 0, count = 0;
-      const parts: string[] = [], missing: string[] = [];
+      let area = 0, count = 0, kg = 0;
+      const parts: string[] = [], missing: string[] = [], rParts: string[] = [], noBars: string[] = [];
       for (const [mark, k] of Object.entries(n).sort((p, q) => Number(p[0].slice(1)) - Number(q[0].slice(1)))) {
         const s = colSizes[mark];
         if (!s) { missing.push(`${mark}×${k}`); continue; }
         area += k * s.b * s.h; count += k;
         parts.push(`${mark}×${k} (${Math.round(s.b * 100)}×${Math.round(s.h * 100)})`);
+        if (s.vert || s.stirrup) {
+          const w = k * columnRebarKg(H, s);
+          kg += w;
+          rParts.push(`${mark}×${k} ${Math.round(w)} كجم (${s.vert ? `${s.vert.n}Ø${s.vert.d}` : "—"}${s.stirrup ? `، كانات Ø${s.stirrup.d} ${r1(s.stirrup.perM)}/م${s.sets && s.sets > 1 ? ` × ${s.sets} أطقم` : ""}` : ""})`);
+        } else noBars.push(mark);
       }
+      if (kg > 0) out.push(rebarLine(`cadr-${gi}-C`, `حديد تسليح الأعمدة — ${where}`, kg, area * H,
+        `${rParts.join("، ")}. الأسياخ الرأسية بارتفاع ${H.toFixed(2)} م + وصلة ${ANCHOR}Ø، والكانات بغطاء 4 سم`,
+        noBars.length ? [`بلا تسليح مقروء في الجدول: ${noBars.join("، ")}`] : []));
       if (count) out.push({
         id: `cadm-${gi}-C`,
         description: `توريد وصب خرسانة مسلحة للأعمدة — ${where} (${count} عمود)`,

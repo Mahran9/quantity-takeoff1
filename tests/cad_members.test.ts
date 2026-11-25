@@ -73,7 +73,7 @@ const dxf2 = {
 };
 const fl = readCadMembers(dxf2, { storeyHeight: 4, slabThickness: 0.25 });
 const db = fl.find((c) => c.id.endsWith("-DB"))!;
-assert.ok(Math.abs(db.quantity - 33.6 * 0.2 * (0.7 - 0.25)) < 1e-6, `dropped beams below the slab ${db.quantity}`);
+assert.ok(Math.abs(db.quantity - 33.6 * 0.2 * 0.7) < 1e-6, `dropped beams full depth ${db.quantity}`);
 const col = fl.find((c) => c.id.endsWith("-C"))!;
 assert.ok(Math.abs(col.quantity - 4 * 0.2 * 0.6 * 4) < 1e-6, `columns ${col.quantity}`);
 assert.match(col.description, /4 عمود/);
@@ -81,6 +81,14 @@ assert.equal(col.review, false, "height given → no review");
 const slab = fl.find((c) => c.id.endsWith("-S"))!;
 assert.equal(slab.unit, "م³");
 assert.ok(slab.quantity > 76 * 0.25 && slab.quantity < 84 * 0.25, `slab ${slab.quantity}`);
+// A beam drawn wider than its schedule is taken as drawn: GB2 is 0.30 in the schedule, drawn 0.40 here.
+const wide = JSON.parse(JSON.stringify(dxf));
+for (const e of wide.parsedData.entities) if (e.type === "LINE" && (e.vertices[0].x === 0.3 || e.vertices[0].x === 10.3) && e.vertices[1].x === e.vertices[0].x) { e.vertices[0].x += 0.1; e.vertices[1].x += 0.1; }
+wide.parsedData.entities.push(L(0, 20, 10, 20), L(0, 20.2, 10, 20.2), T("GB1", 5, 20.5));
+const gbw = readCadMembers(wide).find((c) => c.id.endsWith("-GB"))!;
+assert.ok(Math.abs(gbw.quantity - (30 * 0.2 * 0.6 + 16 * 0.4 * 0.6)) < 1e-6, `drawn width taken ${gbw.quantity}`);
+assert.ok(gbw.checks.some((c) => /أُخذ العرض المرسوم/.test(c)));
+
 // Without the two numbers: columns at the default height under review, slab as an area, beams full depth.
 const fl0 = readCadMembers(dxf2);
 assert.equal(fl0.find((c) => c.id.endsWith("-C"))!.review, true);

@@ -363,7 +363,6 @@ export function readCadMembers(dxf: any, a: MemberAssumptions = {}): Candidate[]
       .filter((t) => t.x > bb[0] - 5 && t.x < bb[2] + 5 && t.y > bb[1] - 16 && t.y < bb[3] + 6)
       .sort((a, b) => Math.hypot(a.x - cx, a.y - bb[1]) - Math.hypot(b.x - cx, b.y - bb[1]))[0]?.s;
     const where = title || `مخطط ${gi + 1}`;
-    const t = a.slabThickness && a.slabThickness > 0 ? a.slabThickness : 0;
     for (const [fam, fm] of byFam) {
       const list = [...fm].sort((a, b) => markNo(a[0]) - markNo(b[0]));
       const dropped = fam === "DB" || fam === "B" || fam === "SB" || fam === "RB";
@@ -371,18 +370,18 @@ export function readCadMembers(dxf: any, a: MemberAssumptions = {}): Candidate[]
       const parts: string[] = [], checks: string[] = [];
       for (const [mark, r] of list) {
         const sec = sectionFor(mark, r.widths);
-        // A dropped beam's depth is given from the top of the slab: with the slab measured over the whole floor, only
-        // the part below it is beam concrete.
-        const h = dropped && t && sec.h > t ? sec.h - t : sec.h;
-        vol += r.L * sec.b * h; len += r.L;
-        parts.push(`${mark}: ${r1(r.L)} م × ${sec.b.toFixed(2)} × ${h.toFixed(2)}${h !== sec.h ? ` (${sec.h.toFixed(2)} − بلاطة ${t.toFixed(2)})` : ""}`);
+        // Office practice: a beam drawn wider than its schedule is built as drawn, so the drawn width is taken
+        // (and the difference is stated). Dropped beams are measured to their full schedule depth.
         const off = r.widths.filter((w) => Math.abs(w - sec.b) > 0.03);
+        let b = sec.b;
         if (off.length > r.widths.length / 2) {
-          const drawn = off.sort((a, b) => a - b)[Math.floor(off.length / 2)];
-          checks.push(`${mark} مرسوم بعرض ${drawn.toFixed(2)} م والجدول يقول ${sec.b.toFixed(2)} — أُخذ عرض الجدول`);
+          b = Math.round(off.sort((p, q) => p - q)[Math.floor(off.length / 2)] * 100) / 100;
+          checks.push(`${mark} مرسوم بعرض ${b.toFixed(2)} م والجدول يقول ${sec.b.toFixed(2)} — أُخذ العرض المرسوم`);
         }
+        vol += r.L * b * sec.h; len += r.L;
+        parts.push(`${mark}: ${r1(r.L)} م × ${b.toFixed(2)} × ${sec.h.toFixed(2)}`);
       }
-      if (dropped && !t) checks.push("العمق من جدول الكمرات كاملاً (يشمل البلاطة). أدخل سمك البلاطة ليُحسب الجزء الساقط تحتها فقط");
+      if (dropped) checks.push("العمق الكامل من جدول الكمرات (شاملاً سمك البلاطة)");
       if (unlabelled > 1) checks.push(`${r1(unlabelled)} م من الخطوط المزدوجة بلا علامة قريبة لم تُحسب`);
       out.push({
         id: `cadm-${gi}-${fam}`,
@@ -392,14 +391,14 @@ export function readCadMembers(dxf: any, a: MemberAssumptions = {}): Candidate[]
         unit: "م³",
         quantity: r3(vol),
         sources: ["cad"],
-        confidence: checks.length > (dropped && !t ? 1 : 0) ? "medium" : "high",
+        confidence: checks.length > (dropped ? 1 : 0) ? "medium" : "high",
         evidence: `أطوال الكمرات مقاسة من الخطوط المزدوجة في الرسم (${r1(len)} م بين وجوه الأعمدة) × مقاطعها من جدول الكمرات: ${parts.join("، ")}`,
         checks,
         selected: true,
         layer: used.map((l) => l.layer).join("، "),
-        formula: dropped && t ? "Σ الطول × العرض × (العمق − سمك البلاطة)" : "Σ الطول × العرض × العمق",
+        formula: "Σ الطول × العرض × العمق",
         length: r3(len),
-        review: dropped && !t,
+        review: false,
       });
     }
 
@@ -447,6 +446,7 @@ export function readCadMembers(dxf: any, a: MemberAssumptions = {}): Candidate[]
     }
 
     // Slab: the floor area enclosed by the beams of this plan.
+    const t = a.slabThickness && a.slabThickness > 0 ? a.slabThickness : 0;
     if (suspended || groundBeams) {
       const area = enclosedArea(spans);
       if (area > 20) {

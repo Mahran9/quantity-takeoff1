@@ -7,12 +7,12 @@ import { readCadMembers } from "./cadMembers";
 import { measureGroup, ptToMetres, suggestRole } from "../utils/pdfPlan";
 
 /** CAD geometry reader: layers, closed shapes, blocks (already parsed when the file was uploaded). */
-export interface CadAssumptions { wallHeight?: number; footingDepth?: number; slabThickness?: number; floorSlabThickness?: number }
+export interface CadAssumptions { wallHeight?: number; footingDepth?: number; slabThickness?: number; floorSlabThickness?: number; storeyHeight?: number }
 
 export function readCad(sheet: BlueprintSheet, a: CadAssumptions = {}): Candidate[] {
   const dxf = sheet.dxfData;
   if (!dxf) return [];
-  const members = readCadMembers(dxf);
+  const members = readCadMembers(dxf, { storeyHeight: a.storeyHeight, slabThickness: a.slabThickness });
   const memberLayers = new Set(members.flatMap((m) => (m.layer || "").split("، ")));
   const generic: Candidate[] = extractEngineeringQuantitiesFromDxf(dxf, {
     defaultWallHeight: a.wallHeight || 0,

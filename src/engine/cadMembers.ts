@@ -1,4 +1,5 @@
 import { Candidate } from "./candidate";
+import { DEFAULT_COLUMN_HEIGHT } from "./schedules";
 
 /**
  * Concrete beams measured from CAD geometry (DWG/DXF in model space).
@@ -125,7 +126,33 @@ function cluster<T extends { x: number; y: number }>(pts: T[], gap: number): T[]
   return groups;
 }
 
-export function readCadMembers(dxf: any): Candidate[] {
+/** Column schedule rows: a column mark with its "20 x 60 cm" / "60*20" size near it (cm). */
+export function parseColumnSizes(texts: Txt[]): Record<string, Section> {
+  const marks = texts.filter((t) => /^C\d{1,2}$/.test(t.s));
+  const sizes = texts
+    .map((t) => ({ t, m: /^(\d{2,3})\s*[xX×*]\s*(\d{2,3})(?:\s*(?:cm|CM|سم|sL))?$/.exec(t.s) }))
+    .filter((z) => z.m) as { t: Txt; m: RegExpExecArray }[];
+  const found: (Txt & Section)[] = [];
+  for (const c of marks) {
+    const near = sizes
+      .map((z) => ({ z, dx: z.t.x - c.x, dy: z.t.y - c.y }))
+      .filter((p) => p.dx > -1.5 && p.dx < 8 && p.dy > -3.2 && p.dy < 0.8)
+      .sort((p, q) => Math.hypot(p.dx, p.dy * 2) - Math.hypot(q.dx, q.dy * 2))[0];
+    if (!near) continue;
+    // The size belongs to this mark only if no other mark is nearer to it.
+    const owner = marks.map((m) => ({ m, d: Math.hypot(near.z.t.x - m.x, (near.z.t.y - m.y) * 2) })).sort((p, q) => p.d - q.d)[0].m;
+    if (owner !== c) continue;
+    found.push({ ...c, b: Number(near.z.m[1]) / 100, h: Number(near.z.m[2]) / 100 });
+  }
+  const kept = found.filter((e) => found.some((o) => o !== e && Math.abs(o.x - e.x) < 0.6));
+  const out: Record<string, Section> = {};
+  for (const e of kept) out[e.s] ||= { b: e.b, h: e.h };
+  return out;
+}
+
+export interface MemberAssumptions { storeyHeight?: number; slabThickness?: number }
+
+export function readCadMembers(dxf: any, a: MemberAssumptions = {}): Candidate[] {
   const ents: any[] = dxf?.parsedData?.entities || [];
   const k: number = dxf?.unitInfo?.toMeters || 1;
   if (!ents.length) return [];
@@ -176,6 +203,28 @@ export function readCadMembers(dxf: any): Candidate[] {
     [...all[mark]].sort((a, b) => widths.filter((w) => Math.abs(w - b.b) <= 0.03).length - widths.filter((w) => Math.abs(w - a.b) <= 0.03).length)[0];
   const fits = (mark: string, w: number) => all[mark].some((s) => Math.abs(w - s.b) <= 0.03);
   const marks = texts.filter((t) => BEAM_MARK.test(t.s) && !rowSet.has(t) && all[t.s]);
+  // Every text placed in the drawing, blocks included, in world coordinates: column marks are often a block laid
+  // over the plan, and the column schedule a block whose missing sizes were typed over it in model space.
+  const world: Txt[] = [...texts];
+  const place = (list: any[], tf: (p: { x: number; y: number }) => { x: number; y: number }, depth: number) => {
+    for (const e of list || []) {
+      if (e.type === "TEXT" || e.type === "MTEXT") {
+        const p = e.startPoint ?? e.position, s = cleanCadText(e.text);
+        if (p && s && Number.isFinite(p.x)) { const w = tf(p); world.push({ s, x: w.x * k, y: w.y * k }); }
+      } else if (e.type === "INSERT" && depth < 5 && blocks[e.name] && e.position) {
+        const base = (blocks[e.name] as any).position || { x: 0, y: 0 };
+        const rad = ((e.rotation || 0) * Math.PI) / 180, c = Math.cos(rad), s = Math.sin(rad);
+        const sx = e.xScale || 1, sy = e.yScale || 1, P0 = e.position;
+        place(blocks[e.name].entities || [], (p) => {
+          const x = (p.x - (base.x || 0)) * sx, y = (p.y - (base.y || 0)) * sy;
+          return tf({ x: P0.x + x * c - y * s, y: P0.y + x * s + y * c });
+        }, depth + 1);
+      }
+    }
+  };
+  place(ents.filter((e) => e.type === "INSERT"), (p) => p, 0);
+  const colSizes = parseColumnSizes(world);
+
   const out: Candidate[] = [];
   const titles = texts.filter((t) => /PLAN|مسقط|مخطط/i.test(t.s) && t.s.length < 60);
 
@@ -220,21 +269,26 @@ export function readCadMembers(dxf: any): Candidate[] {
       .filter((t) => t.x > bb[0] - 5 && t.x < bb[2] + 5 && t.y > bb[1] - 16 && t.y < bb[3] + 6)
       .sort((a, b) => Math.hypot(a.x - cx, a.y - bb[1]) - Math.hypot(b.x - cx, b.y - bb[1]))[0]?.s;
     const where = title || `مخطط ${gi + 1}`;
+    const t = a.slabThickness && a.slabThickness > 0 ? a.slabThickness : 0;
     for (const [fam, fm] of byFam) {
       const list = [...fm].sort((a, b) => markNo(a[0]) - markNo(b[0]));
+      const dropped = fam === "DB" || fam === "B" || fam === "SB" || fam === "RB";
       let vol = 0, len = 0;
       const parts: string[] = [], checks: string[] = [];
       for (const [mark, r] of list) {
         const sec = sectionFor(mark, r.widths);
-        vol += r.L * sec.b * sec.h; len += r.L;
-        parts.push(`${mark}: ${r1(r.L)} م × ${sec.b.toFixed(2)} × ${sec.h.toFixed(2)}`);
+        // A dropped beam's depth is given from the top of the slab: with the slab measured over the whole floor, only
+        // the part below it is beam concrete.
+        const h = dropped && t && sec.h > t ? sec.h - t : sec.h;
+        vol += r.L * sec.b * h; len += r.L;
+        parts.push(`${mark}: ${r1(r.L)} م × ${sec.b.toFixed(2)} × ${h.toFixed(2)}${h !== sec.h ? ` (${sec.h.toFixed(2)} − بلاطة ${t.toFixed(2)})` : ""}`);
         const off = r.widths.filter((w) => Math.abs(w - sec.b) > 0.03);
         if (off.length > r.widths.length / 2) {
           const drawn = off.sort((a, b) => a - b)[Math.floor(off.length / 2)];
           checks.push(`${mark} مرسوم بعرض ${drawn.toFixed(2)} م والجدول يقول ${sec.b.toFixed(2)} — أُخذ عرض الجدول`);
         }
       }
-      if (fam === "DB" || fam === "B") checks.push("العمق من جدول الكمرات كما هو؛ إن كان مقاساً من أعلى البلاطة فاطرح سماكة البلاطة حتى لا تُحسب مرتين");
+      if (dropped && !t) checks.push("العمق من جدول الكمرات كاملاً (يشمل البلاطة). أدخل سمك البلاطة ليُحسب الجزء الساقط تحتها فقط");
       if (unlabelled > 1) checks.push(`${r1(unlabelled)} م من الخطوط المزدوجة بلا علامة قريبة لم تُحسب`);
       out.push({
         id: `cadm-${gi}-${fam}`,
@@ -244,16 +298,145 @@ export function readCadMembers(dxf: any): Candidate[] {
         unit: "م³",
         quantity: r3(vol),
         sources: ["cad"],
-        confidence: checks.length > (fam === "DB" || fam === "B" ? 1 : 0) ? "medium" : "high",
+        confidence: checks.length > (dropped && !t ? 1 : 0) ? "medium" : "high",
         evidence: `أطوال الكمرات مقاسة من الخطوط المزدوجة في الرسم (${r1(len)} م بين وجوه الأعمدة) × مقاطعها من جدول الكمرات: ${parts.join("، ")}`,
         checks,
         selected: true,
         layer: used.map((l) => l.layer).join("، "),
-        formula: "Σ الطول × العرض × العمق",
+        formula: dropped && t ? "Σ الطول × العرض × (العمق − سمك البلاطة)" : "Σ الطول × العرض × العمق",
         length: r3(len),
-        review: fam === "DB" || fam === "B",
+        review: dropped && !t,
       });
+    }
+
+    const fams = new Set(g.map((m) => familyOf(m.s)));
+    const suspended = [...fams].some((f) => f === "DB" || f === "B" || f === "SB" || f === "RB");
+    const groundBeams = fams.has("GB");
+    // The foundation plan redraws the ground-floor columns: count columns on framing plans only.
+    if ((suspended || groundBeams) && Object.keys(colSizes).length) {
+      const seen = new Set<string>();
+      const n: Record<string, number> = {};
+      // Edge columns sit at the ends of the outer beams, which can lie beyond the outermost labels.
+      const sx = spans.flatMap((s) => [s.x0, s.x1]), sy = spans.flatMap((s) => [s.y0, s.y1]);
+      const cb = [Math.min(bb[0], ...sx) - 1, Math.min(bb[1], ...sy) - 1, Math.max(bb[2], ...sx) + 1, Math.max(bb[3], ...sy) + 1];
+      for (const c of world) {
+        if (!/^C\d{1,2}$/.test(c.s) || c.x < cb[0] || c.x > cb[2] || c.y < cb[1] || c.y > cb[3]) continue;
+        const key = `${c.s}@${Math.round(c.x * 20)},${Math.round(c.y * 20)}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        n[c.s] = (n[c.s] || 0) + 1;
+      }
+      const H = a.storeyHeight && a.storeyHeight > 0 ? a.storeyHeight : DEFAULT_COLUMN_HEIGHT;
+      let area = 0, count = 0;
+      const parts: string[] = [], missing: string[] = [];
+      for (const [mark, k] of Object.entries(n).sort((p, q) => Number(p[0].slice(1)) - Number(q[0].slice(1)))) {
+        const s = colSizes[mark];
+        if (!s) { missing.push(`${mark}×${k}`); continue; }
+        area += k * s.b * s.h; count += k;
+        parts.push(`${mark}×${k} (${Math.round(s.b * 100)}×${Math.round(s.h * 100)})`);
+      }
+      if (count) out.push({
+        id: `cadm-${gi}-C`,
+        description: `توريد وصب خرسانة مسلحة للأعمدة — ${where} (${count} عمود)`,
+        category: RC_CAT, dim: "volume", unit: "م³",
+        quantity: r3(area * H),
+        sources: ["cad"],
+        confidence: a.storeyHeight && !missing.length ? "high" : "medium",
+        evidence: `عدد كل عمود من علاماته على المخطط × مقطعه من جدول الأعمدة × ارتفاع ${H.toFixed(2)} م: ${parts.join("، ")}`,
+        checks: [
+          ...(a.storeyHeight ? [] : [`الارتفاع ${H.toFixed(2)} م مفترض — أدخل ارتفاع الدور`]),
+          ...(missing.length ? [`أعمدة بلا مقاس في الجدول لم تُحسب: ${missing.join("، ")}`] : []),
+        ],
+        selected: true, formula: "Σ عدد × العرض × العمق × الارتفاع", count, height: H,
+        review: !a.storeyHeight,
+      });
+    }
+
+    // Slab: the floor area enclosed by the beams of this plan.
+    if (suspended || groundBeams) {
+      const area = enclosedArea(spans);
+      if (area > 20) {
+        if (suspended) out.push({
+          id: `cadm-${gi}-S`,
+          description: t ? `توريد وصب خرسانة مسلحة للبلاطة سمك ${Math.round(t * 100)} سم — ${where}` : `مساحة البلاطة — ${where}`,
+          category: RC_CAT, dim: t ? "volume" : "area", unit: t ? "م³" : "م²",
+          quantity: r3(t ? area * t : area),
+          sources: ["cad"], confidence: "medium",
+          evidence: `مساحة الدور داخل محيط الكمرات الخارجية = ${r1(area)} م²${t ? ` × سمك ${t.toFixed(2)} م` : ""}`,
+          checks: [
+            "الفتحات (سلالم، مناور) لا تُطرح تلقائياً — اطرحها إن وُجدت",
+            ...(t ? [] : ["أدخل سمك البلاطة ليصبح البند بالمتر المكعب"]),
+          ],
+          selected: true, formula: t ? "المساحة × السمك" : "المساحة", review: true,
+        });
+        else out.push({
+          id: `cadm-${gi}-SOG`,
+          description: `مساحة الأرضيات (بلاطة على التربة) داخل الميدات — ${where}`,
+          category: RC_CAT, dim: "area", unit: "م²", quantity: r3(area),
+          sources: ["cad"], confidence: "medium",
+          evidence: `المساحة داخل محيط الميدات الخارجية = ${r1(area)} م² — اضربها في سمك الأرضية`,
+          checks: ["سمك الأرضية غير مأخوذ من الرسم"], selected: true, formula: "المساحة", review: true,
+        });
+      }
     }
   });
   return out;
+}
+
+/**
+ * Floor area enclosed by beam centrelines: draw the beams on a 0.2 m grid, thickened enough to bridge the gaps
+ * where spans stop at columns, flood the outside, and shrink the inside back by the same amount.
+ */
+export function enclosedArea(spans: { x0: number; y0: number; x1: number; y1: number }[], cell = 0.2, r = 0.7): number {
+  if (!spans.length) return 0;
+  const xs = spans.flatMap((s) => [s.x0, s.x1]), ys = spans.flatMap((s) => [s.y0, s.y1]);
+  const X0 = Math.min(...xs) - 2, Y0 = Math.min(...ys) - 2;
+  const W = Math.ceil((Math.max(...xs) + 2 - X0) / cell), Hh = Math.ceil((Math.max(...ys) + 2 - Y0) / cell);
+  if (W * Hh > 4e6) return 0;
+  const wall = new Uint8Array(W * Hh);
+  for (const s of spans) {
+    const dx = s.x1 - s.x0, dy = s.y1 - s.y0, L2 = dx * dx + dy * dy || 1;
+    const i0 = Math.max(0, Math.floor((Math.min(s.x0, s.x1) - r - X0) / cell)), i1 = Math.min(W - 1, Math.ceil((Math.max(s.x0, s.x1) + r - X0) / cell));
+    const j0 = Math.max(0, Math.floor((Math.min(s.y0, s.y1) - r - Y0) / cell)), j1 = Math.min(Hh - 1, Math.ceil((Math.max(s.y0, s.y1) + r - Y0) / cell));
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+      const px = X0 + (i + 0.5) * cell, py = Y0 + (j + 0.5) * cell;
+      const t = Math.max(0, Math.min(1, ((px - s.x0) * dx + (py - s.y0) * dy) / L2));
+      if (Math.hypot(px - s.x0 - t * dx, py - s.y0 - t * dy) <= r) wall[j * W + i] = 1;
+    }
+  }
+  // Distance (in cells, 4-neighbour steps) from the outside, flooding around the thickened beams.
+  const dist = new Int32Array(W * Hh).fill(-1);
+  const q: number[] = [];
+  for (let i = 0; i < W; i++) for (const j of [0, Hh - 1]) if (!wall[j * W + i] && dist[j * W + i] < 0) { dist[j * W + i] = 0; q.push(j * W + i); }
+  for (let j = 0; j < Hh; j++) for (const i of [0, W - 1]) if (!wall[j * W + i] && dist[j * W + i] < 0) { dist[j * W + i] = 0; q.push(j * W + i); }
+  for (let h = 0; h < q.length; h++) {
+    const c = q[h], i = c % W, j = (c - i) / W;
+    for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const ni = i + di, nj = j + dj;
+      if (ni < 0 || nj < 0 || ni >= W || nj >= Hh) continue;
+      const k = nj * W + ni;
+      if (dist[k] >= 0 || wall[k]) continue;
+      dist[k] = 0; q.push(k);
+    }
+  }
+  // Shrink: inside cells within r of the outside belong to the thickening, not the floor.
+  const grow = new Int32Array(W * Hh).fill(-1);
+  const q2: number[] = [];
+  for (let k = 0; k < W * Hh; k++) if (dist[k] === 0) { grow[k] = 0; q2.push(k); }
+  const steps = Math.round(r / cell);
+  for (let h = 0; h < q2.length; h++) {
+    const c = q2[h];
+    if (grow[c] >= steps) continue;
+    const i = c % W, j = (c - i) / W;
+    for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+      const ni = i + di, nj = j + dj;
+      if (ni < 0 || nj < 0 || ni >= W || nj >= Hh) continue;
+      const k = nj * W + ni;
+      if (grow[k] >= 0) continue;
+      grow[k] = grow[c] + 1; q2.push(k);
+    }
+  }
+  let inside = 0;
+  for (let k = 0; k < W * Hh; k++) if (grow[k] < 0) inside++;
+  return inside * cell * cell;
 }

@@ -55,7 +55,7 @@ import {
   markBackupDone,
 } from "./utils/projectStorage";
 
-export const APP_VERSION = "8.19.0";
+export const APP_VERSION = "8.20.0";
 
 // Persistent high-capacity storage powered by IndexedDB (src/utils/projectStorage.ts)
 
@@ -504,7 +504,11 @@ export default function App() {
   };
 
   /** Read CAD geometry, vector hints, marked quantities, and printed quantity labels. */
-  const autoTakeoffAll = async (onlySheetId?: string, sheetList: BlueprintSheet[] = sheets): Promise<string> => {
+  const autoTakeoffAll = async (
+    onlySheetId?: string,
+    sheetList: BlueprintSheet[] = sheets,
+    structural: ProjectMetadata["structural"] = metadata.structural
+  ): Promise<string> => {
     const fresh: TakeoffItem[] = [];
     const replaced = new Set<string>();
     const base = takeoffItems.length;
@@ -517,7 +521,7 @@ export default function App() {
     for (const sh of scope) {
       let cands: ReturnType<typeof readMarks> = [];
       try {
-        if (sh.dxfData) cands = readCad(sh, {});
+        if (sh.dxfData) cands = readCad(sh, { storeyHeight: structural?.storeyHeight, slabThickness: structural?.slabThickness });
         else {
           cands = [...(sh.pdfVector ? readPdf(sh) : []), ...readMarks(sh)];
           // OCR only where the page has (almost) no text layer — scans or text exported as outlines. A page that
@@ -903,6 +907,11 @@ export default function App() {
               readMsg={readMsg}
               onExcel={() => exportBoqToExcel(metadata, sheets, takeoffItems, company)}
               onUndo={historyStack.length ? handleUndo : undefined}
+              structural={sheets.some((s) => s.dxfData) ? metadata.structural || {} : undefined}
+              onStructural={(v) => {
+                setMetadata((m) => ({ ...m, structural: v }));
+                return autoTakeoffAll(itemsAllSheets ? undefined : currentSheet?.id, sheets, v);
+              }}
             >
               {currentSheet && (
                 <TakeoffTable

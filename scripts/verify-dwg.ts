@@ -45,7 +45,8 @@ async function main() {
   const q = extractEngineeringQuantitiesFromDxf(res, {} as any) as any[];
   console.log(`\nextracted ${q.length} items:`);
   for (const e of q) console.log(`  ${e.selected ? "✓" : " "} ${e.type.padEnd(7)} ${String(e.name).slice(0, 50).padEnd(52)} ${Number(e.value).toFixed(2).padStart(12)} ${e.unit}  [${e.layer}]`);
-  const members = readCadMembers(res);
+  const h = process.argv.indexOf("--height"), t = process.argv.indexOf("--slab");
+  const members = readCadMembers(res, { storeyHeight: h > 0 ? Number(process.argv[h + 1]) : undefined, slabThickness: t > 0 ? Number(process.argv[t + 1]) : undefined });
   console.log(`\nbeams measured from geometry: ${members.length}`);
   for (const m of members) {
     console.log(`  ${m.quantity.toFixed(3).padStart(10)} م³  ${m.description}  [${m.layer}]`);

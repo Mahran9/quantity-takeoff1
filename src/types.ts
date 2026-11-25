@@ -221,6 +221,8 @@ export interface ProjectMetadata {
   date: string;
   taxRate: number;
   notes?: string;
+  /** Structural assumptions the drawings don't carry, entered once per project (metres). */
+  structural?: { storeyHeight?: number; slabThickness?: number };
 }
 
 export interface ProjectRecord {

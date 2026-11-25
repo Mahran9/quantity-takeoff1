@@ -19,11 +19,50 @@ interface Props {
   onExcel?: () => void;
   /** Undo the last change (absent when there is nothing to undo). */
   onUndo?: () => void;
+  /** Storey height / slab thickness (m) for CAD files; absent when the project has none. */
+  structural?: { storeyHeight?: number; slabThickness?: number };
+  /** Save the values and read the drawings again with them. */
+  onStructural?: (v: { storeyHeight?: number; slabThickness?: number }) => Promise<string>;
   children: React.ReactNode; // the table for the active sheet
 }
 
+/** Two numbers a structural DWG never states (column height, slab thickness), one row under the header. */
+const StructuralRow: React.FC<{
+  value: { storeyHeight?: number; slabThickness?: number };
+  busy: boolean;
+  onApply: (v: { storeyHeight?: number; slabThickness?: number }) => void;
+}> = ({ value, busy, onApply }) => {
+  const [h, setH] = React.useState(value.storeyHeight ? String(value.storeyHeight) : "");
+  const [t, setT] = React.useState(value.slabThickness ? String(Math.round(value.slabThickness * 100)) : "");
+  const num = (s: string) => { const v = Number(s.replace(",", ".")); return Number.isFinite(v) && v > 0 ? v : undefined; };
+  const cm = num(t);
+  return (
+    <form
+      onSubmit={(e) => { e.preventDefault(); onApply({ storeyHeight: num(h), slabThickness: cm ? cm / 100 : undefined }); }}
+      className="flex flex-wrap items-end gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5"
+    >
+      <label className="flex flex-col gap-1 text-[12px] font-bold text-slate-600">
+        ارتفاع الدور (م)
+        <input value={h} onChange={(e) => setH(e.target.value)} inputMode="decimal" placeholder="3.40"
+          className="h-9 w-24 rounded-lg border border-slate-300 bg-white px-2 text-sm font-mono text-slate-900" />
+      </label>
+      <label className="flex flex-col gap-1 text-[12px] font-bold text-slate-600">
+        سمك البلاطة (سم)
+        <input value={t} onChange={(e) => setT(e.target.value)} inputMode="decimal" placeholder="—"
+          className="h-9 w-24 rounded-lg border border-slate-300 bg-white px-2 text-sm font-mono text-slate-900" />
+      </label>
+      <button type="submit" disabled={busy} className="h-9 rounded-lg border border-slate-300 px-3 text-sm font-bold text-slate-800 disabled:opacity-50">
+        أعد الحساب
+      </button>
+      <p className="basis-full text-[12px] leading-5 text-slate-500">
+        للأعمدة والبلاطات من ملف DWG: الارتفاع × مقاطع الأعمدة، والسمك × مساحة البلاطة. الكمرات الساقطة تُحسب تحت البلاطة.
+      </p>
+    </form>
+  );
+};
+
 /** Quantities: pick a drawing, review its lines. */
-export const ItemsScreen: React.FC<Props> = ({ sheets, items, activeSheetId, onSelectSheet, onAnalyze, onAuto, onGoSheets, readMsg, onExcel, onUndo, children }) => {
+export const ItemsScreen: React.FC<Props> = ({ sheets, items, activeSheetId, onSelectSheet, onAnalyze, onAuto, onGoSheets, readMsg, onExcel, onUndo, structural, onStructural, children }) => {
   const live = items.filter((i) => i.reviewStatus !== "rejected").length;
   const [msg, setMsg] = React.useState(readMsg || "");
   React.useEffect(() => { if (readMsg) setMsg(readMsg); }, [readMsg]);
@@ -72,6 +111,19 @@ export const ItemsScreen: React.FC<Props> = ({ sheets, items, activeSheetId, onS
           </div>
         }
       />
+      {structural && onStructural && (
+        <StructuralRow
+          value={structural}
+          busy={reading}
+          onApply={async (v) => {
+            setReading(true);
+            setMsg("جارٍ إعادة الحساب…");
+            try { setMsg(await onStructural(v)); }
+            catch { setMsg("تعذرت إعادة الحساب."); }
+            finally { setReading(false); }
+          }}
+        />
+      )}
       {msg && <p className="rounded-lg bg-teal-50 px-3 py-2 text-[13px] font-bold leading-6 text-teal-900">{msg}</p>}
       {/* The next step after a read: take the table out as Excel (all sheets, quotation + detailed sheet). */}
       {onExcel && live > 0 && !reading && (

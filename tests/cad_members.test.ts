@@ -87,6 +87,27 @@ assert.equal(fl0.find((c) => c.id.endsWith("-C"))!.review, true);
 assert.equal(fl0.find((c) => c.id.endsWith("-S"))!.unit, "م²");
 assert.ok(Math.abs(fl0.find((c) => c.id.endsWith("-DB"))!.quantity - 33.6 * 0.2 * 0.7) < 1e-6);
 
+// Footings: schedule (plain then reinforced L W H, metres) pasted as a block; foundation plan with repeated marks;
+// a legend listing each mark once must not count as a plan.
+const fsched = [
+  T("PLAIN CONCRETE", 2, 12), T("REINF. CONCRETE", 8, 12), T("SHORT REINFORCEMENT", 14, 12),
+  T("F1", 0, 10), ...[1.4, 1.4, 0.1, 1.2, 1.2, 0.6].map((v, i) => T(v.toFixed(2), 2 + 2 * i, 10)), T("5Ø14MM/M", 15, 10),
+  T("F2", 0, 8.5), ...[2, 2, 0.1, 1.8, 1.8, 0.6].map((v, i) => T(v.toFixed(2), 2 + 2 * i, 8.5)),
+  T("CF1", 0, 7), ...[4.7, 2.7, 0.1, 4.5, 2.5, 0.6].map((v, i) => T(v.toFixed(2), 2 + 2 * i, 7)),
+];
+const fplan = [
+  ...[0, 4, 8, 12, 16, 20].map((x) => T("F1", 200 + x, 0)), T("F2", 200, 5), T("F2", 204, 5), T("CF1", 210, 5),
+  T("FOUNDATION PLAN", 210, -8),
+  ...["F1", "F2", "CF1", "F1", "F2", "CF1", "F1", "F2"].map((m, i) => T(m, 400 + i * 3, 0)).slice(0, 3), // legend
+];
+const dxf3 = { unitInfo: { toMeters: 1 }, parsedData: { entities: [...fplan, { type: "INSERT", layer: "0", name: "FS", position: { x: 600, y: 0 } }], blocks: { FS: { entities: fsched } } } };
+const ft = readCadMembers(dxf3);
+const frc = ft.find((c) => c.id.endsWith("-rc"))!, fpc = ft.find((c) => c.id.endsWith("-pc"))!;
+assert.equal(ft.filter((c) => c.id.endsWith("-rc")).length, 1, "only the foundation plan counts");
+assert.ok(Math.abs(frc.quantity - (6 * 1.2 * 1.2 * 0.6 + 2 * 1.8 * 1.8 * 0.6 + 4.5 * 2.5 * 0.6)) < 1e-6, `RC footings ${frc.quantity}`);
+assert.ok(Math.abs(fpc.quantity - Math.round((6 * 1.4 * 1.4 * 0.1 + 2 * 2 * 2 * 0.1 + 4.7 * 2.7 * 0.1) * 1000) / 1000) < 1e-6, `blinding ${fpc.quantity}`);
+assert.match(frc.description, /FOUNDATION PLAN \(9 قاعدة\)/);
+
 // No schedule → nothing guessed.
 assert.equal(readCadMembers({ unitInfo: { toMeters: 1 }, parsedData: { entities: plan, blocks: {} } }).length, 0);
 console.log("cad_members ok");

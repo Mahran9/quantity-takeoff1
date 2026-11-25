@@ -52,6 +52,14 @@ export function readCad(sheet: BlueprintSheet, a: CadAssumptions = {}): Candidat
       c.selected = false;
       c.checks = [...c.checks, "خطوط هذه الطبقة حُسبت كمرات بالمتر المكعب في بند الكمرات"];
     }
+  // Once the members are measured from schedules × plans, layer totals for concrete (a stray outline on a footing
+  // layer, a count of column rectangles) and bar lengths drawn in details are not quantities beside them.
+  if (members.length)
+    for (const c of generic)
+      if (c.selected && (/خرسان/.test(c.category) || /حديد التسليح/.test(c.category) || /colum|عمود|أعمدة/i.test(`${c.layer} ${c.description}`)) && !/معدني|HEA|IPE/i.test(c.description)) {
+        c.selected = false;
+        c.checks = [...c.checks, "الخرسانة محسوبة من جداول المقاسات وعلامات المخططات في بنود أدق؛ هذا مجموع طبقة فقط"];
+      }
   return [...members, ...generic];
 }
 

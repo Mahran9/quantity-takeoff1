@@ -150,6 +150,100 @@ export function parseColumnSizes(texts: Txt[]): Record<string, Section> {
   return out;
 }
 
+type Box3 = { L: number; W: number; H: number };
+const FOOT_MARK = /^C?F\d{1,2}$/;
+
+/**
+ * Footing schedule rows in a CAD drawing: a footing mark followed on its row by L W H of plain concrete and of
+ * reinforced concrete (order from the headings above), in metres or centimetres.
+ */
+export function parseCadFootingSchedule(texts: Txt[]): { sizes: Record<string, { pc?: Box3; rc?: Box3 }>; rows: Set<Txt> } {
+  const nums = texts.filter((t) => /^\d+(\.\d+)?$/.test(t.s));
+  const pcHeads = texts.filter((t) => /PLAIN|\bP\.?\s?C\b|LEAN|BLINDING/i.test(t.s));
+  const rcHeads = texts.filter((t) => /REINF(?!ORCEMENT)|\bR\.?\s?C\b/i.test(t.s));
+  const above = (m: Txt) => (h: Txt) => h.y > m.y && h.y - m.y < 20 && h.x > m.x - 2 && h.x < m.x + 25;
+  const entries: (Txt & { pc?: Box3; rc?: Box3 })[] = [];
+  for (const m of texts) {
+    if (!FOOT_MARK.test(m.s)) continue;
+    const row = nums.filter((n) => n.x > m.x && n.x - m.x < 25 && Math.abs(n.y - m.y) < 0.35).sort((a, b) => a.x - b.x);
+    if (row.length < 3) continue;
+    const v = row.map((n) => Number(n.s));
+    const k = v.slice(0, 6).some((x) => x >= 20) ? 0.01 : 1;
+    const box = (i: number): Box3 | undefined => {
+      const [L, W, H] = v.slice(i, i + 3).map((x) => x * k);
+      return L > 0 && W > 0 && H > 0 && H <= 2 && L <= 30 && W <= 30 ? { L, W, H } : undefined;
+    };
+    const pcH = pcHeads.filter(above(m)).sort((a, b) => a.y - m.y - (b.y - m.y))[0];
+    const rcH = rcHeads.filter(above(m)).sort((a, b) => a.y - m.y - (b.y - m.y))[0];
+    if (row.length >= 6) {
+      const pcFirst = pcH && rcH ? pcH.x < rcH.x : true;
+      const a = box(0), b = box(3);
+      if (a && b) entries.push({ ...m, pc: pcFirst ? a : b, rc: pcFirst ? b : a });
+    } else if (rcH && !pcH) {
+      const a = box(0);
+      if (a) entries.push({ ...m, rc: a });
+    }
+  }
+  const kept = entries.filter((e) => entries.some((o) => o !== e && Math.abs(o.x - e.x) < 0.6));
+  const sizes: Record<string, { pc?: Box3; rc?: Box3 }> = {};
+  for (const e of kept) sizes[e.s] ||= { pc: e.pc, rc: e.rc };
+  return { sizes, rows: new Set(kept) };
+}
+
+/** Footings on a CAD foundation plan × footing schedule = reinforced and plain (blinding) concrete. */
+export function readCadFootings(world: Txt[], titles: Txt[]): Candidate[] {
+  const { sizes, rows } = parseCadFootingSchedule(world);
+  if (!Object.keys(sizes).length) return [];
+  const plan = world.filter((t) => FOOT_MARK.test(t.s) && !rows.has(t) && sizes[t.s]);
+  const out: Candidate[] = [];
+  const order = (m: string) => (m.startsWith("CF") ? 1000 : 0) + Number(m.replace(/\D/g, ""));
+  // A foundation plan carries many footing marks; a detail or section repeats each mark once or twice.
+  cluster(plan, 12).filter((g) => g.length >= 8).forEach((g, gi) => {
+    const seen = new Set<string>();
+    const n: Record<string, number> = {};
+    for (const m of g) {
+      const key = `${m.s}@${Math.round(m.x * 20)},${Math.round(m.y * 20)}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      n[m.s] = (n[m.s] || 0) + 1;
+    }
+    // Every mark once = a legend, a schedule copy or a sheet of details, not a plan.
+    if (Math.max(...Object.values(n)) < 2) return;
+    const xs = g.map((m) => m.x), ys = g.map((m) => m.y);
+    const cx = (Math.min(...xs) + Math.max(...xs)) / 2, y0 = Math.min(...ys);
+    const title = titles
+      .filter((t) => t.x > Math.min(...xs) - 8 && t.x < Math.max(...xs) + 8 && t.y > y0 - 19 && t.y < Math.max(...ys) + 9)
+      .sort((a, b) => Math.hypot(a.x - cx, a.y - y0) - Math.hypot(b.x - cx, b.y - y0))[0]?.s;
+    const where = title || `مخطط القواعد ${gi + 1}`;
+    let rc = 0, pc = 0;
+    const rcParts: string[] = [], pcParts: string[] = [], missing: string[] = [];
+    let count = 0;
+    for (const [mark, k] of Object.entries(n).sort((a, b) => order(a[0]) - order(b[0]))) {
+      const s = sizes[mark];
+      count += k;
+      if (s.rc) { rc += k * s.rc.L * s.rc.W * s.rc.H; rcParts.push(`${mark}×${k} (${s.rc.L}×${s.rc.W}×${s.rc.H})`); } else missing.push(mark);
+      if (s.pc) { pc += k * s.pc.L * s.pc.W * s.pc.H; pcParts.push(`${mark}×${k} (${s.pc.L}×${s.pc.W}×${s.pc.H})`); }
+    }
+    if (rc > 0) out.push({
+      id: `cadf-${gi}-rc`,
+      description: `توريد وصب خرسانة مسلحة للقواعد — ${where} (${count} قاعدة)`,
+      category: RC_CAT, dim: "volume", unit: "م³", quantity: r3(rc), sources: ["cad"],
+      confidence: missing.length ? "medium" : "high",
+      evidence: `عدد كل قاعدة من علاماتها على المخطط × أبعادها من جدول القواعد: ${rcParts.join("، ")}`,
+      checks: missing.length ? [`قواعد بلا أبعاد خرسانة مسلحة في الجدول: ${missing.join("، ")}`] : [],
+      selected: true, formula: "Σ عدد × الطول × العرض × العمق", count,
+    });
+    if (pc > 0) out.push({
+      id: `cadf-${gi}-pc`,
+      description: `توريد وصب خرسانة عادية (نظافة) تحت القواعد — ${where}`,
+      category: RC_CAT, dim: "volume", unit: "م³", quantity: r3(pc), sources: ["cad"], confidence: "high",
+      evidence: `أبعاد الخرسانة العادية من جدول القواعد × عدد القواعد: ${pcParts.join("، ")}`,
+      checks: [], selected: true, formula: "Σ عدد × الطول × العرض × السماكة",
+    });
+  });
+  return out;
+}
+
 export interface MemberAssumptions { storeyHeight?: number; slabThickness?: number }
 
 export function readCadMembers(dxf: any, a: MemberAssumptions = {}): Candidate[] {
@@ -197,12 +291,6 @@ export function readCadMembers(dxf: any, a: MemberAssumptions = {}): Candidate[]
   for (const src of [model.sections, ...[...reach].map((n) => parseBeamSchedules(textsOf(blocks[n].entities || [])).sections)])
     for (const [mark, s] of Object.entries(src))
       if (!(all[mark] ||= []).some((o) => Math.abs(o.b - s.b) < 1e-6 && Math.abs(o.h - s.h) < 1e-6)) all[mark].push(s);
-  if (!Object.keys(all).length) return [];
-  /** The schedule section that best fits the widths actually drawn for a mark. */
-  const sectionFor = (mark: string, widths: number[]): Section =>
-    [...all[mark]].sort((a, b) => widths.filter((w) => Math.abs(w - b.b) <= 0.03).length - widths.filter((w) => Math.abs(w - a.b) <= 0.03).length)[0];
-  const fits = (mark: string, w: number) => all[mark].some((s) => Math.abs(w - s.b) <= 0.03);
-  const marks = texts.filter((t) => BEAM_MARK.test(t.s) && !rowSet.has(t) && all[t.s]);
   // Every text placed in the drawing, blocks included, in world coordinates: column marks are often a block laid
   // over the plan, and the column schedule a block whose missing sizes were typed over it in model space.
   const world: Txt[] = [...texts];
@@ -224,9 +312,15 @@ export function readCadMembers(dxf: any, a: MemberAssumptions = {}): Candidate[]
   };
   place(ents.filter((e) => e.type === "INSERT"), (p) => p, 0);
   const colSizes = parseColumnSizes(world);
-
-  const out: Candidate[] = [];
   const titles = texts.filter((t) => /PLAN|مسقط|مخطط/i.test(t.s) && t.s.length < 60);
+  const out: Candidate[] = readCadFootings(world, titles);
+
+  if (!Object.keys(all).length) return out;
+  /** The schedule section that best fits the widths actually drawn for a mark. */
+  const sectionFor = (mark: string, widths: number[]): Section =>
+    [...all[mark]].sort((a, b) => widths.filter((w) => Math.abs(w - b.b) <= 0.03).length - widths.filter((w) => Math.abs(w - a.b) <= 0.03).length)[0];
+  const fits = (mark: string, w: number) => all[mark].some((s) => Math.abs(w - s.b) <= 0.03);
+  const marks = texts.filter((t) => BEAM_MARK.test(t.s) && !rowSet.has(t) && all[t.s]);
 
   cluster(marks, 12).filter((g) => g.length >= 4).forEach((g, gi) => {
     const xs = g.map((m) => m.x), ys = g.map((m) => m.y);

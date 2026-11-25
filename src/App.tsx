@@ -55,7 +55,7 @@ import {
   markBackupDone,
 } from "./utils/projectStorage";
 
-export const APP_VERSION = "8.17.1";
+export const APP_VERSION = "8.18.0";
 
 // Persistent high-capacity storage powered by IndexedDB (src/utils/projectStorage.ts)
 

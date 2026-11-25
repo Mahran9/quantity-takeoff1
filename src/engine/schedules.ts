@@ -41,7 +41,8 @@ export function parseColumnSchedule(texts: string[]): Record<string, { b: number
  * layout (one row per mark, L/W/H as column headings). Cells reading "as PLAN" stay empty.
  */
 export function parseFootingSchedule(toks: Tok[]): { marks: Record<string, FootingRow>; unit: "cm" | "m" } | null {
-  const marks = toks.filter((t) => /^F\d{1,2}$/.test(t.text));
+  // Isolated (F1) and combined (CF1) footings share one schedule.
+  const marks = toks.filter((t) => /^C?F\d{1,2}$/.test(t.text));
   if (marks.length < 4) return null;
   const num = (t: Tok) => /^\d{1,4}(?:\.\d{1,3})?$/.test(t.text);
   const nums = toks.filter(num);
@@ -49,7 +50,7 @@ export function parseFootingSchedule(toks: Tok[]): { marks: Record<string, Footi
     /^(L|LENGTH|LONG)$/i.test(t.text) ? "L" : /^(W|B|WIDTH|SHORT)$/i.test(t.text) ? "W" : /^(H|D|T|DEPTH|THK|THICKNESS|HEIGHT)$/i.test(t.text) ? "H" : null;
   const labels = toks.filter((t) => labelOf(t));
   const heads = toks
-    .map((t) => ({ t, kind: /\bR\.?\s?C\b|REINFORCED/i.test(t.text) ? "rc" : /\bP\.?\s?C\b|PLAIN|LEAN|BLINDING/i.test(t.text) ? "pc" : null }))
+    .map((t) => ({ t, kind: /\bR\.?\s?C\b|REINF(?!ORCEMENT)/i.test(t.text) ? "rc" : /\bP\.?\s?C\b|PLAIN|LEAN|BLINDING/i.test(t.text) ? "pc" : null }))
     .filter((h) => h.kind) as { t: Tok; kind: "rc" | "pc" }[];
   const cmHint = toks.some((t) => /\(\s*CM\s*\)|\bCM\b/i.test(t.text));
 
@@ -83,22 +84,43 @@ export function parseFootingSchedule(toks: Tok[]): { marks: Record<string, Footi
     const out: Record<string, FootingRow> = {};
     let used = 0;
     const values: number[] = [];
+    // Each line of numbers gets its L / W / H label (labels and numbers use different font sizes, so their
+    // positions differ by a few points: take the nearest label).
+    const valueLines: { pos: number; cells: Tok[]; label: Tok; lab: "L" | "W" | "H" }[] = [];
     for (const [pos, cells] of rows) {
       if (cells.length < Math.max(3, cols.length * 0.35)) continue;
-      // Row label (L / W / H) on the same line, and the nearest section heading before it.
-      // Labels and numbers use different font sizes, so their tops differ by a few points: take the nearest label.
-      const lab = labels
+      const label = labels
         .filter((l) => Math.abs(cross(l) - pos) < 0.012 && !at(l))
-        .sort((a, b) => Math.abs(cross(a) - pos) - Math.abs(cross(b) - pos))
-        .map(labelOf)[0];
-      if (!lab) continue;
-      // Section heading: one whose width spans this line (a heading centred over its L/W/H columns), else the
-      // nearest one before it (a heading written on its own line above its rows).
-      const spanLo = (t: Tok) => (across ? t.y : t.x), spanHi = (t: Tok) => (across ? t.y : t.x + (t.w ?? 0));
+        .sort((a, b) => Math.abs(cross(a) - pos) - Math.abs(cross(b) - pos))[0];
+      if (label) valueLines.push({ pos, cells, label, lab: labelOf(label)! });
+    }
+    // Section heading per line. The labels repeat in groups (L W H for plain concrete, then L W H for reinforced),
+    // and the headings over those groups come in the same order, whether a heading is centred over its group,
+    // starts at its edge, or sits on its own line above it. So: number the label groups along the table and give
+    // group k the k-th heading near the labels. Distance alone fails when a heading is offset from its columns.
+    valueLines.sort((a, b) => a.pos - b.pos);
+    let group = -1;
+    let seenInGroup = new Set<string>();
+    const groupOf = new Map<(typeof valueLines)[number], number>();
+    for (const ln of valueLines) {
+      if (group < 0 || seenInGroup.has(ln.lab)) { group++; seenInGroup = new Set(); }
+      seenInGroup.add(ln.lab);
+      groupOf.set(ln, group);
+    }
+    const lo = Math.min(...valueLines.map((l) => l.pos)), hi = Math.max(...valueLines.map((l) => l.pos));
+    const labelAlong = valueLines.length ? valueLines.reduce((s, l) => s + along(l.label), 0) / valueLines.length : 0;
+    const nearHeads = heads
+      .filter((h) => cross(h.t) >= lo - 0.05 && cross(h.t) <= hi + 0.05 && Math.abs(along(h.t) - labelAlong) < 0.06)
+      .sort((a, b) => cross(a.t) - cross(b.t));
+    const groups = group + 1;
+    for (const ln of valueLines) {
+      const g = groupOf.get(ln)!;
       const head =
-        heads.find((h) => !across && spanLo(h.t) - 0.006 <= pos && pos <= spanHi(h.t) + 0.006) ||
-        heads.filter((h) => cross(h.t) <= pos + 0.006).sort((a, b) => cross(b.t) - cross(a.t))[0];
+        nearHeads.length === groups
+          ? nearHeads[g]
+          : nearHeads.filter((h) => cross(h.t) <= ln.pos + 0.006).sort((a, b) => cross(b.t) - cross(a.t))[0];
       if (!head) continue;
+      const { cells, lab } = ln;
       for (const c of cells) {
         const m = at(c)!.text;
         const v = Number(c.text);
@@ -109,7 +131,9 @@ export function parseFootingSchedule(toks: Tok[]): { marks: Record<string, Footi
       used++;
     }
     if (used < 2) continue;
-    const unit: "cm" | "m" = cmHint || values.some((v) => v >= 20) ? "cm" : "m";
+    // A footing written in cm always has a side of 20 or more; a schedule in metres never does (15.20 m is the
+    // longest combined footing seen). The "(CM)" note only confirms it.
+    const unit: "cm" | "m" = values.some((v) => v >= 20) || (cmHint && values.every((v) => v >= 5)) ? "cm" : "m";
     const k = unit === "cm" ? 0.01 : 1;
     for (const row of Object.values(out)) for (const kind of ["rc", "pc"] as const) {
       const b = row[kind];
@@ -152,15 +176,19 @@ export function scheduleVolumes(
 
   // Footings: counts from the plan(s) × schedule sizes.
   if (foot) {
-    // The schedule's own header row (F1 … F20, each written once) is not a footing plan.
-    if (counted.some((s) => s.sheetId === footSheetId && s.cands.some((c) => c.id === "mrk-F"))) replaced.push({ sheetId: footSheetId, id: "mrk-F" });
+    // Isolated (F) and combined (CF) footings are two mark families on the same plan.
+    const FOOT_IDS = ["mrk-F", "mrk-CF"];
+    // The schedule's own mark column (F1 … F20, each written once) is not a footing plan.
+    for (const s of counted) if (s.sheetId === footSheetId) for (const c of s.cands) if (FOOT_IDS.includes(c.id)) replaced.push({ sheetId: footSheetId, id: c.id });
     for (const { sheetId, cands } of counted) {
       if (sheetId === footSheetId) continue;
-      const fam = cands.find((c) => c.id === "mrk-F" && c.perMark);
-      if (!fam) continue;
+      const fams = cands.filter((c) => FOOT_IDS.includes(c.id) && c.perMark);
+      if (!fams.length) continue;
+      const perMark: Record<string, number> = Object.assign({}, ...fams.map((f) => f.perMark));
       let rc = 0, pc = 0;
       const rcParts: string[] = [], pcParts: string[] = [], missing: string[] = [];
-      for (const [mark, n] of Object.entries(fam.perMark!).sort((a, b) => parseInt(a[0].slice(1)) - parseInt(b[0].slice(1)))) {
+      const order = (m: string) => (m.startsWith("CF") ? 1000 : 0) + parseInt(m.replace(/\D/g, ""), 10);
+      for (const [mark, n] of Object.entries(perMark).sort((a, b) => order(a[0]) - order(b[0]))) {
         const row = foot.marks[mark];
         if (full(row?.rc)) { const v = n * row!.rc!.L * row!.rc!.W * row!.rc!.H; rc += v; rcParts.push(`${mark}×${n} (${row!.rc!.L}×${row!.rc!.W}×${row!.rc!.H})`); }
         else missing.push(mark);
@@ -174,7 +202,7 @@ export function scheduleVolumes(
           checks: missing.length ? [`قواعد بلا أبعاد في الجدول (مكتوب «as PLAN» أو غير مقروء): ${missing.join("، ")} — أضفها يدوياً`] : ["كل القواعد المعلّمة على المخطط لها أبعاد في الجدول"],
           formula: "Σ عدد × الطول × العرض × العمق", layer: "جدول القواعد",
         } });
-        replaced.push({ sheetId, id: "mrk-F" });
+        for (const f of fams) replaced.push({ sheetId, id: f.id });
       }
       if (pc > 0) lines.push({ sheetId, cand: {
         id: "sch-footing-pc", description: "توريد وصب خرسانة عادية (نظافة) تحت القواعد", category: RC_CAT, dim: "volume", unit: "م³",

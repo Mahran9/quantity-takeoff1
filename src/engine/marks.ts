@@ -13,7 +13,7 @@ const FAMILY: Record<string, string> = {
 
 /** Reinforced-concrete drawings use the same letters for other members. */
 const RC_FAMILY: Record<string, string> = {
-  C: "أعمدة خرسانية", F: "قواعد", N: "رقاب أعمدة", GB: "ميدات", TB: "ميدات ربط", B: "كمرات خرسانية",
+  C: "أعمدة خرسانية", F: "قواعد", CF: "قواعد مشتركة", N: "رقاب أعمدة", GB: "ميدات", TB: "ميدات ربط", B: "كمرات خرسانية",
   RB: "كمرات سقف", R: "أنواع بلاطات هوردي (R)", S: "أنواع بلاطات مصمتة (S)", SB: "كمرات ثانوية", W: "جدران خرسانية", SW: "جدران قص", ST: "درج",
 };
 /**
@@ -21,7 +21,7 @@ const RC_FAMILY: Record<string, string> = {
  * label spans or slab types (one beam can carry its mark several times), so their counts are not quantities:
  * they are offered for review, not added to the BOQ.
  */
-const RC_MEMBER_MARKS = new Set(["C", "F", "N"]);
+const RC_MEMBER_MARKS = new Set(["C", "F", "CF", "N"]);
 const STEEL_CAT = "أعمال الهياكل المعدنية والهناجر";
 const RC_CAT = "أعمال خرسانية مسلحة وعادية";
 

@@ -55,7 +55,7 @@ import {
   markBackupDone,
 } from "./utils/projectStorage";
 
-export const APP_VERSION = "8.17.0";
+export const APP_VERSION = "8.17.1";
 
 // Persistent high-capacity storage powered by IndexedDB (src/utils/projectStorage.ts)
 
@@ -250,7 +250,13 @@ export default function App() {
   }, [storageReady, activeProject.id]);
 
   const pushUndoSnapshot = () => {
-    setHistoryStack((prev) => [...prev.slice(-(HISTORY_LIMIT - 1)), { sheets, takeoffItems, metadata }]);
+    setHistoryStack((prev) => {
+      // A batch action (select all, merge prices) calls this once per line with the same state: keep one step,
+      // so each press of «تراجع» visibly undoes something.
+      const top = prev[prev.length - 1];
+      if (top && top.sheets === sheets && top.takeoffItems === takeoffItems && top.metadata === metadata) return prev;
+      return [...prev.slice(-(HISTORY_LIMIT - 1)), { sheets, takeoffItems, metadata }];
+    });
   };
 
   // Rapid edits of the same field (typing a price) collapse into one undo step.
@@ -277,7 +283,24 @@ export default function App() {
       metadata: last.metadata,
     }));
     setFocusedItem(null);
+    setNotice("تم التراجع عن آخر تعديل.");
+    window.setTimeout(() => setNotice((n) => (n === "تم التراجع عن آخر تعديل." ? null : n)), 2500);
   };
+
+  // Ctrl+Z / ⌘Z undoes the last change, except while typing in a field (the field keeps its own undo).
+  const undoRef = useRef(handleUndo);
+  undoRef.current = handleUndo;
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.key.toLowerCase() !== "z") return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      e.preventDefault();
+      undoRef.current();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const handleSaveCompany = (profile: CompanyProfile) => {
     setCompany(profile);
@@ -879,6 +902,7 @@ export default function App() {
               onGoSheets={() => setTab("sheets")}
               readMsg={readMsg}
               onExcel={() => exportBoqToExcel(metadata, sheets, takeoffItems, company)}
+              onUndo={historyStack.length ? handleUndo : undefined}
             >
               {currentSheet && (
                 <TakeoffTable

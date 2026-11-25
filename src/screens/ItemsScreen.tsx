@@ -1,5 +1,5 @@
 import React from "react";
-import { FileSpreadsheet, Loader2, ScanLine } from "lucide-react";
+import { FileSpreadsheet, Loader2, ScanLine, Undo2 } from "lucide-react";
 import { BlueprintSheet, TakeoffItem } from "../types";
 import { ScreenHeader } from "../components/Nav";
 
@@ -17,11 +17,13 @@ interface Props {
   readMsg?: string;
   /** Download the quantities as an Excel workbook. */
   onExcel?: () => void;
+  /** Undo the last change (absent when there is nothing to undo). */
+  onUndo?: () => void;
   children: React.ReactNode; // the table for the active sheet
 }
 
 /** Quantities: pick a drawing, review its lines. */
-export const ItemsScreen: React.FC<Props> = ({ sheets, items, activeSheetId, onSelectSheet, onAnalyze, onAuto, onGoSheets, readMsg, onExcel, children }) => {
+export const ItemsScreen: React.FC<Props> = ({ sheets, items, activeSheetId, onSelectSheet, onAnalyze, onAuto, onGoSheets, readMsg, onExcel, onUndo, children }) => {
   const live = items.filter((i) => i.reviewStatus !== "rejected").length;
   const [msg, setMsg] = React.useState(readMsg || "");
   React.useEffect(() => { if (readMsg) setMsg(readMsg); }, [readMsg]);
@@ -57,6 +59,15 @@ export const ItemsScreen: React.FC<Props> = ({ sheets, items, activeSheetId, onS
             </button>
             <button onClick={onAnalyze} className="flex h-10 items-center rounded-xl border border-slate-300 px-3 text-sm font-bold text-slate-800">
               راجع
+            </button>
+            <button
+              onClick={onUndo}
+              disabled={!onUndo}
+              title="تراجع عن آخر تعديل (Ctrl+Z)"
+              className="flex h-10 items-center gap-1 rounded-xl border border-slate-300 px-3 text-sm font-bold text-slate-800 disabled:opacity-40"
+            >
+              <Undo2 className="w-4 h-4" />
+              تراجع
             </button>
           </div>
         }

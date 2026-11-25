@@ -3,6 +3,7 @@ import { extractEngineeringQuantitiesFromDxf, isIgnoredLayer } from "../utils/dx
 import { LabelledQty } from "../utils/ocrLabels";
 import { AiItem } from "../utils/aiTakeoff";
 import { Candidate } from "./candidate";
+import { readCadMembers } from "./cadMembers";
 import { measureGroup, ptToMetres, suggestRole } from "../utils/pdfPlan";
 
 /** CAD geometry reader: layers, closed shapes, blocks (already parsed when the file was uploaded). */
@@ -11,7 +12,9 @@ export interface CadAssumptions { wallHeight?: number; footingDepth?: number; sl
 export function readCad(sheet: BlueprintSheet, a: CadAssumptions = {}): Candidate[] {
   const dxf = sheet.dxfData;
   if (!dxf) return [];
-  return extractEngineeringQuantitiesFromDxf(dxf, {
+  const members = readCadMembers(dxf);
+  const memberLayers = new Set(members.flatMap((m) => (m.layer || "").split("، ")));
+  const generic: Candidate[] = extractEngineeringQuantitiesFromDxf(dxf, {
     defaultWallHeight: a.wallHeight || 0,
     defaultFootingDepth: a.footingDepth || 0,
     defaultSlabThickness: a.slabThickness || 0,
@@ -43,6 +46,13 @@ export function readCad(sheet: BlueprintSheet, a: CadAssumptions = {}): Candidat
     height: q.height,
   };
   });
+  // The beam outlines are now measured as beams (m³); the same layer's raw line length would be a second count.
+  for (const c of generic)
+    if (c.layer && memberLayers.has(c.layer) && c.selected) {
+      c.selected = false;
+      c.checks = [...c.checks, "خطوط هذه الطبقة حُسبت كمرات بالمتر المكعب في بند الكمرات"];
+    }
+  return [...members, ...generic];
 }
 
 /** Printed numbers (area labels, summary tables) read by OCR. */

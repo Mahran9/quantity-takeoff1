@@ -5,6 +5,7 @@
 import { readFileSync } from "node:fs";
 import { Dwg_File_Type, LibreDwg } from "@mlightcad/libredwg-web";
 import { dwgDatabaseToDxfObject } from "../src/utils/dwgConvert";
+import { readCadMembers } from "../src/engine/cadMembers";
 import { analyzeParsedDxfObject, extractEngineeringQuantitiesFromDxf, auditExtraction, summarizeAudit } from "../src/utils/dxfParser";
 
 async function main() {
@@ -44,6 +45,13 @@ async function main() {
   const q = extractEngineeringQuantitiesFromDxf(res, {} as any) as any[];
   console.log(`\nextracted ${q.length} items:`);
   for (const e of q) console.log(`  ${e.selected ? "✓" : " "} ${e.type.padEnd(7)} ${String(e.name).slice(0, 50).padEnd(52)} ${Number(e.value).toFixed(2).padStart(12)} ${e.unit}  [${e.layer}]`);
+  const members = readCadMembers(res);
+  console.log(`\nbeams measured from geometry: ${members.length}`);
+  for (const m of members) {
+    console.log(`  ${m.quantity.toFixed(3).padStart(10)} م³  ${m.description}  [${m.layer}]`);
+    console.log(`       ${m.evidence}`);
+    for (const c of m.checks) console.log(`       ! ${c}`);
+  }
   const audit = auditExtraction(res, q as any, {} as any);
   console.log(`\naudit ${audit.level}: ${summarizeAudit(audit)}`);
   for (const c of audit.checks) console.log(`  [${c.level}] ${c.id}: ${c.message}`);

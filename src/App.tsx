@@ -35,6 +35,7 @@ import {
 } from "./types";
 import { initialProjectMetadata, LEGACY_DEMO_SHEET_IDS } from "./data/sampleBlueprints";
 import { exportBoqToExcel } from "./utils/boqExporter";
+import { readTitleBlockNames, isUnsetName } from "./utils/titleBlock";
 import { fromOcr, readCad, readPdf } from "./engine/readers";
 import { readMarks } from "./engine/marks";
 import { readPrintedLabels } from "./utils/ocrLabels";
@@ -186,6 +187,21 @@ export default function App() {
       setActiveSheetId(sheets[0]?.id || "");
     }
   }, [sheets, activeSheetId]);
+
+  // Client / project name written in the drawing's title block fills the empty fields (never overwrites what the person typed).
+  useEffect(() => {
+    if (!sheets.length) return;
+    const need = isUnsetName(metadata.clientName) || !metadata.projectName || metadata.projectName === "مشروع جديد";
+    if (!need) return;
+    const found = readTitleBlockNames(sheets);
+    if (!found.client && !found.project) return;
+    setMetadata((m) => ({
+      ...m,
+      clientName: isUnsetName(m.clientName) && found.client ? found.client : m.clientName,
+      projectName: (!m.projectName || m.projectName === "مشروع جديد") && found.project ? found.project : m.projectName,
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sheets]);
 
   // Highlights belong to a sheet: clear them only when the project or sheet really changes.
   useEffect(() => {

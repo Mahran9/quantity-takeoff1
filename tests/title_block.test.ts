@@ -1,0 +1,11 @@
+import assert from "node:assert/strict";
+import { readTitleBlockNames } from "../src/utils/titleBlock";
+const sh = (...t: string[]) => ({ visualTokens: t.map((text, i) => ({ id: String(i), text, x: 0, y: 0, w: 0, h: 0, source: "pdf_text" as const })) }) as any;
+assert.deepEqual(readTitleBlockNames([sh("CLIENT: Al Noor Trading Co.", "SCALE", "1:100")]), { client: "Al Noor Trading Co.", project: undefined });
+assert.equal(readTitleBlockNames([sh("OWNER", "SULTAN AL-HARBI", "PROJECT NAME", "WAREHOUSE DAMMAM")]).client, "SULTAN AL-HARBI");
+assert.equal(readTitleBlockNames([sh("OWNER", "SULTAN AL-HARBI", "PROJECT NAME", "WAREHOUSE DAMMAM")]).project, "WAREHOUSE DAMMAM");
+assert.equal(readTitleBlockNames([sh("اسم المالك: محمد العتيبي")]).client, "محمد العتيبي");
+assert.equal(readTitleBlockNames([sh("العميل", "شركة الرياض", "التاريخ")]).client, "شركة الرياض");
+assert.equal(readTitleBlockNames([sh("CLIENT", "SCALE", "1:100")]).client, undefined);
+assert.equal(readTitleBlockNames([sh("FOUNDATION PLAN", "DIMENSION")]).client, undefined);
+console.log("PASS title_block");

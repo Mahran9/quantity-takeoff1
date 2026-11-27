@@ -2,6 +2,7 @@ import React from "react";
 import { Plus, FileText, Ruler, Image as ImageIcon, Trash2, ChevronLeft } from "lucide-react";
 import { BlueprintSheet, TakeoffItem } from "../types";
 import { ScreenHeader } from "../components/Nav";
+import { buildMarksTable } from "../engine/marks";
 
 interface Props {
   sheets: BlueprintSheet[];
@@ -21,6 +22,9 @@ const KIND: Record<string, { label: string; Icon: React.ComponentType<{ classNam
 };
 
 export const SheetsScreen: React.FC<Props> = ({ sheets, items, currencySymbol, onOpen, onDelete, onUpload, onProjects }) => {
+  const marks = React.useMemo(() => buildMarksTable(sheets), [sheets]);
+  const [showMarks, setShowMarks] = React.useState(false);
+  const dups = marks.rows.filter((r) => r.warning).length;
   if (sheets.length === 0) {
     return (
       <div className="flex flex-col gap-5">
@@ -98,6 +102,33 @@ export const SheetsScreen: React.FC<Props> = ({ sheets, items, currencySymbol, o
           );
         })}
       </div>
+      {marks.rows.length > 0 && (
+        <section className="card p-4">
+          <button onClick={() => setShowMarks((v) => !v)} className="flex w-full items-center justify-between text-right">
+            <span className="text-[15px] font-extrabold text-slate-900">جدول العلامات الموحّد <span className="font-mono text-[12px] text-slate-500">({marks.rows.length})</span></span>
+            <span className="text-[12.5px] font-bold text-teal-800">{showMarks ? "إخفاء" : "عرض"}</span>
+          </button>
+          {dups > 0 && <p className="mt-1 text-[12.5px] font-semibold leading-6 text-amber-800">{dups} علامة مكررة بين لوحات: غالباً نفس العناصر من منظر آخر، لا تجمعها.</p>}
+          {showMarks && (
+            <div className="mt-3 max-h-[50vh] overflow-auto rounded-lg border border-slate-200">
+              <table className="w-full text-[12.5px]">
+                <thead className="sticky top-0 bg-slate-100 text-slate-700">
+                  <tr><th className="p-2 text-right">العلامة</th>{marks.codes.map((c) => <th key={c} className="p-2 font-mono">{c}</th>)}<th className="p-2">الأرجح</th></tr>
+                </thead>
+                <tbody>
+                  {marks.rows.map((r) => (
+                    <tr key={r.kind + r.label} className={"border-t border-slate-100 " + (r.warning ? "bg-amber-50" : "")} title={r.warning}>
+                      <td className="p-2 text-right font-bold">{r.label} <span className="text-[10.5px] font-semibold text-slate-400">{r.kind}</span></td>
+                      {marks.codes.map((c) => <td key={c} className="p-2 text-center font-mono">{r.perSheet[c] ?? ""}</td>)}
+                      <td className="p-2 text-center font-mono font-extrabold">{r.best}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 };

@@ -176,6 +176,9 @@ export const HomeScreen: React.FC<Props> = ({ metadata, setMetadata, sheets, ite
 
       {sheets.length > 0 && (
         <section className="card p-4">
+          <button onClick={onUpload} className="mb-3 w-full h-14 rounded-xl border-2 border-teal-500 text-[15px] font-extrabold text-teal-800 flex items-center justify-center gap-2">
+            <Plus className="w-5 h-5" /> إضافة مخطط
+          </button>
           <button onClick={runAutoTakeoff} disabled={autoRunning} className="qto-cta w-full h-14 rounded-xl text-[15px] flex items-center justify-center gap-2 disabled:opacity-65">
             {autoRunning ? <Loader2 className="w-5 h-5 animate-spin" /> : <ListChecks className="w-5 h-5" />}
             {autoRunning ? "جارٍ قراءة اللوحات…" : "اقرأ الأبعاد واحصر الكميات"}

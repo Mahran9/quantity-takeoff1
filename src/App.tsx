@@ -36,7 +36,7 @@ import {
 import { initialProjectMetadata, LEGACY_DEMO_SHEET_IDS } from "./data/sampleBlueprints";
 import { exportBoqToExcel } from "./utils/boqExporter";
 import { readTitleBlockNames, isUnsetName } from "./utils/titleBlock";
-import { PriceBook, loadBook, saveBook, applyBook } from "./utils/priceBook";
+import { PriceBook, loadBook, saveBook, applyBook, syncLabor } from "./utils/priceBook";
 import { PriceBookModal } from "./components/PriceBookModal";
 import { fromOcr, readCad, readPdf } from "./engine/readers";
 import { readMarks } from "./engine/marks";
@@ -208,19 +208,29 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sheets]);
 
-  // New / unpriced lines take the saved price of their kind (when the price list has one).
+  // New / unpriced lines take the saved price of their kind, and the two workmanship lines follow the quantities.
   useEffect(() => {
-    if (!priceBook.autoFill || !priceBook.entries.length) return;
-    const r = applyBook(takeoffItems, priceBook, "empty");
-    if (r.changed) updateActiveProject((p) => ({ ...p, takeoffItems: applyBook(p.takeoffItems, priceBook, "empty").items }));
+    const sid = sheets[0]?.id;
+    if (!sid) return;
+    let its = takeoffItems, ch = false;
+    if (priceBook.autoFill) { const r = applyBook(its, priceBook, "empty"); if (r.changed) { its = r.items; ch = true; } }
+    const sl = syncLabor(its, priceBook, sid);
+    if (sl.changed) { its = sl.items; ch = true; }
+    if (ch) updateActiveProject((p) => ({ ...p, takeoffItems: its }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [takeoffItems, priceBook]);
+  }, [takeoffItems, priceBook, sheets]);
 
-  const applyPricesToAllProjects = () => {
+  const applyPricesToAllProjects = (book: PriceBook = priceBook) => {
     setProjects((prev) => prev.map((p) => {
-      const r = applyBook(p.takeoffItems, priceBook, "all");
-      return r.changed ? { ...p, takeoffItems: r.items, updatedAt: new Date().toISOString() } : p;
+      const r = applyBook(p.takeoffItems, book, "all");
+      const sl = p.sheets[0] ? syncLabor(r.items, book, p.sheets[0].id) : { items: r.items, changed: false };
+      return r.changed || sl.changed ? { ...p, takeoffItems: sl.items, updatedAt: new Date().toISOString() } : p;
     }));
+  };
+  const changePriceBook = (b: PriceBook) => {
+    const ratesChanged = JSON.stringify(b.rates || {}) !== JSON.stringify(priceBook.rates || {});
+    setPriceBook(b);
+    if (ratesChanged) applyPricesToAllProjects(b);
   };
 
   // Highlights belong to a sheet: clear them only when the project or sheet really changes.
@@ -1162,7 +1172,7 @@ export default function App() {
       />
 
       {priceBookOpen && (
-        <PriceBookModal book={priceBook} onChange={setPriceBook} projects={projects} activeProject={activeProject} onApplyAll={applyPricesToAllProjects} onClose={() => setPriceBookOpen(false)} />
+        <PriceBookModal book={priceBook} onChange={changePriceBook} projects={projects} activeProject={activeProject} onApplyAll={() => applyPricesToAllProjects()} onClose={() => setPriceBookOpen(false)} />
       )}
 
       <CompanySettingsModal

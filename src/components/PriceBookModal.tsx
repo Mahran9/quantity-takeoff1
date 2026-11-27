@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { History, Plus, RefreshCw, Save, Trash2, X } from "lucide-react";
 import { ProjectRecord } from "../types";
-import { PriceBook, PriceEntry, applyBook, entriesFromItems, upsertPrice } from "../utils/priceBook";
+import { PriceBook, PriceEntry, Rates, RateGroup, LaborBasis, LABOR_BASES, applyBook, entriesFromItems, upsertPrice } from "../utils/priceBook";
 
 interface Props {
   book: PriceBook;
@@ -14,6 +14,13 @@ interface Props {
 
 const fmt = (n: number) => (Math.round(n * 100) / 100).toLocaleString("en-US");
 const day = (iso: string) => { try { return new Date(iso).toLocaleDateString("en-GB"); } catch { return ""; } };
+const RATE_ROWS: { key: RateGroup; label: string; unit: string; hint: string }[] = [
+  { key: "concrete", label: "الخرسانة", unit: "ر.س / م³", hint: "كل بند خرسانة في عرض السعر" },
+  { key: "rebar", label: "حديد التسليح", unit: "ر.س / طن", hint: "كل بند تسليح بالطن" },
+  { key: "frame", label: "الهيكل المعدني: أعمدة وجملونات", unit: "ر.س / طن", hint: "الأعمدة والرفترات والبليتات والتكتيف" },
+  { key: "purlin", label: "الهيكل المعدني: مدادات", unit: "ر.س / طن", hint: "حديد المدادات" },
+  { key: "cladding", label: "الهيكل المعدني: شنكو", unit: "ر.س / م²", hint: "تكسية السقف والجدران" },
+];
 const UNITS = ["م³", "م²", "م.ط", "طن", "عدد", "نقطة", "مقطوعية", "كجم"];
 
 /** The price list: one saved unit price per kind of item, kept apart from any project. Editing a price keeps the old one
@@ -25,6 +32,19 @@ export const PriceBookModal: React.FC<Props> = ({ book, onChange, projects, acti
   const [nn, setNn] = useState(""); const [nu, setNu] = useState("م²"); const [np, setNp] = useState("");
   const field = "rounded-xl border bg-white px-3 py-2.5 text-sm text-slate-900";
 
+  const rates: Rates = book.rates || {};
+  const setRate = (k: RateGroup, v: string) => {
+    const n = Number(v);
+    if (v.trim() !== "" && !(n >= 0)) return;
+    onChange({ ...book, rates: { ...rates, [k]: v.trim() === "" || n === 0 ? undefined : n } });
+    setMsg(n > 0 ? "حُفظ السعر وطُبّق على كل العروض" : "أُلغي السعر الموحّد لهذه المجموعة");
+  };
+  const setLabor = (k: "laborBone" | "laborSteel", patch: { price?: number; basis?: LaborBasis }) => {
+    const kind = k === "laborBone" ? "bone" : "steel";
+    const cur = rates[k] || { price: 0, basis: LABOR_BASES[kind][0].id };
+    onChange({ ...book, rates: { ...rates, [k]: { ...cur, ...patch } } });
+    setMsg("حُفظ بند شغل اليد وطُبّق على كل العروض");
+  };
   const pending = useMemo(() => projects.reduce((a, p) => a + applyBook(p.takeoffItems, book, "all").changed, 0), [projects, book]);
   const list = book.entries.filter((e) => !q.trim() || e.name.includes(q.trim()));
 
@@ -50,13 +70,36 @@ export const PriceBookModal: React.FC<Props> = ({ book, onChange, projects, acti
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 sm:items-center sm:p-4" onClick={onClose}>
-      <div className="flex max-h-[94dvh] w-full flex-col overflow-hidden rounded-t-3xl bg-white text-right sm:max-w-xl sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
+      <div className="flex max-h-[94dvh] w-full flex-col overflow-y-auto rounded-t-3xl bg-white text-right sm:max-w-xl sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 pb-2 pt-5">
           <div>
             <h2 className="text-lg font-extrabold text-slate-900">قائمة الأسعار</h2>
             <p className="text-[12.5px] font-semibold text-slate-500">{book.entries.length} صنف محفوظ، تُستعمل في كل عروض الأسعار</p>
           </div>
           <button onClick={onClose} aria-label="إغلاق" className="grid h-10 w-10 place-items-center rounded-xl border border-slate-200"><X className="h-5 w-5" /></button>
+        </div>
+
+        <div className="mx-5 mb-3 rounded-2xl border border-slate-200 p-3">
+          <div className="mb-1 text-[14px] font-extrabold text-slate-900">الأسعار الأساسية</div>
+          <p className="mb-2 text-[12px] font-semibold text-slate-500">اكتب السعر مرة واحدة فيُطبَّق على كل بنود مجموعته في كل عروض الأسعار.</p>
+          {RATE_ROWS.map((r) => (
+            <label key={r.key} className="flex items-center gap-2 border-t border-slate-100 py-2">
+              <span className="min-w-0 flex-1"><span className="block text-[13.5px] font-bold text-slate-900">{r.label}</span><span className="block text-[11.5px] text-slate-500">{r.hint}</span></span>
+              <input key={String(rates[r.key])} inputMode="decimal" defaultValue={rates[r.key] ?? ""} placeholder="0" onBlur={(e) => setRate(r.key, e.target.value)} className={`${field} w-24 font-mono`} aria-label={r.label} />
+              <span className="w-14 text-[11px] font-bold text-slate-500">{r.unit}</span>
+            </label>
+          ))}
+          {([["laborBone", "بند شغل اليد: العظم", "bone"], ["laborSteel", "بند شغل اليد: الهيكل المعدني", "steel"]] as const).map(([k, label, kind]) => (
+            <div key={k} className="border-t border-slate-100 py-2">
+              <div className="mb-1.5 text-[13.5px] font-bold text-slate-900">{label}</div>
+              <div className="flex items-center gap-2">
+                <select value={rates[k]?.basis || LABOR_BASES[kind][0].id} onChange={(e) => setLabor(k, { basis: e.target.value as LaborBasis })} className={`${field} min-w-0 flex-1`}>
+                  {LABOR_BASES[kind].map((b) => <option key={b.id} value={b.id}>{b.label}</option>)}
+                </select>
+                <input key={String(rates[k]?.price)} inputMode="decimal" defaultValue={rates[k]?.price ?? ""} placeholder="0" onBlur={(e) => setLabor(k, { price: Number(e.target.value) || 0 })} className={`${field} w-24 font-mono`} aria-label={label} />
+              </div>
+            </div>
+          ))}
         </div>
 
         <div className="flex flex-col gap-2 px-5 pb-3">
@@ -72,7 +115,7 @@ export const PriceBookModal: React.FC<Props> = ({ book, onChange, projects, acti
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="بحث في الأصناف" className={`${field} w-full`} />
         </div>
 
-        <div className="flex flex-col gap-2 overflow-y-auto px-5 pb-3">
+        <div className="flex flex-col gap-2 px-5 pb-3">
           {list.length === 0 && <p className="py-6 text-center text-sm text-slate-400">لا أسعار محفوظة بعد. أدخل أسعار مشروعك ثم اضغط «حفظ أسعار المشروع الحالي»، أو أضف صنفاً بالأسفل.</p>}
           {list.map((e) => (
             <div key={e.id} className="rounded-2xl border border-slate-200 p-3">

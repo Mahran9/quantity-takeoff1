@@ -9,7 +9,13 @@ export interface PriceEntry {
   updatedAt: string;
   history: { price: number; at: string }[];
 }
-export interface PriceBook { entries: PriceEntry[]; autoFill: boolean; }
+export type RateGroup = "concrete" | "rebar" | "frame" | "purlin" | "cladding";
+export type LaborBasis = "m3" | "ton" | "m2" | "lump";
+export interface LaborRate { price: number; basis: LaborBasis; }
+/** One price for a whole group of lines: every concrete line, every rebar line, the three steel-frame groups, and the two labour lines. */
+export interface Rates { concrete?: number; rebar?: number; frame?: number; purlin?: number; cladding?: number; laborBone?: LaborRate; laborSteel?: LaborRate; }
+export interface PriceBook { entries: PriceEntry[]; autoFill: boolean; rates?: Rates; }
+export const LABOR_CATEGORY = "أعمال الأجور (شغل اليد)";
 
 const KEY = "qto_pricebook_v1";
 const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -35,7 +41,7 @@ export function loadBook(): PriceBook {
     const raw = localStorage.getItem(KEY);
     if (!raw) return emptyBook();
     const b = JSON.parse(raw);
-    return { entries: Array.isArray(b.entries) ? b.entries : [], autoFill: b.autoFill !== false };
+    return { entries: Array.isArray(b.entries) ? b.entries : [], autoFill: b.autoFill !== false, rates: b.rates && typeof b.rates === "object" ? b.rates : {} };
   } catch { return emptyBook(); }
 }
 export function saveBook(b: PriceBook) { try { localStorage.setItem(KEY, JSON.stringify(b)); } catch { /* storage full or blocked */ } }
@@ -71,12 +77,64 @@ export function applyBook(items: TakeoffItem[], book: PriceBook, mode: "empty" |
   let changed = 0;
   const out = items.map((it) => {
     if (it.reviewStatus === "rejected") return it;
-    const p = map.get(keyOf(it.description, it.unit));
+    const g = groupOf(it);
+    const rate = g ? book.rates?.[g] : undefined;
+    const p = rate && rate > 0 ? rate : map.get(keyOf(it.description, it.unit));
     if (!(p && p > 0)) return it;
     if (mode === "empty" && it.unitPrice > 0) return it;
     if (it.unitPrice === p) return it;
     changed++;
     return { ...it, unitPrice: p, totalPrice: r2((Number(it.quantity) || 0) * p) };
   });
+  return { items: out, changed };
+}
+
+
+/** Which one-price group a line belongs to (null: priced on its own). */
+export function groupOf(it: TakeoffItem): RateGroup | null {
+  const cat = it.category || "", d = it.description || "", u = (it.unit || "").trim();
+  if (cat === LABOR_CATEGORY) return null;
+  const steelCat = /هياكل|معدن/.test(cat);
+  if (u === "طن" && /تسليح|rebar/i.test(`${cat} ${d}`) && !steelCat) return "rebar";
+  if (u === "طن" && steelCat) return /مداد|purlin|ZZ\d/i.test(d) ? "purlin" : "frame";
+  if (u === "م²" && /تكسية|شنكو|clad|sheeting/i.test(`${cat} ${d}`)) return "cladding";
+  if (u === "م³" && !steelCat && (/خرسان/.test(cat) || /خرسانة|قواعد|أعناق|رقاب|ميدة|ميدات|كمرات|بلاطة/.test(d))) return "concrete";
+  return null;
+}
+
+const sumBy = (items: TakeoffItem[], g: RateGroup[]) =>
+  r2(items.filter((i) => i.reviewStatus !== "rejected" && g.includes(groupOf(i) as RateGroup)).reduce((a, i) => a + (Number(i.quantity) || 0), 0));
+
+export const LABOR_BASES: Record<"bone" | "steel", { id: LaborBasis; label: string; unit: string }[]> = {
+  bone: [{ id: "m3", label: "لكل م³ خرسانة", unit: "م³" }, { id: "ton", label: "لكل طن حديد تسليح", unit: "طن" }, { id: "lump", label: "مقطوعية", unit: "مقطوعية" }],
+  steel: [{ id: "ton", label: "لكل طن حديد الهيكل", unit: "طن" }, { id: "m2", label: "لكل م² شنكو", unit: "م²" }, { id: "lump", label: "مقطوعية", unit: "مقطوعية" }],
+};
+
+/** Keep the two workmanship lines (عظم, هيكل معدني) in step with the project's quantities and the saved labour rates. */
+export function syncLabor(items: TakeoffItem[], book: PriceBook, sheetId: string): { items: TakeoffItem[]; changed: boolean } {
+  const rates = book.rates || {};
+  const defs: { id: string; desc: string; rate?: LaborRate; kind: "bone" | "steel" }[] = [
+    { id: "auto-labor-bone", desc: "أجور شغل اليد - أعمال العظم (خرسانة وتسليح)", rate: rates.laborBone, kind: "bone" },
+    { id: "auto-labor-steel", desc: "أجور شغل اليد - الهيكل المعدني", rate: rates.laborSteel, kind: "steel" },
+  ];
+  let out = items.slice(), changed = false;
+  for (const d of defs) {
+    const idx = out.findIndex((i) => i.id === d.id);
+    const base = out.filter((i) => i.category !== LABOR_CATEGORY);
+    const b = d.rate ? LABOR_BASES[d.kind].find((x) => x.id === d.rate!.basis) : undefined;
+    let qty = 0;
+    if (b) qty = b.id === "lump" ? 1 : d.kind === "bone" ? sumBy(base, [b.id === "m3" ? "concrete" : "rebar"]) : sumBy(base, b.id === "ton" ? ["frame", "purlin"] : ["cladding"]);
+    const price = d.rate?.price || 0;
+    if (!b || !(price > 0) || !(qty > 0)) { if (idx >= 0) { out.splice(idx, 1); changed = true; } continue; }
+    const line = { quantity: qty, unit: b.unit, unitPrice: price, totalPrice: r2(qty * price) };
+    if (idx >= 0) {
+      const o = out[idx];
+      if (o.quantity !== qty || o.unit !== b.unit || o.unitPrice !== price) { out[idx] = { ...o, ...line, description: d.desc }; changed = true; }
+    } else {
+      out.push({ id: d.id, sheetId, itemCode: "L", description: d.desc, category: LABOR_CATEGORY, dimensionType: b.id === "m2" ? "area" : "count", location: "", count: 1, ...line,
+        isVerified: true, reviewStatus: "approved", extractionSource: "manual_input", notes: b.id === "lump" ? "مبلغ مقطوع" : b.label } as TakeoffItem);
+      changed = true;
+    }
+  }
   return { items: out, changed };
 }

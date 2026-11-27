@@ -914,6 +914,7 @@ export default function App() {
               onAnalyze={openAnalyze}
               onAuto={() => autoTakeoffAll(itemsAllSheets ? undefined : currentSheet?.id)}
               onAddItems={(its) => its.forEach(handleAddItem)}
+              onReplaceItems={(ids, its) => { its.forEach(handleAddItem); if (ids.length) updateActiveProject((p) => ({ ...p, takeoffItems: p.takeoffItems.filter((x) => !ids.includes(x.id)) })); }}
               onGoSheets={() => setTab("sheets")}
               readMsg={readMsg}
               onExcel={exportSelectedToExcel}

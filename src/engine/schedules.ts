@@ -40,7 +40,7 @@ export function parseColumnSchedule(texts: string[]): Record<string, { b: number
  * "P.C DIMENSIONS" (plain concrete / blinding) and "R.C DIMENSIONS" (reinforced). Also reads the transposed
  * layout (one row per mark, L/W/H as column headings). Cells reading "as PLAN" stay empty.
  */
-export function parseFootingSchedule(toks: Tok[]): { marks: Record<string, FootingRow>; unit: "cm" | "m" } | null {
+export function parseFootingSchedule(toks: Tok[]): { marks: Record<string, FootingRow>; unit: "mm" | "cm" | "m" } | null {
   // Isolated (F1) and combined (CF1) footings share one schedule.
   const marks = toks.filter((t) => /^C?F\d{1,2}$/.test(t.text));
   if (marks.length < 4) return null;
@@ -50,7 +50,7 @@ export function parseFootingSchedule(toks: Tok[]): { marks: Record<string, Footi
     /^(L|LENGTH|LONG)$/i.test(t.text) ? "L" : /^(W|B|WIDTH|SHORT)$/i.test(t.text) ? "W" : /^(H|D|T|DEPTH|THK|THICKNESS|HEIGHT)$/i.test(t.text) ? "H" : null;
   const labels = toks.filter((t) => labelOf(t));
   const heads = toks
-    .map((t) => ({ t, kind: /\bR\.?\s?C\b|REINF(?!ORCEMENT)/i.test(t.text) ? "rc" : /\bP\.?\s?C\b|PLAIN|LEAN|BLINDING/i.test(t.text) ? "pc" : null }))
+    .map((t) => ({ t, kind: /\bR\.?\s?C\b|REINF\w*\.?\s*(?:CONC|DIM)/i.test(t.text) ? "rc" : /\bP\.?\s?C\b|PLAIN|LEAN|BLINDING/i.test(t.text) ? "pc" : null }))
     .filter((h) => h.kind) as { t: Tok; kind: "rc" | "pc" }[];
   const cmHint = toks.some((t) => /\(\s*CM\s*\)|\bCM\b/i.test(t.text));
 
@@ -64,7 +64,9 @@ export function parseFootingSchedule(toks: Tok[]): { marks: Record<string, Footi
       const key = [...lines.keys()].find((k) => Math.abs(k - cross(m)) < 0.012) ?? cross(m);
       (lines.get(key) || lines.set(key, []).get(key)!).push(m);
     }
-    const header = [...lines.values()].sort((a, b) => b.length - a.length)[0];
+    // The schedule column holds the most DIFFERENT marks (plan labels repeat one mark many times).
+    const distinct = (l: Tok[]) => new Set(l.map((m) => m.text)).size;
+    const header = [...lines.values()].sort((a, b) => distinct(b) - distinct(a) || b.length - a.length)[0];
     if (!header || new Set(header.map((m) => m.text)).size < 4) continue;
     const cols = [...header].sort((a, b) => along(a) - along(b));
     const gaps = cols.slice(1).map((c, i) => along(c) - along(cols[i])).filter((g) => g > 0.002);
@@ -115,10 +117,13 @@ export function parseFootingSchedule(toks: Tok[]): { marks: Record<string, Footi
     const groups = group + 1;
     for (const ln of valueLines) {
       const g = groupOf.get(ln)!;
+      // A schedule with no PLAIN / REINFORCED headings holds reinforced dimensions only.
       const head =
-        nearHeads.length === groups
-          ? nearHeads[g]
-          : nearHeads.filter((h) => cross(h.t) <= ln.pos + 0.006).sort((a, b) => cross(b.t) - cross(a.t))[0];
+        nearHeads.length === 0
+          ? { t: ln.label, kind: "rc" as const }
+          : nearHeads.length === groups
+            ? nearHeads[g]
+            : nearHeads.filter((h) => cross(h.t) <= ln.pos + 0.006).sort((a, b) => cross(b.t) - cross(a.t))[0];
       if (!head) continue;
       const { cells, lab } = ln;
       for (const c of cells) {
@@ -133,8 +138,9 @@ export function parseFootingSchedule(toks: Tok[]): { marks: Record<string, Footi
     if (used < 2) continue;
     // A footing written in cm always has a side of 20 or more; a schedule in metres never does (15.20 m is the
     // longest combined footing seen). The "(CM)" note only confirms it.
-    const unit: "cm" | "m" = values.some((v) => v >= 20) || (cmHint && values.every((v) => v >= 5)) ? "cm" : "m";
-    const k = unit === "cm" ? 0.01 : 1;
+    // Millimetres: every value, depth included, is at least 200 (a 20 cm footing is the thinnest in practice).
+    const unit: "mm" | "cm" | "m" = values.length && Math.min(...values) >= 200 ? "mm" : values.some((v) => v >= 20) || (cmHint && values.every((v) => v >= 5)) ? "cm" : "m";
+    const k = unit === "mm" ? 0.001 : unit === "cm" ? 0.01 : 1;
     for (const row of Object.values(out)) for (const kind of ["rc", "pc"] as const) {
       const b = row[kind];
       if (b) for (const d of ["L", "W", "H"] as const) if (b[d] !== undefined) b[d] = r3(b[d]! * k);
@@ -179,9 +185,17 @@ export function scheduleVolumes(
     // Isolated (F) and combined (CF) footings are two mark families on the same plan.
     const FOOT_IDS = ["mrk-F", "mrk-CF"];
     // The schedule's own mark column (F1 … F20, each written once) is not a footing plan.
-    for (const s of counted) if (s.sheetId === footSheetId) for (const c of s.cands) if (FOOT_IDS.includes(c.id)) replaced.push({ sheetId: footSheetId, id: c.id });
+    // When the plan and its schedule share one sheet, the marks counted there are plan labels (more than one per
+    // schedule row), so that sheet is a plan too.
+    const nSched = Object.keys(foot.marks).length;
+    const onlySchedule = (sheetId: string) => {
+      const c = counted.find((x) => x.sheetId === sheetId);
+      const total = (c?.cands || []).filter((x) => FOOT_IDS.includes(x.id)).reduce((a, x) => a + x.quantity, 0);
+      return total <= nSched;
+    };
+    for (const s of counted) if (s.sheetId === footSheetId && onlySchedule(footSheetId)) for (const c of s.cands) if (FOOT_IDS.includes(c.id)) replaced.push({ sheetId: footSheetId, id: c.id });
     for (const { sheetId, cands } of counted) {
-      if (sheetId === footSheetId) continue;
+      if (sheetId === footSheetId && onlySchedule(footSheetId)) continue;
       const fams = cands.filter((c) => FOOT_IDS.includes(c.id) && c.perMark);
       if (!fams.length) continue;
       const perMark: Record<string, number> = Object.assign({}, ...fams.map((f) => f.perMark));

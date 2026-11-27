@@ -13,6 +13,7 @@ interface Props {
   onSelectSheet: (id: string) => void;
   onAnalyze: () => void;
   onAddItems?: (items: TakeoffItem[]) => void;
+  onReplaceItems?: (removeIds: string[], add: TakeoffItem[]) => void;
   onAuto: () => Promise<string>;
   onGoSheets: () => void;
   /** Result of the automatic read right after an upload. */
@@ -64,7 +65,7 @@ const StructuralRow: React.FC<{
 };
 
 /** Quantities: pick a drawing, review its lines. */
-export const ItemsScreen: React.FC<Props> = ({ sheets, items, activeSheetId, onSelectSheet, onAnalyze, onAddItems, onAuto, onGoSheets, readMsg, onExcel, onUndo, structural, onStructural, children }) => {
+export const ItemsScreen: React.FC<Props> = ({ sheets, items, activeSheetId, onSelectSheet, onAnalyze, onAddItems, onReplaceItems, onAuto, onGoSheets, readMsg, onExcel, onUndo, structural, onStructural, children }) => {
   const live = items.filter((i) => i.reviewStatus !== "rejected").length;
   const picked = items.filter((i) => i.reviewStatus === "approved" || i.isVerified).length;
   const [msg, setMsg] = React.useState(readMsg || "");
@@ -139,7 +140,7 @@ export const ItemsScreen: React.FC<Props> = ({ sheets, items, activeSheetId, onS
           {picked > 0 ? `تصدير المحدد إلى Excel (${picked} من ${live})` : "حدد البنود بعلامة ✓ ثم صدّر Excel"}
         </button>
       )}
-      {onAddItems && <CladdingCard onAdd={onAddItems} />}
+      {onAddItems && <CladdingCard onAdd={onAddItems} items={items} onReplace={onReplaceItems} />}
       {sheets.length > 1 && (() => {
         // One table for the whole project by default. A many-page PDF used to show a strip of 16 page buttons here;
         // picking a single sheet is now one dropdown, sheets with lines first.

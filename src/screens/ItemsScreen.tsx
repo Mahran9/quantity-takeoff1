@@ -2,6 +2,7 @@ import React from "react";
 import { FileSpreadsheet, Loader2, ScanLine, Undo2 } from "lucide-react";
 import { BlueprintSheet, TakeoffItem } from "../types";
 import { ScreenHeader } from "../components/Nav";
+import { CladdingCard } from "../components/CladdingCard";
 
 interface Props {
   sheets: BlueprintSheet[];
@@ -11,6 +12,7 @@ interface Props {
   /** "" selects all sheets. */
   onSelectSheet: (id: string) => void;
   onAnalyze: () => void;
+  onAddItems?: (items: TakeoffItem[]) => void;
   onAuto: () => Promise<string>;
   onGoSheets: () => void;
   /** Result of the automatic read right after an upload. */
@@ -62,7 +64,7 @@ const StructuralRow: React.FC<{
 };
 
 /** Quantities: pick a drawing, review its lines. */
-export const ItemsScreen: React.FC<Props> = ({ sheets, items, activeSheetId, onSelectSheet, onAnalyze, onAuto, onGoSheets, readMsg, onExcel, onUndo, structural, onStructural, children }) => {
+export const ItemsScreen: React.FC<Props> = ({ sheets, items, activeSheetId, onSelectSheet, onAnalyze, onAddItems, onAuto, onGoSheets, readMsg, onExcel, onUndo, structural, onStructural, children }) => {
   const live = items.filter((i) => i.reviewStatus !== "rejected").length;
   const [msg, setMsg] = React.useState(readMsg || "");
   React.useEffect(() => { if (readMsg) setMsg(readMsg); }, [readMsg]);
@@ -132,6 +134,7 @@ export const ItemsScreen: React.FC<Props> = ({ sheets, items, activeSheetId, onS
           تصدير جدول الكميات Excel ({live} بند)
         </button>
       )}
+      {onAddItems && <CladdingCard onAdd={onAddItems} />}
       {sheets.length > 1 && (() => {
         // One table for the whole project by default. A many-page PDF used to show a strip of 16 page buttons here;
         // picking a single sheet is now one dropdown, sheets with lines first.

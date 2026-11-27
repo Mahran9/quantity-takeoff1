@@ -903,6 +903,7 @@ export default function App() {
               onSelectSheet={(id) => { if (id) { setActiveSheetId(id); setItemsAllSheets(false); } else setItemsAllSheets(true); }}
               onAnalyze={openAnalyze}
               onAuto={() => autoTakeoffAll(itemsAllSheets ? undefined : currentSheet?.id)}
+              onAddItems={(its) => its.forEach(handleAddItem)}
               onGoSheets={() => setTab("sheets")}
               readMsg={readMsg}
               onExcel={() => exportBoqToExcel(metadata, sheets, takeoffItems, company)}

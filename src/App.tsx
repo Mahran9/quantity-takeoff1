@@ -17,6 +17,7 @@ import { CompanySettingsModal } from "./components/CompanySettingsModal";
 import { QuotationModal } from "./components/QuotationModal";
 import { SaveStatusBar, StorageNotice } from "./components/SaveStatusBar";
 import { ProjectManagerModal } from "./components/ProjectManagerModal";
+import { ExportPickerModal } from "./components/ExportPickerModal";
 import { SteelCalculatorModal } from "./components/SteelCalculatorModal";
 import { OfflineIndicator } from "./components/OfflineIndicator";
 import {
@@ -164,6 +165,7 @@ export default function App() {
   const [isExtractionModalOpen, setIsExtractionModalOpen] = useState(false);
   const [isProjectsOpen, setIsProjectsOpen] = useState(false);
   const [isSteelCalcOpen, setIsSteelCalcOpen] = useState(false);
+  const [exportPickerOpen, setExportPickerOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   /** Quantities screen: one table for every sheet (default) or a single sheet the person picked. */
   const [itemsAllSheets, setItemsAllSheets] = useState(true);
@@ -505,14 +507,13 @@ export default function App() {
   };
 
   /** Read CAD geometry, vector hints, marked quantities, and printed quantity labels. */
-  /** Excel carries only the lines the person ticked (approved), never the whole unreviewed table. */
+  /** «تصدير Excel» opens a list where the person picks all lines, a section, or just a few. */
   const exportSelectedToExcel = () => {
-    const picked = takeoffItems.filter((i) => i.reviewStatus === "approved" || i.isVerified);
-    if (!picked.length) {
-      window.alert("لا توجد بنود محددة. افتح «الكميات» وحدد البنود التي تريدها بعلامة ✓ (أو «تحديد الكل») ثم صدّر.");
+    if (!takeoffItems.length) {
+      window.alert("لا توجد بنود بعد. شغّل «اقرأ واحصر» أو أضف بنداً ثم صدّر.");
       return;
     }
-    exportBoqToExcel(metadata, sheets, picked, company);
+    setExportPickerOpen(true);
   };
 
   const autoTakeoffAll = async (
@@ -1080,6 +1081,14 @@ export default function App() {
           activeSheet={currentSheet}
           existingTakeoffItems={takeoffItems}
           onAddExtractedItems={handleApplyExtractedItems}
+        />
+      )}
+
+      {exportPickerOpen && (
+        <ExportPickerModal
+          items={takeoffItems}
+          onClose={() => setExportPickerOpen(false)}
+          onExport={(chosen) => exportBoqToExcel(metadata, sheets, chosen, company)}
         />
       )}
 

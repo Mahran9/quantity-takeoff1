@@ -133,11 +133,10 @@ export const ItemsScreen: React.FC<Props> = ({ sheets, items, activeSheetId, onS
       {onExcel && live > 0 && !reading && (
         <button
           onClick={onExcel}
-          disabled={picked === 0}
-          className="qto-cta sticky bottom-24 z-30 flex h-12 w-full items-center justify-center gap-2 rounded-xl text-[15px] shadow-lg disabled:opacity-60"
+          className="qto-cta sticky bottom-24 z-30 flex h-12 w-full items-center justify-center gap-2 rounded-xl text-[15px] shadow-lg"
         >
           <FileSpreadsheet className="w-5 h-5" />
-          {picked > 0 ? `تصدير المحدد إلى Excel (${picked} من ${live})` : "حدد البنود بعلامة ✓ ثم صدّر Excel"}
+          {picked > 0 ? `تصدير إلى Excel… (${picked} محدد من ${live})` : `تصدير إلى Excel… اختر البنود (${live})`}
         </button>
       )}
       {onAddItems && <CladdingCard onAdd={onAddItems} />}

@@ -1,26 +1,19 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-<defs>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512"><defs>
 <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1b3361"/><stop offset="1" stop-color="#070f20"/></linearGradient>
-<linearGradient id="gold" gradientUnits="userSpaceOnUse" x1="120" y1="178" x2="392" y2="410"><stop offset="0" stop-color="#fde68a"/><stop offset="1" stop-color="#f59e0b"/></linearGradient>
+<linearGradient id="gold" gradientUnits="userSpaceOnUse" x1="140" y1="150" x2="380" y2="392"><stop offset="0" stop-color="#fde68a"/><stop offset="1" stop-color="#f59e0b"/></linearGradient>
 <radialGradient id="glow" cx="0.2" cy="0.1" r="0.9"><stop offset="0" stop-color="#ffffff" stop-opacity="0.16"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/></radialGradient>
-</defs>
-<rect width="512" height="512" rx="112" fill="url(#bg)"/>
-<rect width="512" height="512" rx="112" fill="url(#glow)"/>
-<g transform="translate(0.00 0.00) scale(1.0)">
+</defs><rect width="512" height="512" rx="112" fill="url(#bg)"/><rect width="512" height="512" rx="112" fill="url(#glow)"/><g transform="translate(256 256) scale(1.18) translate(-256 -298)"><g fill="none" stroke-linecap="round" stroke-linejoin="round">
+ <!-- ground line -->
+ <path d="M96 392H416" stroke="#64748b" stroke-width="10"/>
+ <!-- portal frame: columns + rafters -->
+ <path d="M150 392V228L256 150L362 228V392" stroke="url(#gold)" stroke-width="30"/>
+ <!-- ridge to eave tie -->
+ 
+ <!-- purlin dots -->
+ <g fill="#fff7e0" stroke="none"><circle cx="203" cy="189" r="9"/><circle cx="309" cy="189" r="9"/><circle cx="256" cy="150" r="10"/></g>
+ <!-- base plates -->
+ <path d="M126 392H174M338 392H386" stroke="#fff7e0" stroke-width="14"/>
  <!-- dimension line -->
- <g stroke="#cbd5e1" stroke-width="12" stroke-linecap="round" fill="none">
-  <path d="M120 116H392"/><path d="M120 92V140"/><path d="M392 92V140"/>
- </g>
- <!-- floor plan -->
- <g fill="none" stroke="url(#gold)" stroke-linejoin="round" stroke-linecap="round">
-  <rect x="120" y="178" width="272" height="232" stroke-width="24"/>
-  <path d="M278 178V286M278 342V410" stroke-width="16"/>
-  <path d="M278 286A56 56 0 0 1 334 342" stroke-width="7" opacity="0.85"/>
- </g>
- <!-- columns -->
- <g fill="#fff7e0">
-  <rect x="104" y="162" width="32" height="32" rx="5"/><rect x="376" y="162" width="32" height="32" rx="5"/>
-  <rect x="104" y="394" width="32" height="32" rx="5"/><rect x="376" y="394" width="32" height="32" rx="5"/>
- </g>
+ <g stroke="#cbd5e1" stroke-width="9"><path d="M150 430H362"/><path d="M150 414V446"/><path d="M362 414V446"/></g>
 </g>
-</svg>
+</g></svg>

@@ -140,7 +140,7 @@ export const HomeScreen: React.FC<Props> = ({ metadata, setMetadata, sheets, ite
       {/* Project + total: the one dark, memorable block */}
       <section className="hero-card p-5 sm:p-6">
         <button onClick={onProjects} className="flex items-center gap-2 text-right max-w-full" title="المشاريع">
-          <FolderKanban className="w-4 h-4 text-teal-300 shrink-0" />
+          <img src="/icon.svg" alt="" className="w-7 h-7 rounded-lg shrink-0" />
           <span className="truncate text-[15px] font-bold">{metadata.projectName}</span>
           <ChevronLeft className="w-4 h-4 text-slate-400 shrink-0" />
         </button>

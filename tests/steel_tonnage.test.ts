@@ -12,6 +12,8 @@ const col = r.lines.find((l) => l.cand.id === "stl-col-IPE600")!.cand;
 eq(col.quantity, 23.42, "column tons"); eq(col.unit, "طن", "unit");
 eq(r.lines.find((l) => l.cand.id === "stl-rafters")!.cand.quantity, 32.51, "rafter tons");
 eq(r.lines.find((l) => l.cand.id === "stl-roofclad")!.cand.quantity, 2084.12, "roof area");
+eq(r.lines.find((l) => l.cand.id === "stl-blockwalls")!.cand.quantity, 1623.08, "block walls");
+eq(r.lines.find((l) => l.cand.id === "stl-blockwalls")!.cand.selected, false, "block walls unselected");
 const none = steelTonnage([plan], [{ sheetId: "p", cands: [c("mrk-col-IPE600", 24)] }]);
 eq(none.lines.length, 0, "no levels, no tonnage");
 console.log("PASS steel_tonnage");

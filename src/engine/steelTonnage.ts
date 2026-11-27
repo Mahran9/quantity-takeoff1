@@ -64,7 +64,7 @@ export function steelTonnage(
       id: `stl-col-${m[1]}`, description: `حديد أعمدة ${m[1]} (${c.quantity} عمود${main ? "" : "، المبنى الثاني"})`,
       category: STEEL_CAT, dim: "count", unit: "طن", quantity: tons, count: 1, sources: ["mark"], confidence: "medium", selected: main, review: true,
       evidence: `عدد الأعمدة ${c.quantity} من مخطط براغي التثبيت، ارتفاع الحافة +${eave * 1000} من الواجهة، ووزن ${m[1]} القياسي ${kg} كجم/م`,
-      checks: [main ? "طول العمود = منسوب الحافة؛ تُنقص الصفائح والوصلات" : `مبنى/منطقة غير الهنجر الرئيسي: الارتفاع مفترض بمنسوب الحافة، فتحقق منه ثم حدّد البند. أعمدة اللوحة ${colsOn(x.sheetId)}${pedestals.length ? ` وأعداد أعناق القواعد المقروءة ${pedestals.join(" و")}` : ""}: إن اختلفت فبعض التسميات مكررة أو أعمدة اللوحة لا تقوم على قواعد هذا الملف`],
+      checks: [main ? "طول العمود = منسوب الحافة؛ تُنقص الصفائح والوصلات" : `مبنى/منطقة غير الهنجر الرئيسي: الارتفاع مفترض بمنسوب الحافة، فتحقق منه ثم حدّد البند. أعمدة اللوحة ${colsOn(x.sheetId)}${pedestals.length ? ` بينما أعناق القواعد المقروءة في الملف ${pedestals.join(" و")}` : ""}: إن اختلفت فقد تكون قواعد هذا المبنى في لوحة غير مرفوعة`],
       formula: `${c.quantity} × ${eave} × ${kg} ÷ 1000`, layer: "أعمدة",
     });
   }
@@ -107,6 +107,22 @@ export function steelTonnage(
         evidence: `الطول ${size.L} م والعرض ${size.W} م من أبعاد المخطط، والحافة +${eave * 1000} والقمة +${ridge * 1000} من الواجهة؛ مساحة المنحدرين بلا خصم فتحات أو بروز`,
         checks: ["الجدران بلوك فلا تكسية جدران؛ أضف الجدران المكسوة من حاسبة التكسية إن وجدت"],
         formula: `2 × ${size.L} × ${r2(slope)}`, layer: "تكسية",
+      });
+    }
+  }
+  if (frames && framesAt) {
+    const sh = sheets.find((x) => x.id === framesAt.sheetId);
+    const size = sh ? overall(sh) : null;
+    if (size) {
+      // Gross wall area of the hangar envelope (two long sides to the eave, two gables up to the ridge); openings unknown.
+      const rise = ridge - eave;
+      const walls = r2(2 * size.L * eave + 2 * (size.W * eave + 0.5 * size.W * rise));
+      line(framesAt.sheetId, {
+        id: "stl-blockwalls", description: "جدران بلوك (إجمالي قبل خصم الفتحات)",
+        category: "أعمال البناء", dim: "area", unit: "م²", quantity: walls, sources: ["mark"], confidence: "low", selected: false, review: true,
+        evidence: `محيط المبنى × ارتفاع الحافة +${eave * 1000} مع جملونات الجبهتين حتى القمة +${ridge * 1000}، من الطول ${size.L} م والعرض ${size.W} م`,
+        checks: ["الفتحات (أبواب ونوافذ وبوابات) غير محسومة فلا تُخصم، والجدران قد تكون جزئية الارتفاع؛ حدّد البند بعد المراجعة"],
+        formula: `2 × ${size.L} × ${eave} + 2 × (${size.W} × ${eave} + ½ × ${size.W} × ${r2(rise)})`, layer: "جدران",
       });
     }
   }

@@ -55,8 +55,8 @@ export const SheetsScreen: React.FC<Props> = ({ sheets, items, currencySymbol, o
         title="اللوحات"
         sub={`${sheets.length} لوحة`}
         action={
-          <button onClick={onUpload} className="qto-cta flex h-10 items-center gap-1.5 rounded-xl px-4 text-sm">
-            <Plus className="w-[18px] h-[18px]" /> إضافة
+          <button onClick={onUpload} className="qto-cta flex h-11 items-center gap-1.5 rounded-xl px-4 text-[14px]">
+            <Plus className="w-[18px] h-[18px]" /> إضافة مخطط
           </button>
         }
       />
@@ -102,6 +102,9 @@ export const SheetsScreen: React.FC<Props> = ({ sheets, items, currencySymbol, o
           );
         })}
       </div>
+      <button onClick={onUpload} className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-teal-600 text-[15px] font-extrabold text-teal-800">
+        <Plus className="w-5 h-5" /> إضافة مخطط آخر
+      </button>
       {marks.rows.length > 0 && (
         <section className="card p-4">
           <button onClick={() => setShowMarks((v) => !v)} className="flex w-full items-center justify-between text-right">

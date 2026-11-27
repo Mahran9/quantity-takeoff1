@@ -223,11 +223,6 @@ export const HomeScreen: React.FC<Props> = ({ metadata, setMetadata, sheets, ite
             );
           })}
         </div>
-        {sheets.length > 0 && (
-          <button onClick={onUpload} className="mt-3 flex items-center gap-1.5 text-[13px] font-bold text-teal-800">
-            <Plus className="w-4 h-4" /> إضافة لوحة أخرى
-          </button>
-        )}
       </section>
 
       {/* Tools */}

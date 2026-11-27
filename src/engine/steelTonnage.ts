@@ -1,6 +1,7 @@
 import { BlueprintSheet } from "../types";
 import { Candidate } from "./candidate";
 import { kgPerMetre } from "../utils/steelWeights";
+import { purlinKgPerMetre } from "../utils/purlinLines";
 
 const STEEL_CAT = "أعمال الهياكل المعدنية والهناجر";
 const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -46,6 +47,8 @@ export function steelTonnage(
   const anchors = counted.filter((x) => x.cands.some((c) => /^mrk-col-/.test(c.id) && c.selected));
   const NAMES = ["", "المبنى الثاني", "المبنى الثالث", "المبنى الرابع"];
 
+  // Purlin spacing measured on the first building that has a drawn family; later buildings reuse it as an estimate.
+  let measuredSpacing: number | null = null;
   anchors.forEach((x, bi) => {
     const idx = sheets.findIndex((q) => q.id === x.sheetId);
     const sheet0 = sheets[idx];
@@ -103,6 +106,29 @@ export function steelTonnage(
           evidence: `${frames.quantity} إطاراً، العرض ${size.W} م والقمة +${ridge * 1000} والحافة +${eave * 1000} من الواجهة، والمقطع الأكثر كتابة على لوحات السقف ${best[0]} (${best[1]} مرة)`,
           checks: ["قد يختلف مقطع الرفتر عند الركبة (Haunch) أو القمة؛ راجع مقاطع الإطار في لوحة التفاصيل"],
           formula: `${frames.quantity} × 2 × ${r2(slope)} × ${kg} ÷ 1000`, layer: "جملونات",
+        });
+      }
+    }
+    if (size && !mezz) {
+      // Purlins: the evenly spaced long lines drawn on the roof/main-system plan × the building length × the profile's kg/m.
+      const ZZ = (w: BlueprintSheet) => { const m = new Map<string, number>(); for (const q of textsOf(w)) if (/^ZZ?\d{3}-\d/i.test(q)) m.set(q, (m.get(q) || 0) + 1); return [...m.entries()].sort((a, b) => b[1] - a[1])[0]?.[0]; };
+      const planSheet = window.find((w) => !!w.pdfVector?.purlinLines && textsOf(w).some((q) => /(MAIN SYSTEM|ROOF) PLAN/i.test(q)) && !textsOf(w).some((q) => /ELEVATION/i.test(q)) && !!ZZ(w));
+      const tagSheet = planSheet || window.find((w) => !!ZZ(w));
+      const tag = tagSheet ? ZZ(tagSheet) : undefined;
+      const kgz = tag ? purlinKgPerMetre(tag) : null;
+      if (tag && kgz) {
+        const pl = planSheet?.pdfVector?.purlinLines;
+        let n = 0, measured = false;
+        if (pl) { n = pl.count; measured = true; if (!measuredSpacing && n > 1) measuredSpacing = size.W / (n - 1); }
+        else if (measuredSpacing) n = Math.round(size.W / measuredSpacing) + 1;
+        if (n > 0) line(x.sheetId, {
+          id: `stl-purlins${bi === 0 ? "" : "-b" + (bi + 1)}`, description: `حديد مدادات ${tag} (${n} خط${bname ? "، " + bname : ""})`,
+          category: STEEL_CAT, dim: "count", unit: "طن", quantity: r2((n * size.L * kgz) / 1000), count: 1, sources: ["mark"], confidence: measured ? "medium" : "low", selected: measured, review: true,
+          evidence: measured
+            ? `خطوط المدادات المرسومة على مخطط السقف ${code(planSheet!.id)}: ${n} خطاً متوازياً بتباعد منتظم، تمتد بطول المبنى ${size.L} م، ووزن ${tag} حسب أبعاد القطاع ${kgz} كجم/م`
+            : `لا خطوط مدادات مرسومة على لوحات هذا المبنى: العدد تقدير ${n} خطاً بنفس تباعد المبنى الأول (≈${r2(measuredSpacing || 0)} م) على عرض ${size.W} م`,
+          checks: [measured ? "لا يشمل التراكب عند الإطارات ولا مدادات الحواف إن كانت خارج العائلة المنتظمة" : "تقدير غير مقروء من المخطط، فراجع عدد الخطوط ثم حدّد البند"],
+          formula: `${n} × ${size.L} × ${kgz} ÷ 1000`, layer: "مدادات",
         });
       }
     }

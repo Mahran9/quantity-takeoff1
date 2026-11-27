@@ -183,6 +183,8 @@ export interface PdfVectorSummary {
   scaleMessage: string;
   /** Numeric dimension strings found on the page (for later re-calibration). */
   dimensionNumbers: number[];
+  /** Evenly spaced long parallel lines (purlins) found in the page's vector drawing. */
+  purlinLines?: { orientation: "v" | "h"; count: number; pitchPt: number; coveragePt: number };
 }
 
 export interface BlueprintSheet {

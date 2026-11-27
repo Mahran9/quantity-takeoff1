@@ -2,6 +2,7 @@ import * as pdfjsLib from "pdfjs-dist";
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { PdfVectorSummary, VisualSearchToken } from "../types";
 import { extractVectorPaths } from "./pdfVector";
+import { findPurlinLines } from "./purlinLines";
 import { analyzePdfPaths, calibrateScale, extractTextScale, parseDimensionNumbers, summarizePdfPage } from "./pdfPlan";
 
 // Bundle the matching PDF.js worker locally.
@@ -140,6 +141,11 @@ async function renderLoadedPage(
       const textScale = extractTextScale(textParts.join(" "));
       const scale = calibrateScale(ext.paths, numbers, pg, textScale);
       vector = summarizePdfPage({ analysis, page: pg, userUnit: (page as any).userUnit || 1, truncated: ext.truncated, scale, numbers });
+      // Purlin family on roof/framing plans (the page names its purlin profile, e.g. ZZ200-2-20-60).
+      if (vector && textParts.some((t) => /\bZZ?\s?\d{3}-\d/i.test(t))) {
+        const pl = findPurlinLines(ext.paths);
+        if (pl) vector.purlinLines = pl;
+      }
     }
   } catch (e) {
     console.warn("PDF vector read failed", e);

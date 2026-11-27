@@ -66,6 +66,7 @@ const StructuralRow: React.FC<{
 /** Quantities: pick a drawing, review its lines. */
 export const ItemsScreen: React.FC<Props> = ({ sheets, items, activeSheetId, onSelectSheet, onAnalyze, onAddItems, onAuto, onGoSheets, readMsg, onExcel, onUndo, structural, onStructural, children }) => {
   const live = items.filter((i) => i.reviewStatus !== "rejected").length;
+  const picked = items.filter((i) => i.reviewStatus === "approved" || i.isVerified).length;
   const [msg, setMsg] = React.useState(readMsg || "");
   React.useEffect(() => { if (readMsg) setMsg(readMsg); }, [readMsg]);
   const [reading, setReading] = React.useState(false);
@@ -129,9 +130,13 @@ export const ItemsScreen: React.FC<Props> = ({ sheets, items, activeSheetId, onS
       {msg && <p className="rounded-lg bg-teal-50 px-3 py-2 text-[13px] font-bold leading-6 text-teal-900">{msg}</p>}
       {/* The next step after a read: take the table out as Excel (all sheets, quotation + detailed sheet). */}
       {onExcel && live > 0 && !reading && (
-        <button onClick={onExcel} className="qto-cta sticky bottom-24 z-30 flex h-12 w-full items-center justify-center gap-2 rounded-xl text-[15px] shadow-lg">
+        <button
+          onClick={onExcel}
+          disabled={picked === 0}
+          className="qto-cta sticky bottom-24 z-30 flex h-12 w-full items-center justify-center gap-2 rounded-xl text-[15px] shadow-lg disabled:opacity-60"
+        >
           <FileSpreadsheet className="w-5 h-5" />
-          تصدير جدول الكميات Excel ({live} بند)
+          {picked > 0 ? `تصدير المحدد إلى Excel (${picked} من ${live})` : "حدد البنود بعلامة ✓ ثم صدّر Excel"}
         </button>
       )}
       {onAddItems && <CladdingCard onAdd={onAddItems} />}

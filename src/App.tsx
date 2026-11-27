@@ -504,6 +504,16 @@ export default function App() {
   };
 
   /** Read CAD geometry, vector hints, marked quantities, and printed quantity labels. */
+  /** Excel carries only the lines the person ticked (approved), never the whole unreviewed table. */
+  const exportSelectedToExcel = () => {
+    const picked = takeoffItems.filter((i) => i.reviewStatus === "approved" || i.isVerified);
+    if (!picked.length) {
+      window.alert("لا توجد بنود محددة. افتح «الكميات» وحدد البنود التي تريدها بعلامة ✓ (أو «تحديد الكل») ثم صدّر.");
+      return;
+    }
+    exportBoqToExcel(metadata, sheets, picked, company);
+  };
+
   const autoTakeoffAll = async (
     onlySheetId?: string,
     sheetList: BlueprintSheet[] = sheets,
@@ -871,7 +881,7 @@ export default function App() {
               onTab={setTab}
               onUpload={() => setIsUploadOpen(true)}
               onQuotation={() => setIsQuotationOpen(true)}
-              onExcel={() => exportBoqToExcel(metadata, sheets, takeoffItems, company)}
+              onExcel={exportSelectedToExcel}
               onAutoAll={autoTakeoffAll}
               onProjects={() => setIsProjectsOpen(true)}
               onVisualSearch={openVisualSearch}
@@ -906,7 +916,7 @@ export default function App() {
               onAddItems={(its) => its.forEach(handleAddItem)}
               onGoSheets={() => setTab("sheets")}
               readMsg={readMsg}
-              onExcel={() => exportBoqToExcel(metadata, sheets, takeoffItems, company)}
+              onExcel={exportSelectedToExcel}
               onUndo={historyStack.length ? handleUndo : undefined}
               structural={sheets.some((s) => s.dxfData) ? metadata.structural || {} : undefined}
               onStructural={(v) => {

@@ -31,6 +31,7 @@ interface BOQViewProps {
   company: CompanyProfile;
   onOpenQuotation: () => void;
   onOpenSettings: () => void;
+  onOpenPriceBook?: () => void;
 }
 
 const n2 = (v: number) => v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -45,6 +46,7 @@ export const BOQView: React.FC<BOQViewProps> = ({
   company,
   onOpenQuotation,
   onOpenSettings,
+  onOpenPriceBook,
 }) => {
   const [displayMode, setDisplayMode] = useState<"quotation" | "by-sheet" | "consolidated">("quotation");
   const [searchQuery, setSearchQuery] = useState("");
@@ -245,6 +247,9 @@ export const BOQView: React.FC<BOQViewProps> = ({
         )}
       </div>
 
+      {onOpenPriceBook && (
+        <button onClick={onOpenPriceBook} className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white text-sm font-extrabold text-slate-800 print:hidden">قائمة الأسعار المحفوظة</button>
+      )}
       {onAddItem && sheets.length > 0 && <LaborCard items={takeoffItems} currencySymbol={metadata.currencySymbol} onAdd={onAddItem} />}
 
       {/* Mode Switcher & Filter Bar (hidden on print) */}

@@ -36,6 +36,8 @@ import {
 import { initialProjectMetadata, LEGACY_DEMO_SHEET_IDS } from "./data/sampleBlueprints";
 import { exportBoqToExcel } from "./utils/boqExporter";
 import { readTitleBlockNames, isUnsetName } from "./utils/titleBlock";
+import { PriceBook, loadBook, saveBook, applyBook } from "./utils/priceBook";
+import { PriceBookModal } from "./components/PriceBookModal";
 import { fromOcr, readCad, readPdf } from "./engine/readers";
 import { readMarks } from "./engine/marks";
 import { readPrintedLabels } from "./utils/ocrLabels";
@@ -173,6 +175,9 @@ export default function App() {
   /** Result of the automatic read after an upload, shown above the quantities table. */
   const [readMsg, setReadMsg] = useState("");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [priceBook, setPriceBookState] = useState<PriceBook>(() => loadBook());
+  const [priceBookOpen, setPriceBookOpen] = useState(false);
+  const setPriceBook = (b: PriceBook) => { setPriceBookState(b); saveBook(b); };
   const [isQuotationOpen, setIsQuotationOpen] = useState(false);
 
   // Visual Search Highlights & Review-on-Blueprint state
@@ -202,6 +207,21 @@ export default function App() {
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sheets]);
+
+  // New / unpriced lines take the saved price of their kind (when the price list has one).
+  useEffect(() => {
+    if (!priceBook.autoFill || !priceBook.entries.length) return;
+    const r = applyBook(takeoffItems, priceBook, "empty");
+    if (r.changed) updateActiveProject((p) => ({ ...p, takeoffItems: applyBook(p.takeoffItems, priceBook, "empty").items }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [takeoffItems, priceBook]);
+
+  const applyPricesToAllProjects = () => {
+    setProjects((prev) => prev.map((p) => {
+      const r = applyBook(p.takeoffItems, priceBook, "all");
+      return r.changed ? { ...p, takeoffItems: r.items, updatedAt: new Date().toISOString() } : p;
+    }));
+  };
 
   // Highlights belong to a sheet: clear them only when the project or sheet really changes.
   useEffect(() => {
@@ -913,6 +933,7 @@ export default function App() {
               onVisualSearch={openVisualSearch}
               onSteelCalc={openSteelCalc}
               onSettings={() => setIsSettingsOpen(true)}
+              onPriceBook={() => setPriceBookOpen(true)}
             />
           )}
 
@@ -989,6 +1010,7 @@ export default function App() {
                 company={company}
                 onOpenQuotation={() => setIsQuotationOpen(true)}
                 onOpenSettings={() => setIsSettingsOpen(true)}
+                onOpenPriceBook={() => setPriceBookOpen(true)}
               />
             </div>
           )}
@@ -1138,6 +1160,10 @@ export default function App() {
         onDeleteProject={handleDeleteProject}
         onImportProject={handleCreateProject}
       />
+
+      {priceBookOpen && (
+        <PriceBookModal book={priceBook} onChange={setPriceBook} projects={projects} activeProject={activeProject} onApplyAll={applyPricesToAllProjects} onClose={() => setPriceBookOpen(false)} />
+      )}
 
       <CompanySettingsModal
         isOpen={isSettingsOpen}

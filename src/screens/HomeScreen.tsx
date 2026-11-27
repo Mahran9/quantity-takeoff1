@@ -34,6 +34,7 @@ interface Props {
   onVisualSearch: () => void;
   onSteelCalc: () => void;
   onSettings: () => void;
+  onPriceBook: () => void;
 }
 
 const SYMBOLS: Record<string, string> = { SAR: "ر.س", AED: "د.إ", USD: "$", EGP: "ج.م", QAR: "ر.ق", KWD: "د.ك" };
@@ -68,7 +69,7 @@ const CountUp: React.FC<{ value: number }> = ({ value }) => {
 
 const money = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 2 });
 
-export const HomeScreen: React.FC<Props> = ({ metadata, setMetadata, sheets, items, onTab, onUpload, onQuotation, onExcel, onAutoAll, onProjects, onVisualSearch, onSteelCalc, onSettings }) => {
+export const HomeScreen: React.FC<Props> = ({ metadata, setMetadata, sheets, items, onTab, onUpload, onQuotation, onExcel, onAutoAll, onProjects, onVisualSearch, onSteelCalc, onSettings, onPriceBook }) => {
   const q = buildQuotation(items, metadata.taxRate);
   const live = items.filter((i) => i.reviewStatus !== "rejected");
   const approved = live.filter((i) => i.reviewStatus === "approved" || i.isVerified).length;
@@ -237,6 +238,11 @@ export const HomeScreen: React.FC<Props> = ({ metadata, setMetadata, sheets, ite
           <button className={tool} onClick={onSteelCalc}>
             <span className={tile}><Calculator className="w-[18px] h-[18px]" /></span>
             <span className="flex-1">حاسبة الحديد</span>
+            <ChevronLeft className="w-4 h-4 text-slate-300" />
+          </button>
+          <button className={tool} onClick={onPriceBook}>
+            <span className={tile}><Receipt className="w-[18px] h-[18px]" /></span>
+            <span className="flex-1">قائمة الأسعار</span>
             <ChevronLeft className="w-4 h-4 text-slate-300" />
           </button>
           <button className={tool} onClick={onSettings}>

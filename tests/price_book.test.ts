@@ -1,0 +1,18 @@
+import assert from "node:assert/strict";
+import { coreName, keyOf, upsertPrice, emptyBook, applyBook, entriesFromItems } from "../src/utils/priceBook";
+const it = (description: string, unit: string, unitPrice: number, quantity = 10): any => ({ id: description, description, unit, unitPrice, quantity, totalPrice: 0 });
+assert.equal(keyOf("أعمدة C1 (0.3×0.5×3.2)", "م³"), keyOf("أعمدة C2 (0.4×0.4×3)", "م³"));
+assert.notEqual(keyOf("جدار بلوك 20سم خارجي", "م²"), keyOf("جدار بلوك 10سم خارجي", "م²"));
+assert.notEqual(keyOf("أعمدة C1", "م³"), keyOf("أعمدة C1", "م²"));
+assert.equal(coreName("حديد أعمدة IPE600 (24 عمود)"), "حديد أعمدة IPE600");
+let b = upsertPrice(emptyBook(), "أعمدة C1 (0.3×0.5)", "م³", 2600, "2026-01-01");
+b = upsertPrice(b, "أعمدة C2", "م³", 2700, "2026-02-01");
+assert.equal(b.entries.length, 1);
+assert.equal(b.entries[0].price, 2700);
+assert.deepEqual(b.entries[0].history, [{ price: 2600, at: "2026-01-01" }]);
+assert.equal(upsertPrice(b, "أعمدة", "م³", 2700), b);
+const r = applyBook([it("أعمدة C5 (1×1)", "م³", 0), it("أعمدة C6", "م³", 2000), it("شيء آخر", "م²", 0)], b, "empty");
+assert.equal(r.changed, 1); assert.equal(r.items[0].unitPrice, 2700); assert.equal(r.items[0].totalPrice, 27000); assert.equal(r.items[1].unitPrice, 2000);
+assert.equal(applyBook(r.items, b, "all").changed, 1);
+assert.equal(entriesFromItems(emptyBook(), [it("لياسة داخلية", "م²", 28), it("لياسة داخلية", "م²", 30), it("بلا سعر", "م²", 0)]).book.entries[0].price, 30);
+console.log("PASS price_book");

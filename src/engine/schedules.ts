@@ -210,7 +210,7 @@ export function scheduleVolumes(
       }
       if (rc > 0) {
         lines.push({ sheetId, cand: {
-          id: "sch-footing-rc", description: "توريد وصب خرسانة مسلحة للقواعد", category: RC_CAT, dim: "volume", unit: "م³",
+          id: "sch-footing-rc", description: `قواعد خرسانية (لوحة ${code(sheetId).replace(/^.*P(\d+)$/, "$1")})`, category: RC_CAT, dim: "volume", unit: "م³",
           quantity: r3(rc), sources: ["mark"], confidence: missing.length ? "medium" : "high", selected: true,
           evidence: `عدد كل قاعدة من مخطط القواعد (${code(sheetId)}) × أبعادها الخرسانية من جدول القواعد (${footSheet}): ${rcParts.join("، ")}`,
           checks: missing.length ? [`قواعد بلا أبعاد في الجدول (مكتوب «as PLAN» أو غير مقروء): ${missing.join("، ")} — أضفها يدوياً`] : ["كل القواعد المعلّمة على المخطط لها أبعاد في الجدول"],
@@ -219,7 +219,7 @@ export function scheduleVolumes(
         for (const f of fams) replaced.push({ sheetId, id: f.id });
       }
       if (pc > 0) lines.push({ sheetId, cand: {
-        id: "sch-footing-pc", description: "توريد وصب خرسانة عادية (نظافة) تحت القواعد", category: RC_CAT, dim: "volume", unit: "م³",
+        id: "sch-footing-pc", description: `خرسانة عادية (نظافة) تحت القواعد (لوحة ${code(sheetId).replace(/^.*P(\d+)$/, "$1")})`, category: RC_CAT, dim: "volume", unit: "م³",
         quantity: r3(pc), sources: ["mark"], confidence: "high", selected: true,
         evidence: `أبعاد الخرسانة العادية من جدول القواعد (${footSheet}) × عدد القواعد: ${pcParts.join("، ")}`,
         checks: [], formula: "Σ عدد × الطول × العرض × السماكة", layer: "جدول القواعد",

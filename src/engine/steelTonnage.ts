@@ -50,6 +50,8 @@ export function steelTonnage(
   const { eave, ridge } = levels;
   const line = (sheetId: string, c: Candidate) => lines.push({ sheetId, cand: c });
 
+  const colsOn = (id: string) => (counted.find((q) => q.sheetId === id)?.cands || []).filter((c) => /^mrk-col-/.test(c.id) && c.selected).reduce((a, c) => a + c.quantity, 0);
+  const pedestals = counted.flatMap((q) => q.cands).filter((c) => /^mrk-PD/.test(c.id)).map((c) => c.quantity);
   for (const x of counted) for (const c of x.cands) {
     const m = /^mrk-col-(.+)$/.exec(c.id);
     if (!m || !c.selected) continue;
@@ -59,10 +61,10 @@ export function steelTonnage(
     const tons = r2((c.quantity * eave * kg) / 1000);
     replaced.push({ sheetId: x.sheetId, id: c.id });
     line(x.sheetId, {
-      id: `stl-col-${m[1]}`, description: `حديد أعمدة ${m[1]} — ${c.quantity} عمود × ${eave} م × ${kg} كجم/م (${code(x.sheetId)})`,
+      id: `stl-col-${m[1]}`, description: `حديد أعمدة ${m[1]} (${c.quantity} عمود${main ? "" : "، المبنى الثاني"})`,
       category: STEEL_CAT, dim: "count", unit: "طن", quantity: tons, count: 1, sources: ["mark"], confidence: "medium", selected: main, review: true,
       evidence: `عدد الأعمدة ${c.quantity} من مخطط براغي التثبيت، ارتفاع الحافة +${eave * 1000} من الواجهة، ووزن ${m[1]} القياسي ${kg} كجم/م`,
-      checks: [main ? "طول العمود = منسوب الحافة؛ تُنقص الصفائح والوصلات" : "مبنى/منطقة غير الهنجر الرئيسي: الارتفاع مفترض بمنسوب الحافة، فتحقق منه ثم حدّد البند"],
+      checks: [main ? "طول العمود = منسوب الحافة؛ تُنقص الصفائح والوصلات" : `مبنى/منطقة غير الهنجر الرئيسي: الارتفاع مفترض بمنسوب الحافة، فتحقق منه ثم حدّد البند. أعمدة اللوحة ${colsOn(x.sheetId)}${pedestals.length ? ` وأعداد أعناق القواعد المقروءة ${pedestals.join(" و")}` : ""}: إن اختلفت فبعض التسميات مكررة أو أعمدة اللوحة لا تقوم على قواعد هذا الملف`],
       formula: `${c.quantity} × ${eave} × ${kg} ÷ 1000`, layer: "أعمدة",
     });
   }
@@ -85,7 +87,7 @@ export function steelTonnage(
       const tons = r2((frames.quantity * 2 * slope * kg) / 1000);
       replaced.push({ sheetId: framesAt.sheetId, id: "mrk-frames" });
       line(framesAt.sheetId, {
-        id: "stl-rafters", description: `حديد رفترات الجملونات ${best[0]} — ${frames.quantity} إطار × 2 × ${r2(slope)} م × ${kg} كجم/م (${code(framesAt.sheetId)})`,
+        id: "stl-rafters", description: `حديد رفترات الجملونات ${best[0]} (${frames.quantity} إطار)`,
         category: STEEL_CAT, dim: "count", unit: "طن", quantity: tons, count: 1, sources: ["mark"], confidence: "medium", selected: true, review: true,
         evidence: `${frames.quantity} إطاراً، العرض ${size.W} م والقمة +${ridge * 1000} والحافة +${eave * 1000} من الواجهة، والمقطع الأكثر كتابة على لوحات السقف ${best[0]} (${best[1]} مرة)`,
         checks: ["قد يختلف مقطع الرفتر عند الركبة (Haunch) أو القمة؛ راجع مقاطع الإطار في لوحة التفاصيل"],
@@ -100,7 +102,7 @@ export function steelTonnage(
       const slope = Math.hypot(size.W / 2, ridge - eave);
       const area = r2(2 * size.L * slope);
       line(framesAt.sheetId, {
-        id: "stl-roofclad", description: `تكسية السقف (الشنكو) — 2 × ${size.L} م × ${r2(slope)} م منحدر (${code(framesAt.sheetId)})`,
+        id: "stl-roofclad", description: "تكسية السقف (الشنكو)",
         category: STEEL_CAT, dim: "area", unit: "م²", quantity: area, sources: ["mark"], confidence: "medium", selected: true, review: true,
         evidence: `الطول ${size.L} م والعرض ${size.W} م من أبعاد المخطط، والحافة +${eave * 1000} والقمة +${ridge * 1000} من الواجهة؛ مساحة المنحدرين بلا خصم فتحات أو بروز`,
         checks: ["الجدران بلوك فلا تكسية جدران؛ أضف الجدران المكسوة من حاسبة التكسية إن وجدت"],

@@ -163,6 +163,7 @@ export function readMarks(sheet: BlueprintSheet): Candidate[] {
       id: `mrk-${f.prefix}`,
       description: steel
         ? `${name} (${sheet.code}) — ${f.marks.length} علامة مختلفة`
+        : f.prefix === "PD" ? `أعناق القواعد ${f.marks.map((m) => m.mark).join("، ")}`
         : `عدد ${name} حسب العلامات (${f.marks.map((m) => m.mark).slice(0, 8).join("، ")}${f.marks.length > 8 ? "…" : ""})`,
       category: steel ? STEEL_CAT : RC_CAT,
       dim: "count", unit: "عدد", quantity: f.total, count: f.total,

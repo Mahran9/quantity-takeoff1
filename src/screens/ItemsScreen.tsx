@@ -140,7 +140,7 @@ export const ItemsScreen: React.FC<Props> = ({ sheets, items, activeSheetId, onS
           {picked > 0 ? `تصدير المحدد إلى Excel (${picked} من ${live})` : "حدد البنود بعلامة ✓ ثم صدّر Excel"}
         </button>
       )}
-      {onAddItems && <CladdingCard onAdd={onAddItems} items={items} onReplace={onReplaceItems} />}
+      {onAddItems && <CladdingCard onAdd={onAddItems} />}
       {sheets.length > 1 && (() => {
         // One table for the whole project by default. A many-page PDF used to show a strip of 16 page buttons here;
         // picking a single sheet is now one dropdown, sheets with lines first.

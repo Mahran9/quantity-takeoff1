@@ -1,0 +1,17 @@
+import { steelTonnage, readLevels } from "../src/engine/steelTonnage";
+const tok = (text: string) => ({ text, source: "pdf_text", x: 0, y: 0 } as any);
+const sheet = (id: string, texts: string[]) => ({ id, code: id, visualTokens: texts.map(tok) } as any);
+const eq = (a: any, b: any, m: string) => { if (a !== b) { console.error("FAIL", m, a, b); process.exit(1); } };
+const elev = sheet("e", ["+0", "+0", "+8000", "+8000", "+9000", "+9000"]);
+const plan = sheet("p", ["69780", "29800", "6350"]);
+const roof = sheet("r", [...Array(5).fill("ZZ200-2-20-60"), ...Array(10).fill("IPE500")]);
+eq(JSON.stringify(readLevels([elev])), JSON.stringify({ eave: 8, ridge: 9 }), "levels");
+const c = (id: string, q: number): any => ({ id, quantity: q, selected: true, sources: ["mark"] });
+const r = steelTonnage([elev, plan, roof], [{ sheetId: "p", cands: [c("mrk-col-IPE600", 24), c("mrk-frames", 12)] }]);
+const col = r.lines.find((l) => l.cand.id === "stl-col-IPE600")!.cand;
+eq(col.quantity, 23.42, "column tons"); eq(col.unit, "طن", "unit");
+eq(r.lines.find((l) => l.cand.id === "stl-rafters")!.cand.quantity, 32.51, "rafter tons");
+eq(r.lines.find((l) => l.cand.id === "stl-roofclad")!.cand.quantity, 2084.12, "roof area");
+const none = steelTonnage([plan], [{ sheetId: "p", cands: [c("mrk-col-IPE600", 24)] }]);
+eq(none.lines.length, 0, "no levels, no tonnage");
+console.log("PASS steel_tonnage");

@@ -41,6 +41,7 @@ import { importWithRecovery } from "./utils/lazyImport";
 import { reconcile } from "./engine/reconcile";
 import { Candidate, candidatesToTakeoff, mergeRepeatedMarks } from "./engine/candidate";
 import { scheduleVolumes } from "./engine/schedules";
+import { steelTonnage } from "./engine/steelTonnage";
 import { getSheetVisualTokens, searchSheetTokens } from "./utils/visualSearchEngine";
 import {
   loadProjectsFromStorage,
@@ -573,6 +574,14 @@ export default function App() {
       ],
     }));
     toReview += vol.replaced.length;
+    // Section names × standard kg/m × lengths from the drawing: member counts become tonnage.
+    const stl = steelTonnage(sheetList, finalPerSheet);
+    for (const f of finalPerSheet) {
+      f.cands = [
+        ...stl.lines.filter((l) => l.sheetId === f.sheetId).map((l) => l.cand),
+        ...f.cands.filter((c) => !stl.replaced.some((r) => r.sheetId === f.sheetId && r.id === c.id)),
+      ];
+    }
     for (const { sheetId, cands } of finalPerSheet) {
       if (!cands.length) continue;
       const sh = scope.find((x) => x.id === sheetId)!;

@@ -123,8 +123,24 @@ export function readMarks(sheet: BlueprintSheet): Candidate[] {
   const s = readMarkStats(texts);
   const out: Candidate[] = [];
   const steel = isSteelDrawing(texts, s);
+  // A sheet that carries the anchor-bolt plan beside a mezzanine and a roof plan: the columns are the labels inside the
+  // anchor plan's own column of the page (between the neighbouring plan titles), not every label on the sheet.
+  let band: { x0: number; x1: number; y1: number } | null = null;
+  {
+    const titles = toks.filter((t) => /^(ANCHOR BOLTS? PLAN|MEZZANINE PLAN|ROOF PLAN)$/i.test(t.text.trim()) && t.y > 0);
+    const anchor = titles.find((t) => /ANCHOR/i.test(t.text));
+    if (anchor && titles.length >= 2) {
+      // A title's token starts at its left edge; the plan it names is centred on the title, about half a title wide further right.
+      const c = (t: { x: number }) => t.x + 0.05;
+      const xs = titles.map(c).sort((a, b) => a - b);
+      const i = xs.indexOf(c(anchor));
+      band = { x0: i === 0 ? 0 : (xs[i - 1] + c(anchor)) / 2, x1: i === xs.length - 1 ? 1 : (c(anchor) + xs[i + 1]) / 2, y1: anchor.y + 0.02 };
+    }
+  }
   // Only a sheet that is just the anchor-bolt plan: when it also holds a mezzanine/roof plan the labels are not all columns.
-  const isAnchorPlan = texts.some((t) => /ANCHOR BOLTS? PLAN/i.test(t)) && !texts.some((t) => /MEZZANINE|ROOF PLAN|FLOOR PLAN|FRAMING|ELEVATION/i.test(t));
+  const isAnchorPlan = texts.some((t) => /ANCHOR BOLTS? PLAN/i.test(t)) && (!!band || !texts.some((t) => /MEZZANINE|ROOF PLAN|FLOOR PLAN|FRAMING|ELEVATION/i.test(t)));
+  const bandTexts = band ? toks.filter((t) => t.x >= band!.x0 && t.x <= band!.x1 && t.y <= band!.y1).map((t) => t.text) : null;
+  const bandN = (label: string) => (bandTexts ? bandTexts.filter((t) => t.trim() === label).length : null);
   const hasSchedule = texts.some((t) => /SCHEDULE/i.test(t));
   // Architectural plans tag doors and windows with a bare "D" / "W". (On a steel set "D12" is a rod diameter.)
   if (!steel && texts.some((t) => /FLOOR PLAN|ROOF PLAN/i.test(t))) {
@@ -201,11 +217,12 @@ export function readMarks(sheet: BlueprintSheet): Candidate[] {
     });
   const ROLLED = /^(IPE|HEA|HEB|HEM|UPN)\d+$/;
   for (const x of s.sections) {
-    if (ROLLED.test(x.label) && isAnchorPlan) {
+    const nCol = bandN(x.label) ?? x.n;
+    if (ROLLED.test(x.label) && isAnchorPlan && nCol > 0) {
       out.push({
         id: `mrk-col-${x.label}`, description: `أعمدة ${x.label} (${sheet.code})`, category: STEEL_CAT,
-        dim: "count", unit: "عدد", quantity: x.n, count: x.n, sources: ["mark"], confidence: "medium", selected: true,
-        evidence: `${where}: على مخطط براغي التثبيت تُكتب تسمية المقطع «${x.label}» مرة عند كل قاعدة عمود، فظهرت ${x.n} مرة`,
+        dim: "count", unit: "عدد", quantity: nCol, count: nCol, sources: ["mark"], confidence: "medium", selected: true,
+        evidence: `${where}: على مخطط براغي التثبيت تُكتب تسمية المقطع «${x.label}» مرة عند كل قاعدة عمود، فظهرت ${nCol} مرة${band ? " داخل مخطط براغي التثبيت وحده من بين المخططات على اللوحة" : ""}`,
         checks: ["كل تسمية = قاعدة عمود واحدة؛ طابقها مع عدد القواعد على المخطط"],
         layer: "أعمدة",
       });
@@ -219,7 +236,7 @@ export function readMarks(sheet: BlueprintSheet): Candidate[] {
   }
   // Main portal frames: one frame = two columns on its two grid lines, confirmed against the grid numbers 1…N.
   if (isAnchorPlan) {
-    const cols = s.sections.filter((x) => ROLLED.test(x.label)).reduce((a, x) => a + x.n, 0);
+    const cols = s.sections.filter((x) => ROLLED.test(x.label)).reduce((a, x) => a + (bandN(x.label) ?? x.n), 0);
     const nums = new Set(texts.map((t) => (/^\d{1,2}$/.test(t.trim()) ? +t.trim() : 0)).filter(Boolean));
     let N = 0;
     while (nums.has(N + 1)) N++;

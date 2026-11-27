@@ -32,3 +32,12 @@ console.log("PASS steel_tonnage");
   eq(two.lines.find((l) => l.cand.id === "stl-col-IPE600")!.cand.description.includes("المبنى"), false, "main building unnamed");
 }
 console.log("PASS steel_tonnage two buildings");
+// A building with a mezzanine plan: columns run to the highest level, no roof or walls are guessed.
+{
+  const el = sheet("el", ["+4050", "+4050", "+8000", "+8000"]);
+  const pm = sheet("pm", ["ANCHOR BOLTS PLAN", "MEZZANINE PLAN", "ROOF PLAN"]);
+  const r3 = steelTonnage([pm, el], [{ sheetId: "pm", cands: [c("mrk-col-HEA240", 23)] }]);
+  eq(r3.lines.find((l) => l.cand.id === "stl-col-HEA240")!.cand.quantity, 11.1, "mezzanine building column tons");
+  eq(r3.lines.some((l) => /roofclad|blockwalls/.test(l.cand.id)), false, "no envelope for mezzanine building");
+}
+console.log("PASS steel_tonnage mezzanine");

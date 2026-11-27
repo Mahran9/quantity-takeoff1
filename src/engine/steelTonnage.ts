@@ -48,6 +48,7 @@ export function steelTonnage(
 
   anchors.forEach((x, bi) => {
     const idx = sheets.findIndex((q) => q.id === x.sheetId);
+    const sheet0 = sheets[idx];
     const window = sheets.slice(Math.max(idx, 0), idx + 5);
     // The elevation that follows the anchor plan gives this building's levels; else any elevation in the set.
     let levels: { eave: number; ridge: number } | null = null;
@@ -55,6 +56,10 @@ export function steelTonnage(
     levels = levels || readLevels(sheets);
     if (!levels) { notes.push(`لا مناسيب ارتفاع مكتوبة (+8000 …) قرب لوحة ${code(x.sheetId)}: بقيت أعمدتها بالعدد.`); return; }
     const { eave, ridge } = levels;
+    // A sheet with a mezzanine plan: the lowest level is the mezzanine slab, so columns run to the top level and the
+    // envelope shape is unknown.
+    const mezz = !!sheet0 && textsOf(sheet0).some((q) => /MEZZANINE/i.test(q));
+    const colH = mezz ? ridge : eave;
     const bname = bi === 0 ? "" : NAMES[bi] || `المبنى ${bi + 1}`;
     const tag = bi === 0 ? "" : `-b${bi + 1}`;
     const sheet = sheets.find((q) => q.id === x.sheetId);
@@ -67,20 +72,20 @@ export function steelTonnage(
       const sec = c.id.replace(/^mrk-col-/, "");
       const kg = kgPerMetre(sec);
       if (!kg) continue;
-      const tons = r2((c.quantity * eave * kg) / 1000);
+      const tons = r2((c.quantity * colH * kg) / 1000);
       replaced.push({ sheetId: x.sheetId, id: c.id });
       line(x.sheetId, {
         id: `stl-col-${sec}${tag}`, description: `حديد أعمدة ${sec} (${c.quantity} عمود${bname ? "، " + bname : ""})`,
         category: STEEL_CAT, dim: "count", unit: "طن", quantity: tons, count: 1, sources: ["mark"], confidence: "medium", selected: true, review: true,
-        evidence: `عدد الأعمدة ${c.quantity} من مخطط براغي التثبيت ${code(x.sheetId)}، ارتفاع الحافة +${eave * 1000} من الواجهة، ووزن ${sec} القياسي ${kg} كجم/م`,
+        evidence: `عدد الأعمدة ${c.quantity} من مخطط براغي التثبيت ${code(x.sheetId)}، ${mezz ? "أعلى منسوب" : "ارتفاع الحافة"} +${colH * 1000} من الواجهة، ووزن ${sec} القياسي ${kg} كجم/م`,
         checks: [bi === 0 ? "طول العمود = منسوب الحافة؛ تُنقص الصفائح والوصلات"
-          : `أعمدة اللوحة ${total}${pedestals.length ? ` وأعناق القواعد المقروءة في الملف ${pedestals.join(" و")}` : ""}: إن اختلفت فقد تكون قواعد هذا المبنى في لوحة غير مرفوعة. طول العمود = منسوب الحافة`],
-        formula: `${c.quantity} × ${eave} × ${kg} ÷ 1000`, layer: "أعمدة",
+          : `أعمدة اللوحة ${total}${pedestals.length ? ` وأعناق القواعد المقروءة في الملف ${pedestals.join(" و")}` : ""}: إن اختلفت فقد تكون قواعد هذا المبنى في لوحة غير مرفوعة. ${mezz ? "فيه ميزانين: الطول أعلى منسوب مكتوب والأعمدة قد تُقسَم عند الميزانين" : "طول العمود = منسوب الحافة"}`],
+        formula: `${c.quantity} × ${colH} × ${kg} ÷ 1000`, layer: "أعمدة",
       });
     }
 
-    const slope = size ? Math.hypot(size.W / 2, ridge - eave) : 0;
-    if (frames && size) {
+    const slope = size && !mezz ? Math.hypot(size.W / 2, ridge - eave) : 0;
+    if (frames && size && !mezz) {
       const tally = new Map<string, number>();
       for (const w of window) {
         const t = textsOf(w);
@@ -101,7 +106,7 @@ export function steelTonnage(
         });
       }
     }
-    if (size) {
+    if (size && !mezz) {
       const roofArea = r2(2 * size.L * slope);
       line(x.sheetId, {
         id: `stl-roofclad${tag}`, description: bname ? `تكسية سقف ${bname} (الشنكو)` : "تكسية السقف (الشنكو)",

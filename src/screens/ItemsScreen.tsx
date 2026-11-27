@@ -127,7 +127,7 @@ export const ItemsScreen: React.FC<Props> = ({ sheets, items, activeSheetId, onS
       {msg && <p className="rounded-lg bg-teal-50 px-3 py-2 text-[13px] font-bold leading-6 text-teal-900">{msg}</p>}
       {/* The next step after a read: take the table out as Excel (all sheets, quotation + detailed sheet). */}
       {onExcel && live > 0 && !reading && (
-        <button onClick={onExcel} className="qto-cta flex h-12 w-full items-center justify-center gap-2 rounded-xl text-[15px]">
+        <button onClick={onExcel} className="qto-cta sticky bottom-24 z-30 flex h-12 w-full items-center justify-center gap-2 rounded-xl text-[15px] shadow-lg">
           <FileSpreadsheet className="w-5 h-5" />
           تصدير جدول الكميات Excel ({live} بند)
         </button>

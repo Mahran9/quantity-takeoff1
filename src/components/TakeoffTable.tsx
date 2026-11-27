@@ -879,8 +879,6 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
               <th className="py-2.5 px-2 text-center w-24">نوع القياس</th>
               <th className="py-2.5 px-3 min-w-[190px]">الوصف الهندسي والمواصفات</th>
               <th className="py-2.5 px-3 min-w-[120px]">الموقع / المحاور</th>
-              <th className="py-2.5 px-3 min-w-[140px]">معادلة الحساب والأبعاد</th>
-              <th className="py-2.5 px-3 text-center">الخصم</th>
               <th className="py-2.5 px-3 text-center font-bold text-slate-900">الكمية الصافية</th>
               <th className="py-2.5 px-3 text-center">الوحدة</th>
               <th className="py-2.5 px-3 text-center">سعر الوحدة ({currencySymbol})</th>
@@ -892,7 +890,7 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
           <tbody className="divide-y divide-slate-100">
             {filteredItems.length === 0 ? (
               <tr>
-                <td colSpan={13} className="py-12 text-center text-slate-400">
+                <td colSpan={11} className="py-12 text-center text-slate-400">
                   <Calculator className="w-8 h-8 mx-auto text-slate-300 mb-2" />
                   <p className="font-semibold text-slate-600">لا توجد بنود حصر في هذا المخطط حتى الآن.</p>
                   <p className="text-xs text-slate-400 mt-1">
@@ -977,32 +975,6 @@ export const TakeoffTable: React.FC<TakeoffTableProps> = ({
                           onUpdateItem({ ...item, location: e.target.value })
                         }
                         className="w-full px-1.5 py-0.5 bg-transparent hover:bg-slate-100 focus:bg-white rounded border border-transparent focus:border-slate-300"
-                      />
-                    </td>
-
-                    <td className="py-2.5 px-3 font-mono text-[11px] text-slate-600">
-                      <input
-                        type="text"
-                        value={item.formula || ""}
-                        onChange={(e) =>
-                          onUpdateItem({ ...item, formula: e.target.value })
-                        }
-                        placeholder="معادلة الحساب"
-                        className="w-full px-1.5 py-0.5 bg-transparent hover:bg-slate-100 focus:bg-white rounded border border-transparent focus:border-slate-300"
-                      />
-                    </td>
-
-                    <td className="py-2.5 px-3 text-center font-mono text-rose-600">
-                      <input
-                        type="number"
-                        value={item.deduction || 0}
-                        onChange={(e) =>
-                          onUpdateItem({
-                            ...item,
-                            deduction: Number(e.target.value),
-                          })
-                        }
-                        className="w-14 text-center px-1 py-0.5 bg-transparent hover:bg-slate-100 focus:bg-white rounded border border-transparent focus:border-slate-300"
                       />
                     </td>
 

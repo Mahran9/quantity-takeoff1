@@ -13,7 +13,7 @@ const FAMILY: Record<string, string> = {
 
 /** Reinforced-concrete drawings use the same letters for other members. */
 const RC_FAMILY: Record<string, string> = {
-  C: "أعمدة خرسانية", F: "قواعد", CF: "قواعد مشتركة", N: "رقاب أعمدة", GB: "ميدات", TB: "ميدات ربط", B: "كمرات خرسانية",
+  C: "أعمدة خرسانية", F: "قواعد", PD: "أعناق/ركائز خرسانية (Pedestals)", CF: "قواعد مشتركة", N: "رقاب أعمدة", GB: "ميدات", TB: "ميدات ربط", B: "كمرات خرسانية",
   RB: "كمرات سقف", R: "أنواع بلاطات هوردي (R)", S: "أنواع بلاطات مصمتة (S)", SB: "كمرات ثانوية", W: "جدران خرسانية", SW: "جدران قص", ST: "درج",
 };
 /**
@@ -21,7 +21,7 @@ const RC_FAMILY: Record<string, string> = {
  * label spans or slab types (one beam can carry its mark several times), so their counts are not quantities:
  * they are offered for review, not added to the BOQ.
  */
-const RC_MEMBER_MARKS = new Set(["C", "F", "CF", "N"]);
+const RC_MEMBER_MARKS = new Set(["C", "F", "CF", "N", "PD"]);
 const STEEL_CAT = "أعمال الهياكل المعدنية والهناجر";
 const RC_CAT = "أعمال خرسانية مسلحة وعادية";
 
@@ -32,7 +32,7 @@ const RC_CAT = "أعمال خرسانية مسلحة وعادية";
 export function isSteelDrawing(texts: string[], s: Pick<MarkStats, "bolts" | "sections">): boolean {
   if (s.bolts.length || s.sections.length) return true;
   const joined = texts.join(" ");
-  const steel = (joined.match(/\b(IPE|HEA|HEB|UPN|UB|UC|SHS|RHS|CHS|PURLINS?|RAFTERS?|ANCHOR\s?BOLTS?|BRACING|BASE\s?PLATE|HAUNCH|GIRTS?)\b/gi) || []).length;
+  const steel = (joined.match(/\b(IPE|HEA|HEB|HEM|UPN|SHS|RHS|CHS)\s?\d{2,4}|\bZZ\s?\d{3}-|\b(UB|UC|PURLINS?|RAFTERS?|ANCHOR\s?BOLTS?|BRACING|BASE\s?PLATE|HAUNCH|GIRTS?|SAGROD)\b/gi) || []).length;
   const rc = (joined.match(/Ø|\bT\d{2}\b|\bFOOTINGS?\b|\bBLINDING\b|\bSTIRRUPS?\b|\bCONCRETE\b|\bREINF|\bSLAB\b|\bTIE\s?BEAMS?\b|\bNECK\b|خرسان|قواعد|ميد|تسليح/gi) || []).length;
   return steel > rc;
 }
@@ -86,6 +86,8 @@ export function readMarkStats(texts: string[]): MarkStats {
   const sections = [
     ...tally(/\b(SHS|RHS|CHS)\s?(\d{2,3})\s?[xX*]\s?(\d{1,3}(?:\.\d+)?)\b/g, (m) => `${m[1]} ${m[2]}x${m[3]}`),
     ...tally(/\bZ\s?(\d{2,3})\s?x\s?(\d{2,3})\s?x\s?([\d.]+)\s?x\s?([\d.]+)\b/gi, (m) => `Z${m[1]}x${m[2]}x${m[3]}x${m[4]}`),
+    ...tally(/\b(IPE|HEA|HEB|HEM|UPN)\s?(\d{2,4})\b/g, (m) => `${m[1]}${m[2]}`),
+    ...tally(/\bZZ\s?(\d{2,3})-(\d(?:\.\d+)?)-(\d+)-(\d+)\b/g, (m) => `ZZ${m[1]}-${m[2]}-${m[3]}-${m[4]}`),
     ...tally(/\bW\s?(\d{2,3}-?\d{0,3})\s?[x*]\s?(\d{1,2})\s?\/\s?F\s?(\d{2,3})\s?[x*]\s?(\d{1,2})\b/gi, (m) => `W${m[1]}*${m[2]} / F${m[3]}*${m[4]}`),
   ];
   const beamMap = new Map<string, Map<string, number>>();
@@ -96,16 +98,36 @@ export function readMarkStats(texts: string[]): MarkStats {
   }
   const beams = [...beamMap].map(([prefix, g]) => ({ prefix, total: [...g.values()].reduce((a, b) => a + b, 0), marks: [...g].map(([label, n]) => ({ label, n })).sort((a, b) => b.n - a.n) }));
   const rods = tally(/\bROD\s?(\d{2})\s?mm/gi, (m) => `قضيب ${m[1]} مم`);
+  // Sag rods ("الشنكو"): drawn with a "D12" tag per rod and a "ROD12" note.
+  const sagD = new Map<number, number>();
+  for (const t of texts) { const m = /^D(\d{1,2})$/.exec(t.trim()); if (m && +m[1] >= 8 && +m[1] <= 20) sagD.set(+m[1], (sagD.get(+m[1]) || 0) + 1); }
+  const hasSag = /SAG\s?ROD|\bROD\s?\d{1,2}\b/i.test(joined);
+  if (hasSag) for (const [d, n] of sagD) if (n >= 3) rods.push({ label: `شنكو Ø${d} مم`, n });
   return { families, bolts: [...bolts.values()].sort((a, b) => b.n - a.n), tokens: texts.length, sections, beams, rods };
 }
 
 export function readMarks(sheet: BlueprintSheet): Candidate[] {
-  const texts = (sheet.visualTokens || []).filter((t) => t.source === "pdf_text").map((t) => t.text);
+  // CAD exports often print the same label twice at the same spot (overprint): count it once.
+  const seen = new Set<string>();
+  const all = (sheet.visualTokens || []).filter((t) => t.source === "pdf_text");
+  const positioned = new Set(all.map((t) => `${Math.round(t.x / 0.004)}|${Math.round(t.y / 0.004)}`)).size > all.length * 0.3;
+  const toks = all.filter((t) => {
+    if (!positioned) return true;
+    const k = `${t.text}|${Math.round(t.x / 0.004)}|${Math.round(t.y / 0.004)}`;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+  const texts = toks.map((t) => t.text);
   if (texts.length < 5) return [];
   const s = readMarkStats(texts);
   const out: Candidate[] = [];
-  // Architectural plans tag doors and windows with a bare "D" / "W".
-  if (texts.some((t) => /FLOOR PLAN|ROOF PLAN/i.test(t))) {
+  const steel = isSteelDrawing(texts, s);
+  // Only a sheet that is just the anchor-bolt plan: when it also holds a mezzanine/roof plan the labels are not all columns.
+  const isAnchorPlan = texts.some((t) => /ANCHOR BOLTS? PLAN/i.test(t)) && !texts.some((t) => /MEZZANINE|ROOF PLAN|FLOOR PLAN|FRAMING|ELEVATION/i.test(t));
+  const hasSchedule = texts.some((t) => /SCHEDULE/i.test(t));
+  // Architectural plans tag doors and windows with a bare "D" / "W". (On a steel set "D12" is a rod diameter.)
+  if (!steel && texts.some((t) => /FLOOR PLAN|ROOF PLAN/i.test(t))) {
     // Some CAD fonts export the tag number as a control character ("D\u0014"), so accept a letter followed by one.
     const tags = texts.map((t) => /^([DW])([\u0000-\u001f]|\d{1,2})?$/.exec(t.trim())).filter(Boolean) as RegExpExecArray[];
     for (const [ch, name] of [["D", "أبواب"], ["W", "نوافذ"]] as const) {
@@ -124,8 +146,18 @@ export function readMarks(sheet: BlueprintSheet): Candidate[] {
   const where = `نص مكتوب على اللوحة ${sheet.code}`;
   const sample = (marks: { mark: string; n: number }[]) =>
     marks.slice(0, 12).map((m) => (m.n > 1 ? `${m.mark}×${m.n}` : m.mark)).join("، ") + (marks.length > 12 ? " …" : "");
-  const steel = isSteelDrawing(texts, s);
-  for (const f of s.families) {
+  // Concrete plans: member marks are counted only on the drawing area above the schedule tables and typical details,
+  // where each mark is repeated for the table row and the section detail as well.
+  let planFamilies = s.families;
+  if (!steel && hasSchedule) {
+    const schedY = Math.min(...toks.filter((t) => /SCHEDULE/i.test(t.text)).map((t) => t.y));
+    const above = toks.filter((t) => t.y < schedY - 0.005);
+    // Tokens without real positions (y = 0) or a table at the very top: nothing to separate, keep every label.
+    if (schedY > 0.15 && above.length >= 5) planFamilies = readMarkStats(above.map((t) => t.text)).families;
+  }
+  for (const f of planFamilies) {
+    // A steel set also carries concrete marks (GB, F, PD …) on its elevations and base details: not steel quantities.
+    if (steel && !FAMILY[f.prefix]) continue;
     const name = (steel ? FAMILY[f.prefix] : RC_FAMILY[f.prefix]) || `علامات ${f.prefix}`;
     out.push({
       id: `mrk-${f.prefix}`,
@@ -135,7 +167,7 @@ export function readMarks(sheet: BlueprintSheet): Candidate[] {
       category: steel ? STEEL_CAT : RC_CAT,
       dim: "count", unit: "عدد", quantity: f.total, count: f.total,
       sources: ["mark"], confidence: "medium", selected: steel || RC_MEMBER_MARKS.has(f.prefix),
-      evidence: `${where}: ظهرت علامات ${f.prefix} ${f.total} مرة (${sample(f.marks)})`,
+      evidence: `${where}: ظهرت علامات ${f.prefix} ${f.total} مرة (${sample(f.marks)})${!steel && hasSchedule ? " (فوق الجداول والتفاصيل النموذجية فقط)" : ""}`,
       checks: steel
         ? ["العدد = عدد مرات ظهور العلامة في هذا المنظر؛ لا تجمعه مع لوحة تعرض نفس العناصر من زاوية أخرى"]
         : RC_MEMBER_MARKS.has(f.prefix)
@@ -166,9 +198,42 @@ export function readMarks(sheet: BlueprintSheet): Candidate[] {
       checks: ["رسم تصميمي: العدد = مرات كتابة التسمية، وليس بالضرورة عدد القطع (قد تُكتب مرة لعدة قطع). القياس الفعلي يحتاج المقياس أو قائمة المواد"],
       layer: "تسميات المقاطع",
     });
-  for (const x of s.sections) lab(`mrk-sec-${x.label}`, `مقطع ${x.label}`, x.n, `التسمية «${x.label}» مكتوبة ${x.n} مرة`);
+  const ROLLED = /^(IPE|HEA|HEB|HEM|UPN)\d+$/;
+  for (const x of s.sections) {
+    if (ROLLED.test(x.label) && isAnchorPlan) {
+      out.push({
+        id: `mrk-col-${x.label}`, description: `أعمدة ${x.label} (${sheet.code})`, category: STEEL_CAT,
+        dim: "count", unit: "عدد", quantity: x.n, count: x.n, sources: ["mark"], confidence: "medium", selected: true,
+        evidence: `${where}: على مخطط براغي التثبيت تُكتب تسمية المقطع «${x.label}» مرة عند كل قاعدة عمود، فظهرت ${x.n} مرة`,
+        checks: ["كل تسمية = قاعدة عمود واحدة؛ طابقها مع عدد القواعد على المخطط"],
+        layer: "أعمدة",
+      });
+    } else if (ROLLED.test(x.label)) {
+      lab(`mrk-sec-${x.label}`, `مقطع ${x.label} (عمود أو جملون/رفتر أو كمرة حسب موضعه)`, x.n, `التسمية «${x.label}» مكتوبة ${x.n} مرة، بعضها في المناظر الجانبية أيضاً`);
+    } else if (/^ZZ/.test(x.label)) {
+      lab(`mrk-sec-${x.label}`, `مدادات (Purlins) ${x.label}`, x.n, `النوع «${x.label}» مذكور ${x.n} مرة في ملاحظات اللوحة، وطول المدادات غير مكتوب`);
+    } else if (/^(SHS|RHS|CHS)/.test(x.label)) {
+      lab(`mrk-sec-${x.label}`, `تكتيف / أنابيب ${x.label}`, x.n, `التسمية «${x.label}» مكتوبة ${x.n} مرة`);
+    } else lab(`mrk-sec-${x.label}`, `مقطع ${x.label}`, x.n, `التسمية «${x.label}» مكتوبة ${x.n} مرة`);
+  }
+  // Main portal frames: one frame = two columns on its two grid lines, confirmed against the grid numbers 1…N.
+  if (isAnchorPlan) {
+    const cols = s.sections.filter((x) => ROLLED.test(x.label)).reduce((a, x) => a + x.n, 0);
+    const nums = new Set(texts.map((t) => (/^\d{1,2}$/.test(t.trim()) ? +t.trim() : 0)).filter(Boolean));
+    let N = 0;
+    while (nums.has(N + 1)) N++;
+    if (N >= 3 && cols === 2 * N) {
+      out.push({
+        id: "mrk-frames", description: `جملونات (إطارات رئيسية) — ${N} إطار (${sheet.code})`, category: STEEL_CAT,
+        dim: "count", unit: "عدد", quantity: N, count: N, sources: ["mark"], confidence: "medium", selected: true,
+        evidence: `${where}: محاور الإطارات 1 إلى ${N} و${cols} عموداً = ${N} × 2`,
+        checks: ["عدد الأعمدة يساوي ضعف عدد المحاور المرقمة، فكل محور إطار بعمودين"],
+        layer: "جملونات",
+      });
+    }
+  }
   for (const g of s.beams) lab(`mrk-beam-${g.prefix}`, `كمرات ${g.prefix}`, g.total, `${g.marks.map((m) => `${m.label}×${m.n}`).join("، ")}`);
-  for (const x of s.rods) lab(`mrk-rod-${x.label}`, `تكتيف ${x.label}`, x.n, `«${x.label}» مكتوب ${x.n} مرة`);
+  for (const x of s.rods) lab(`mrk-rod-${x.label}`, /شنكو/.test(x.label) ? `${x.label} (Sag rods)` : `تكتيف ${x.label}`, x.n, /شنكو/.test(x.label) ? `الوسم «${x.label.replace(/.*Ø/, "D").replace(" مم", "")}» مكتوب ${x.n} مرة، وهو يُكرَّر في المنظر والتفصيل` : `«${x.label}» مكتوب ${x.n} مرة`);
   const plates = readPlateList(texts);
   if (plates) {
     const ok = plates.printedTotal !== undefined;

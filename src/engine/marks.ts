@@ -98,11 +98,11 @@ export function readMarkStats(texts: string[]): MarkStats {
   }
   const beams = [...beamMap].map(([prefix, g]) => ({ prefix, total: [...g.values()].reduce((a, b) => a + b, 0), marks: [...g].map(([label, n]) => ({ label, n })).sort((a, b) => b.n - a.n) }));
   const rods = tally(/\bROD\s?(\d{2})\s?mm/gi, (m) => `قضيب ${m[1]} مم`);
-  // Sag rods ("الشنكو"): drawn with a "D12" tag per rod and a "ROD12" note.
+  // Sag rods (hanger rods between purlins; NOT the cladding, which the trade calls "الشنكو"): drawn with a "D12" tag per rod and a "ROD12" note.
   const sagD = new Map<number, number>();
   for (const t of texts) { const m = /^D(\d{1,2})$/.exec(t.trim()); if (m && +m[1] >= 8 && +m[1] <= 20) sagD.set(+m[1], (sagD.get(+m[1]) || 0) + 1); }
   const hasSag = /SAG\s?ROD|\bROD\s?\d{1,2}\b/i.test(joined);
-  if (hasSag) for (const [d, n] of sagD) if (n >= 3) rods.push({ label: `شنكو Ø${d} مم`, n });
+  if (hasSag) for (const [d, n] of sagD) if (n >= 3) rods.push({ label: `قضبان تعليق Ø${d} مم`, n });
   return { families, bolts: [...bolts.values()].sort((a, b) => b.n - a.n), tokens: texts.length, sections, beams, rods };
 }
 
@@ -233,7 +233,7 @@ export function readMarks(sheet: BlueprintSheet): Candidate[] {
     }
   }
   for (const g of s.beams) lab(`mrk-beam-${g.prefix}`, `كمرات ${g.prefix}`, g.total, `${g.marks.map((m) => `${m.label}×${m.n}`).join("، ")}`);
-  for (const x of s.rods) lab(`mrk-rod-${x.label}`, /شنكو/.test(x.label) ? `${x.label} (Sag rods)` : `تكتيف ${x.label}`, x.n, /شنكو/.test(x.label) ? `الوسم «${x.label.replace(/.*Ø/, "D").replace(" مم", "")}» مكتوب ${x.n} مرة، وهو يُكرَّر في المنظر والتفصيل` : `«${x.label}» مكتوب ${x.n} مرة`);
+  for (const x of s.rods) lab(`mrk-rod-${x.label}`, /قضبان تعليق/.test(x.label) ? `${x.label} (Sag rods)` : `تكتيف ${x.label}`, x.n, /قضبان تعليق/.test(x.label) ? `الوسم «${x.label.replace(/.*Ø/, "D").replace(" مم", "")}» مكتوب ${x.n} مرة، وهو يُكرَّر في المنظر والتفصيل` : `«${x.label}» مكتوب ${x.n} مرة`);
   const plates = readPlateList(texts);
   if (plates) {
     const ok = plates.printedTotal !== undefined;

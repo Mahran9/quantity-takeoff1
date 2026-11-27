@@ -19,7 +19,7 @@ const roof: any[] = [T("ROOF PLAN", 0.5, 0.9), T("TYPICAL SAGROD CONNECTION DETA
 for (let i = 0; i < 6; i++) roof.push(T("D12", 0.1 + i * 0.05, 0.3), T("ZZ200-2-20-60", 0.1 + i * 0.05, 0.2), T("SHS120*3", 0.1 + i * 0.05, 0.6));
 const r = readMarks(sheet("S-05", roof));
 assert.ok(!r.some((c) => /أبواب/.test(c.description)), "D12 is not a door");
-const sag = r.find((c) => /شنكو/.test(c.description))!;
+const sag = r.find((c) => /قضبان تعليق/.test(c.description))!;
 assert.equal(sag.quantity, 6); assert.ok(!sag.selected);
 assert.ok(r.find((c) => /مدادات/.test(c.description) && /ZZ200/.test(c.description)));
 assert.ok(r.find((c) => /تكتيف/.test(c.description) && /SHS 120x3/.test(c.description)));

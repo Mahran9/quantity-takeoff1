@@ -1,19 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512"><defs>
-<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1b3361"/><stop offset="1" stop-color="#070f20"/></linearGradient>
-<linearGradient id="gold" gradientUnits="userSpaceOnUse" x1="140" y1="150" x2="380" y2="392"><stop offset="0" stop-color="#fde68a"/><stop offset="1" stop-color="#f59e0b"/></linearGradient>
-<radialGradient id="glow" cx="0.2" cy="0.1" r="0.9"><stop offset="0" stop-color="#ffffff" stop-opacity="0.16"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/></radialGradient>
-</defs><rect width="512" height="512" rx="112" fill="url(#bg)"/><rect width="512" height="512" rx="112" fill="url(#glow)"/><g transform="translate(256 256) scale(1.18) translate(-256 -298)"><g fill="none" stroke-linecap="round" stroke-linejoin="round">
- <!-- ground line -->
- <path d="M96 392H416" stroke="#64748b" stroke-width="10"/>
- <!-- portal frame: columns + rafters -->
- <path d="M150 392V228L256 150L362 228V392" stroke="url(#gold)" stroke-width="30"/>
- <!-- ridge to eave tie -->
- 
- <!-- purlin dots -->
- <g fill="#fff7e0" stroke="none"><circle cx="203" cy="189" r="9"/><circle cx="309" cy="189" r="9"/><circle cx="256" cy="150" r="10"/></g>
- <!-- base plates -->
- <path d="M126 392H174M338 392H386" stroke="#fff7e0" stroke-width="14"/>
- <!-- dimension line -->
- <g stroke="#cbd5e1" stroke-width="9"><path d="M150 430H362"/><path d="M150 414V446"/><path d="M362 414V446"/></g>
-</g>
-</g></svg>
+<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2dd4bf"/><stop offset="1" stop-color="#0b5f63"/></linearGradient>
+<linearGradient id="glow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.22"/><stop offset="0.5" stop-color="#fff" stop-opacity="0"/></linearGradient>
+</defs><rect width="512" height="512" rx="112" fill="url(#bg)"/><rect width="512" height="512" rx="112" fill="url(#glow)"/><g transform="translate(256 256) scale(1) translate(-284 -256)"><g>
+ <!-- I-beam -->
+ <g fill="#ffffff"><rect x="146" y="122" width="220" height="46" rx="10"/><rect x="146" y="344" width="220" height="46" rx="10"/><rect x="232" y="150" width="48" height="212"/></g>
+ <!-- ruler ticks -->
+ <g stroke="#0f1d33" stroke-linecap="round" opacity="0.85"><path d="M406 122V390" stroke-width="10"/><path d="M390 122H422M390 390H422" stroke-width="10"/><path d="M398 190H414M398 256H422M398 322H414" stroke-width="8"/></g>
+</g></g></svg>

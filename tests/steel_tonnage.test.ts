@@ -17,3 +17,18 @@ eq(r.lines.find((l) => l.cand.id === "stl-blockwalls")!.cand.selected, false, "b
 const none = steelTonnage([plan], [{ sheetId: "p", cands: [c("mrk-col-IPE600", 24)] }]);
 eq(none.lines.length, 0, "no levels, no tonnage");
 console.log("PASS steel_tonnage");
+// Two buildings: the second anchor plan gets its own levels, size, cladding and walls, named «المبنى الثاني».
+{
+  const e2 = sheet("e2", ["+8000", "+8000", "+9000", "+9000"]);
+  const p2 = sheet("p2", ["61200", "22300", "20150"]);
+  const two = steelTonnage([elev, plan, roof, p2, e2], [
+    { sheetId: "p", cands: [c("mrk-col-IPE600", 24), c("mrk-frames", 12)] },
+    { sheetId: "p2", cands: [c("mrk-col-IPE450", 16)] },
+  ]);
+  const col2 = two.lines.find((l) => l.cand.id === "stl-col-IPE450-b2")!.cand;
+  eq(col2.quantity, 9.93, "second building column tons");
+  eq(col2.description.includes("المبنى الثاني"), true, "second building name");
+  eq(two.lines.find((l) => l.cand.id === "stl-roofclad-b2")!.cand.quantity, 1370.24, "second roof area");
+  eq(two.lines.find((l) => l.cand.id === "stl-col-IPE600")!.cand.description.includes("المبنى"), false, "main building unnamed");
+}
+console.log("PASS steel_tonnage two buildings");

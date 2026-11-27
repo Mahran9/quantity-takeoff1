@@ -94,12 +94,12 @@ export const ThemeToggle: React.FC<{ className?: string }> = ({ className = "" }
 
 /** Large screen title with an optional action on the opposite side. */
 export const ScreenHeader: React.FC<{ title: string; sub?: string; action?: React.ReactNode }> = ({ title, sub, action }) => (
-  <header className="flex items-end justify-between gap-3 pt-1">
-    <div className="min-w-0">
+  <header className="flex flex-wrap items-end justify-between gap-x-3 gap-y-2 pt-1">
+    <div className="min-w-0 flex-1 basis-44">
       <h1 className="text-[26px] leading-tight font-extrabold text-slate-900 truncate">{title}</h1>
       {sub && <p className="mt-0.5 text-[13px] text-slate-500 font-semibold">{sub}</p>}
     </div>
-    <div className="flex items-center gap-2 shrink-0">
+    <div className="flex items-center gap-2 shrink-0 flex-wrap">
       {action}
       <ThemeToggle />
     </div>

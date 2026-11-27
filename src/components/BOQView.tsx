@@ -19,6 +19,7 @@ import {
 import { BlueprintSheet, TakeoffItem, ProjectMetadata, CompanyProfile } from "../types";
 import { exportBoqToExcel, exportBoqToCsv, getExportWarnings } from "../utils/boqExporter";
 import { buildQuotation } from "../utils/quotation";
+import { LaborCard } from "./LaborCard";
 
 interface BOQViewProps {
   metadata: ProjectMetadata;
@@ -26,6 +27,7 @@ interface BOQViewProps {
   sheets: BlueprintSheet[];
   takeoffItems: TakeoffItem[];
   onUpdateItem: (item: TakeoffItem) => void;
+  onAddItem?: (item: TakeoffItem) => void;
   company: CompanyProfile;
   onOpenQuotation: () => void;
   onOpenSettings: () => void;
@@ -39,6 +41,7 @@ export const BOQView: React.FC<BOQViewProps> = ({
   sheets,
   takeoffItems,
   onUpdateItem,
+  onAddItem,
   company,
   onOpenQuotation,
   onOpenSettings,
@@ -241,6 +244,8 @@ export const BOQView: React.FC<BOQViewProps> = ({
           </div>
         )}
       </div>
+
+      {onAddItem && sheets.length > 0 && <LaborCard items={takeoffItems} currencySymbol={metadata.currencySymbol} onAdd={onAddItem} />}
 
       {/* Mode Switcher & Filter Bar (hidden on print) */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 sm:p-4 rounded-xl border border-slate-200 shadow-2xs print:hidden">

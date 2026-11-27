@@ -969,6 +969,7 @@ export default function App() {
                 sheets={sheets}
                 takeoffItems={takeoffItems}
                 onUpdateItem={handleUpdateItem}
+                onAddItem={handleAddItem}
                 company={company}
                 onOpenQuotation={() => setIsQuotationOpen(true)}
                 onOpenSettings={() => setIsSettingsOpen(true)}
